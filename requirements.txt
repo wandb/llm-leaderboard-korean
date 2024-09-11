@@ -14,7 +14,7 @@ bitsandbytes==0.41.2.post2
 boto3==1.34.117
 botocore==1.34.117
 cachetools==5.3.3
-certifi==2024.2.2
+certifi==2024.7.4
 charset-normalizer==3.3.2
 click==8.1.7
 cloudpickle==3.0.0
