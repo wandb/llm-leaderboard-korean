@@ -21,7 +21,7 @@ parser.add_argument(
     type=str,
     required=True
 )
-# choose from jaster, lctg
+# choose from kaster, lctg
 
 parser.add_argument(
     "-d",

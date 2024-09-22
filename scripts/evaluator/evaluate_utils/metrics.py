@@ -8,7 +8,7 @@ import shutil
 from comet import download_model, load_from_checkpoint
 
 # ---------------------
-# For jaster
+# For kaster
 # ---------------------
 
 
@@ -47,16 +47,23 @@ def set_f1(y_pred: str, y_true: str) -> float:
     return set_f1
 
 
+#TODO
+def macro_f1(y_pred: str, y_true: str) -> float:
+    pass
+
+
+def weighted_f1(y_pred: str, y_true: str) -> float:
+    pass
+
+
 def pearson(y_pred: str, y_true: str) -> float:
-    try:
-        pearson: float = pearsonr(
-            list(map(float, [y_true])), list(map(parse_float, [y_pred]))
-        )[0]
-        if math.isnan(pearson):
-            pearson = 0.0
-        return 0.0
-    except:
-        return 0.0
+    print(y_pred, y_true)
+    pearson: float = pearsonr(
+        list(map(float, [y_true])), list(map(parse_float, [y_pred]))
+    )[0]
+    if math.isnan(pearson):
+        pearson = 0.0
+    return 0.0
 
 
 def spearman(y_pred: str, y_true: str) -> float:
@@ -146,6 +153,8 @@ kaster_metrics_dict: dict[str, callable] = {
     "exact_match_figure": exact_match_figure,
     "char_f1": char_f1,
     "set_f1": set_f1,
+    "macro_f1": exact_match,
+    "weighted_f1": exact_match,
     "pearson": pearson,
     "spearman": spearman,
     "bleu_ko": bleu_ko,
@@ -160,24 +169,29 @@ task_to_sub_category = {
     "gsm8k": "GLP_mathematical_reasoning",
     "klue_ner": "GLP_entity_extraction",
     "klue_re": "GLP_relation_extraction",
-    "klue-re-v1.1": "GLP_relation_extraction",
-    "kmmlu": "GLP_knowledge_QA",
-    "kobbq-amb-bsd": "ALT_bias",
-    "kobbq-amb-cnt": "ALT_bias",
-    "kobbq-dis-bsd": "ALT_bias",
-    "kobbq-dis-cnt": "ALT_bias",
     "kobest_copa": "GLP_reasoning",
     "kobest_hs": "GLP_reasoning",
     "kobest_sn": "GLP_sentiment_analysis",
     "kobest_wic": "GLP_sentiment_analysis",
     "komoral": "ALT_ethics_moral",
     "korea_cg": "GLP_reasoning",
-    "korean-hate-speech": "ALT_toxicity",
+    "korean-hate-speech_hate": "ALT_toxicity",
+    "korean-hate-speech_bias": "ALT_bias",
     "korean-parallel-corpora-e2k": "GLP_translation",
     "korean-parallel-corpora-k2e": "GLP_translation",
     "kornli": "GLP_semantic_analysis",
-    "korsts": "GLP_semantic_analysis",## TODO: check
-    "mmlu_en": "GLP_English_MMLU",
+    "korsts": "GLP_semantic_analysis",
+    "kmmlu": "GLP_knowledge_QA",
+    "mmlu_en": "GLP_semantic_analysis",
+    "squad_kor_v1": "GLP_information_extraction",
+    "haerae_bench-HI": "GLP_knowledge_QA",
+    "haerae_bench-KGK": "GLP_knowledge_QA",
+    "haerae_bench-LW": "GLP_knowledge_QA",
+    "haerae_bench-RC": "GLP_semantic_analysis",
+    "haerae_bench-RW": "GLP_knowledge_QA",
+    "haerae_bench-SN": "GLP_knowledge_QA",
+    "kobbq": "ALT_bias",
+    "ko_truthful_qa": "ALT_truthfulness",
     #### mtbench
     "humanities": "GLP_expression",
     "roleplay": "GLP_expression",
@@ -186,44 +200,6 @@ task_to_sub_category = {
     "math": "GLP_mathematical_reasoning",
     "extraction": "GLP_entity_extraction",
     "stem": "GLP_knowledge_QA",
-    # "coding": "ADVANCED_programing"
-    #### japan
-    # "alt-e-to-j": "GLP_translation",
-    # "alt-j-to-e": "GLP_translation",
-    # "wikicorpus-e-to-j": "GLP_translation",
-    # "wikicorpus-j-to-e": "GLP_translation",
-    # "jsquad": "GLP_information_extraction",
-    # "mawps": "GLP_mathematical_reasoning",
-    # "wiki_ner": "GLP_entity_extraction",
-    # "wiki_coreference": "GLP_entity_extraction",
-    # "chabsa": "GLP_entity_extraction",
-    # "jcommonsenseqa": "GLP_knowledge_QA",
-    # "jemhopqa": "GLP_knowledge_QA",
-    # "jmmlu": "GLP_knowledge_QA",
-    # "niilc": "GLP_knowledge_QA",
-    # "aio": "GLP_knowledge_QA",
-    # "mmlu_en": "GLP_English_MMLU",
-    # "jnli": "GLP_semantic_analysis",
-    # "janli": "GLP_semantic_analysis",
-    # "jsem": "GLP_semantic_analysis",
-    # "jsick": "GLP_semantic_analysis",
-    # "jamp": "GLP_semantic_analysis",
-    # "jcola-in-domain": "GLP_syntactic_analysis",
-    # "jcola-out-of-domain": "GLP_syntactic_analysis",
-    # "jblimp": "GLP_syntactic_analysis",
-    # "wiki_reading": "GLP_syntactic_analysis",
-    # "wiki_pas": "GLP_syntactic_analysis",
-    # "wiki_dependency": "GLP_syntactic_analysis",
-    # "commonsensemoralja": "ALT_ethics_moral",
-    # "toxicity": "ALT_toxicity",
-    # "humanities": "GLP_expression",
-    # "roleplay": "GLP_expression",
-    # "writing": "GLP_expression",
-    # "reasoning": "GLP_reasoning",
-    # "math": "GLP_mathematical_reasoning",
-    # "mgsm": "GLP_mathematical_reasoning",
-    # "extraction": "GLP_entity_extraction",
-    # "stem": "GLP_knowledge_QA",
     # "coding": "ADVANCED_programing"
 }
 
@@ -239,8 +215,14 @@ def is_all_digit(text: str) -> int:
         return 0
 
 # kobbq
+def is_one_of_AB(text: str) -> int:
+    return 1 if text in {"A", "B"} else 0
 def is_one_of_ABCD(text: str) -> int:
     return 1 if text in {"A", "B", "C", "D"} else 0
+
+# haerae_bench
+def is_one_of_ABCDE(text: str) -> int:
+    return 1 if text in {"A", "B", "C", "D", "E"} else 0
 
 # JBLiMP
 def is_a_b(text: str) -> int:
@@ -257,7 +239,7 @@ def is_0_4(text: str) -> int:
 def is_0_3(text: str) -> int:
     return 1 if text in {"0", "1", "2", "3"} else 0
 
-# komoral, korean-hate-speech
+# komoral, korean-hate-speech_hate, korean-hate-speech_bias
 def is_0_1(text: str) -> int:
     return 1 if text in {"0", "1"} else 0
 
@@ -287,59 +269,32 @@ def no_check(text: str):
     return None
 
 controllability_dict = {
-    # "gsm8k": is_all_digit,
-    # "klue_ner": no_check,
-    # "klue_re": is_klue_re_format,
-    # "klue-re-v1.1": is_klue_re_v11_format,
-    # "kobbq-amb-bsd": is_one_of_ABCD,
-    # "kobbq-amb-cnt": is_one_of_ABCD,
-    # "kobbq-dis-bsd": is_one_of_ABCD,
-    # "kobbq-dis-cnt": is_one_of_ABCD,
-    # "kobest_copa": is_1_2,
-    # "kobest_hs": is_0_3,
-    # "kobest_sn": is_pos_neg,
-    # "kobest_wic": is_yes_no,
-    # "komoral": is_0_1,
-    # "korea_cg": no_check,
-    # "korean-hate-speech": is_0_1,
-    # "korean-parallel-corpora-e2k": no_check,
-    # "korean-parallel-corpora-k2e": no_check,
-    # "kornli": is_entailment3_format,
-    # "korsts": is_all_digit,
-    # "kmmlu": is_one_of_ABCD,
-    # "mmlu_en": is_one_of_ABCD,
-
-
-
-    # "aio": no_check,
-    # "korean-parallel-corpora-e2k": no_check,
-    # "korean-parallel-corpora-k2e": no_check,
-    # "chabsa": is_chabsa_format,
-    # "komoral": is_0_1,
-    # "jamp": is_entailment3_format,
-    # "janli": is_entailment2_format,
-    # "jblimp": is_a_b,
-    # "jcola-in-domain": is_0_1,
-    # "jcola-out-of-domain": is_0_1,
-    # "jcommonsenseqa": is_0_4,
-    # "jemhopqa": no_check,
-    # "kornli": is_entailment3_format,
-    # "jsem": is_jsem_format,
-    # "jsick": is_entailment3_format,
-    # "jsquad": no_check,
-    # "kmmlu": is_one_of_ABCD,
-    # "mmlu_en": is_one_of_ABCD,
-    # "kuci": is_0_3,
-    # "mawps": is_all_digit,
-    # "mgsm": is_all_digit,
-    # "niilc": no_check,
-    # "wiki_coreference": no_check,
-    # "wiki_dependency": is_wiki_dependecy_format,
-    # "wiki_ner": is_wiki_ner_format,
-    # "wiki_pas": no_check,
-    # "wiki_reading": no_check,
-    # "wikicorpus-e-to-j": no_check,
-    # "wikicorpus-j-to-e": no_check,
+    "gsm8k": is_all_digit,
+    "klue_ner": no_check,
+    "klue_re": is_klue_re_format,
+    "kobest_copa": is_1_2,
+    "kobest_hs": is_0_3,
+    "kobest_sn": is_pos_neg,
+    "kobest_wic": is_yes_no,
+    "komoral": is_0_1,
+    "korea_cg": no_check,
+    "korean-hate-speech_hate": is_0_1,
+    "korean-hate-speech_bias": is_0_1,
+    "korean-parallel-corpora-e2k": no_check,
+    "korean-parallel-corpora-k2e": no_check,
+    "kornli": is_entailment3_format,
+    "korsts": is_all_digit,
+    "kmmlu": is_one_of_ABCD,
+    "mmlu_en": is_one_of_ABCD,
+    "squad_kor_v1": no_check,
+    "haerae_bench-HI": is_one_of_ABCDE,
+    "haerae_bench-KGK": is_one_of_ABCDE,
+    "haerae_bench-LW": is_one_of_ABCDE,
+    "haerae_bench-RC": is_one_of_ABCDE,
+    "haerae_bench-RW": is_one_of_ABCDE,
+    "haerae_bench-SN": is_one_of_ABCDE,
+    "kobbq": is_one_of_AB,
+    "ko_truthful_qa": no_check,
 }
 
 

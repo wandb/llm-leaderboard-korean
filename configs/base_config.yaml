@@ -10,6 +10,7 @@ inference_interval: 0 # seconds
 
 run:
   kaster: true
+  haerae_bench_v1: true
   kmmlu_robustness: true # if this is set as true, kaster should set as true
   mtbench: true
   kobbq: false
@@ -35,8 +36,13 @@ num_few_shots: 2
 
 kaster:
   message_intro: "<prompt>"
-  artifacts_path: "wandb-korea/llm-leaderboard3/kaster:v0"
+  artifacts_path: "wandb-korea/llm-leaderboard3/eval_data:latest"
   dataset_dir: "kaster"
+
+haerae_bench_v1:
+  message_intro: "<prompt>"
+  artifacts_path: "wandb-korea/llm-leaderboard3/eval_data:latest"
+  dataset_dir: "haerae_bench_v1"
 
 mtbench:
   temperature_override:

@@ -13,6 +13,7 @@ from evaluator import (
     kobbq,
     mtbench,
     aggregate,
+    haerae_bench_v1
 )
 from utils import paginate_choices
 
@@ -82,6 +83,11 @@ instance.llm = llm
 # kaster
 if cfg.run.kaster:
     kaster.evaluate()
+
+# haerae_bench_v1
+if cfg.run.haerae_bench_v1:
+    haerae_bench_v1.evaluate()
+
 # mt-bench evaluation
 if cfg.run.mtbench:
     mtbench.evaluate()
@@ -89,7 +95,6 @@ if cfg.run.mtbench:
 # kobbq
 if cfg.run.kobbq:
     kobbq.evaluate()
-
 
 # 6. Aggregation
 if cfg.run.aggregate:

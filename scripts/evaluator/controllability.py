@@ -13,7 +13,7 @@ def evaluate():
     instance = WandbConfigSingleton.get_instance()
     run = instance.run
 
-    input_task = "jaster_0shot"
+    input_task = "kaster_0shot"
     output_task = input_task + "_controllability"
     for table_suffix in ("", "_dev"):
         # get output table

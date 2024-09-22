@@ -29,18 +29,14 @@ def update_flag(cfg, blend_cfg):
                     mtbench_flag = True
                 elif "kobbq" in dataset:
                     kobbq_flag = True
-                elif "lctg" in dataset:
-                    lctg_flag = True
-                elif "toxicity" in dataset:
-                    toxicity_flag = True
-                elif "jtruthfulqa" in dataset:
-                    jtruthfulqa_flag = True
+                elif "ko_truthful_qa" in dataset:
+                    ko_truthful_qa_flag = True
                 elif "kaster" in dataset:
                     kaster_flag = True
 
     if mtbench_flag and kaster_flag:
         GLP_flag = True
-    if kobbq_flag and lctg_flag and toxicity_flag and jtruthfulqa_flag:
+    if kobbq_flag and ko_truthful_qa_flag:
         ALT_flag = True
     return GLP_flag, ALT_flag
 
@@ -56,23 +52,31 @@ def evaluate():
 
     # Initialize empty variables
     if GLP_flag or ALT_flag:
-        kaster_0shot = kaster_fewshots = jmmlu_robust_fewshots = kaster_control_0shot = None
-        kaster_control_fewshots = lctg_overall = kobbq_fewshots = toxicity = mtbench = None
+        kaster_0shot = kaster_fewshots = kmmlu_robust_fewshots = kaster_control_0shot = None
+        kaster_control_fewshots = kobbq_fewshots = toxicity = mtbench = None
         kaster_0shot = read_wandb_table(table_name=f"kaster_0shot_leaderboard_table", run=run)
         kaster_fewshots = read_wandb_table(table_name=f"kaster_{num_few_shots}shot_leaderboard_table", run=run)
 
     if GLP_flag:
         mtbench = read_wandb_table(table_name=f"mtbench_leaderboard_table", run=run)
+        haerae_bench_v1_0shot = read_wandb_table(table_name=f"haerae_bench_v1_0shot_leaderboard_table", run=run)
+        haerae_bench_v1_fewshots = read_wandb_table(table_name=f"haerae_bench_v1_{num_few_shots}shot_leaderboard_table", run=run)
+        kaster_0shot = pd.concat([kaster_0shot, haerae_bench_v1_0shot], axis=1)
+        kaster_fewshots = pd.concat([kaster_fewshots, haerae_bench_v1_fewshots], axis=1)
     
     if ALT_flag:
-        lctg_overall = read_wandb_table(table_name=f"lctg_overall_leaderboard_table", run=run)
 
-        jmmlu_robust_fewshots = read_wandb_table(table_name=f"jmmlu_robust_{num_few_shots}shot_leaderboard_table", run=run)
+        kmmlu_robust_fewshots = read_wandb_table(table_name=f"kmmlu_robust_{num_few_shots}shot_leaderboard_table", run=run)
         kaster_control_0shot = read_wandb_table(table_name=f"kaster_control_0shot_leaderboard_table", run=run)
         kaster_control_fewshots = read_wandb_table(table_name=f"kaster_control_{num_few_shots}shot_leaderboard_table", run=run)
+        haerae_bench_v1_control_0shot = read_wandb_table(table_name=f"haerae_bench_v1_control_0shot_leaderboard_table", run=run)
+        haerae_bench_v1_control_fewshots = read_wandb_table(table_name=f"haerae_bench_v1_control_{num_few_shots}shot_leaderboard_table", run=run)
+        kaster_control_0shot = pd.concat([kaster_control_0shot, haerae_bench_v1_control_0shot], axis=1)
+        kaster_control_fewshots = pd.concat([kaster_control_fewshots, haerae_bench_v1_control_fewshots], axis=1)
+        
         kobbq_fewshots = read_wandb_table(table_name=f"kobbq_{num_few_shots}shot_leaderboard_table", run=run)
         toxicity = read_wandb_table(table_name=f"toxicity_leaderboard_table", run=run)
-        jtruthfulqa = read_wandb_table(table_name=f"jtruthfulqa_leaderboard_table", run=run)
+        ko_truthful_qa = read_wandb_table(table_name=f"ko_truthful_qa_leaderboard_table", run=run)
 
     print("-------- aggregating results ----------")
 
@@ -106,10 +110,9 @@ def evaluate():
         elif other == "control":
             data = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
-                "AVG": np.mean([np.mean([kaster_control_0shot["AVG"][0], kaster_control_fewshots["AVG"][0]]), lctg_overall["AVG_Total_ctg"][0]]),
+                "AVG": np.mean([np.mean([kaster_control_0shot["AVG"][0], kaster_control_fewshots["AVG"][0]])]),
                 "kaster_control_0shot":kaster_control_0shot["AVG"][0],
                 "kaster_control_2shot":kaster_control_fewshots["AVG"][0],
-                "lctg_avg_score": lctg_overall["AVG_Total_ctg"][0],
             }
 
         elif other == "toxicity":
@@ -132,15 +135,15 @@ def evaluate():
         elif other == "robust":
             data = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
-                "AVG": jmmlu_robust_fewshots["robust_score"][0],
-                "jmmlu_robust_fewshots": jmmlu_robust_fewshots["robust_score"][0],
+                "AVG": kmmlu_robust_fewshots["robust_score"][0],
+                "kmmlu_robust_fewshots": kmmlu_robust_fewshots["robust_score"][0],
             }
 
         elif other == "truthful":
             data = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
-                "AVG": jtruthfulqa["overall_score"][0],
-                "jtruthfulqa_overall_score": jtruthfulqa["overall_score"][0],
+                "AVG": ko_truthful_qa["overall_score"][0],
+                "ko_truthful_qa_overall_score": ko_truthful_qa["overall_score"][0],
             }
 
         # Convert data to DataFrame
@@ -162,60 +165,66 @@ def evaluate():
     first_cols = ["model_name","model_size_category"]
     
     if GLP_flag:
-        leaderboard_dict["GLP_表現"] = calculate_combined_means([],["roleplay","writing","humanities"])
+        leaderboard_dict["GLP_표현"] = calculate_combined_means([],["roleplay","writing","humanities"])
         create_subcategory_table("expression", [], ["roleplay","writing","humanities"])
-        leaderboard_dict["GLP_翻訳"] = calculate_combined_means(["alt-e-to-j","alt-j-to-e","wikicorpus-e-to-j","wikicorpus-j-to-e"], [])
-        create_subcategory_table("translation", ["alt-e-to-j","alt-j-to-e","wikicorpus-e-to-j","wikicorpus-j-to-e"], [])
-        leaderboard_dict["GLP_情報検索"] = calculate_combined_means(["jsquad"], [])
-        create_subcategory_table("information_extraction", ["jsquad"], [])
-        leaderboard_dict["GLP_推論"] = calculate_combined_means([], ["reasoning"])
+        leaderboard_dict["GLP_번역"] = calculate_combined_means(["korean-parallel-corpora-e2k", "korean-parallel-corpora-k2e"], [])
+        create_subcategory_table("translation", ["korean-parallel-corpora-e2k", "korean-parallel-corpora-k2e"], [])
+        leaderboard_dict["GLP_정보검색"] = calculate_combined_means(["squad_kor_v1"], [])
+        create_subcategory_table("information_extraction", ["squad_kor_v1"], [])
+        leaderboard_dict["GLP_추론"] = calculate_combined_means([], ["reasoning"])
         create_subcategory_table("reasoning", [], ["reasoning"])
-        leaderboard_dict["GLP_数学的推論"] = calculate_combined_means(["mawps","mgsm"], ["math"])
-        create_subcategory_table("mathematical_reasoning", ["mawps", "mgsm"], ["math"])
-        leaderboard_dict["GLP_抽出"] = calculate_combined_means(["wiki_ner", "wiki_coreference", "chabsa"], ["extraction"])
-        create_subcategory_table("entity_extraction", ["wiki_ner", "wiki_coreference", "chabsa"], ["extraction"])
-        leaderboard_dict["GLP_知識・質問応答"] = calculate_combined_means(["jcommonsenseqa","jemhopqa", "jmmlu","niilc","aio"], ["stem"])
-        create_subcategory_table("knowledge_QA", ["jcommonsenseqa","jemhopqa", "jmmlu","niilc","aio"], ["stem"])
-        leaderboard_dict["GLP_英語"] = calculate_combined_means(["mmlu_en"], [])
+        leaderboard_dict["GLP_수학적추론"] = calculate_combined_means(["gsm8k"], ["math"])
+        create_subcategory_table("mathematical_reasoning", ["gsm8k"], ["math"])
+        leaderboard_dict["GLP_추출"] = calculate_combined_means(["klue_ner"], ["extraction"])
+        create_subcategory_table("entity_extraction", ["klue_ner"], ["extraction"])
+        # leaderboard_dict["GLP_지식・질의응답"] = calculate_combined_means(["kmmlu"], ["stem"])
+        # create_subcategory_table("knowledge_QA", ["kmmlu"], ["stem"])
+        leaderboard_dict["GLP_지식・질의응답"] = calculate_combined_means(["kmmlu", "haerae_bench-HI", "haerae_bench-KGK", "haerae_bench-LW", "haerae_bench-RW", "haerae_bench-SN"], ["stem"])
+        create_subcategory_table("knowledge_QA", ["kmmlu", "haerae_bench-HI", "haerae_bench-KGK", "haerae_bench-LW", "haerae_bench-RW", "haerae_bench-SN"], ["stem"])
+        leaderboard_dict["GLP_영어"] = calculate_combined_means(["mmlu_en"], [])
         create_subcategory_table("english", ["mmlu_en"], [])
-        leaderboard_dict["GLP_意味解析"] = calculate_combined_means(["jnli","janli","jsem","jsick", "jamp"], [])
-        create_subcategory_table("semantic_analysis", ["jnli","janli","jsem","jsick", "jamp"], [])
-        leaderboard_dict["GLP_構文解析"] = calculate_combined_means(["jcola-in-domain","jcola-out-of-domain","jblimp","wiki_reading","wiki_pas","wiki_dependency"], [])   
-        create_subcategory_table("syntactic_analysis", ["jcola-in-domain","jcola-out-of-domain","jblimp","wiki_reading","wiki_pas","wiki_dependency"], []) 
-        leaderboard_dict["汎用的言語性能(GLP)_AVG"] = calculate_average_from_dict(leaderboard_dict, "GLP")
-        first_cols.append("汎用的言語性能(GLP)_AVG")
+        # leaderboard_dict["GLP_의미해석"] = calculate_combined_means(["kobest_sn", "kornli", "kobest_wic"], [])
+        # create_subcategory_table("semantic_analysis", ["kobest_sn", "kornli", "kobest_wic"], [])
+        leaderboard_dict["GLP_의미해석"] = calculate_combined_means(["kobest_sn", "kornli", "kobest_wic", "haerae_bench-RC"], [])
+        create_subcategory_table("semantic_analysis", ["kobest_sn", "kornli", "kobest_wic", "haerae_bench-RC"], [])
+        leaderboard_dict["GLP_구문해석"] = calculate_combined_means(["klue_re"], [])   
+        create_subcategory_table("syntactic_analysis", ["klue_re"], []) 
+        leaderboard_dict["범용적언어성능(GLP)_AVG"] = calculate_average_from_dict(leaderboard_dict, "GLP")
+        first_cols.append("범용적언어성능(GLP)_AVG")
 
     if ALT_flag:
-        leaderboard_dict["ALT_制御性"] = np.mean([np.mean([kaster_control_0shot["AVG"][0], kaster_control_fewshots["AVG"][0]]), lctg_overall["AVG_Total_ctg"][0]])
+        leaderboard_dict["ALT_제어성"] = np.mean([np.mean([kaster_control_0shot["AVG"][0], kaster_control_fewshots["AVG"][0]])])#, lctg_overall["AVG_Total_ctg"][0]])
         create_subcategory_table("controllability", [], [], "control")
-        leaderboard_dict["ALT_倫理・道徳"] = kaster_fewshots["commonsensemoralja"][0] # use only fewshots result
-        create_subcategory_table("ethics", ["commonsensemoralja"], [])
-        leaderboard_dict["ALT_毒性"] = toxicity[["公平性", "社会規範", "禁止行為", "違反カテゴリ"]].values.mean() if 'toxicity' in locals() else np.nan
-        create_subcategory_table("toxicity", [], [], "toxicity")
-        leaderboard_dict["ALT_バイアス"] = 1 - kobbq_fewshots["avg_abs_bias_score"][0]
-        create_subcategory_table("bias", [], [], "bias")
-        leaderboard_dict["ALT_堅牢性"] = jmmlu_robust_fewshots["robust_score"][0]
+        leaderboard_dict["ALT_윤리・도덕"] = kaster_fewshots["komoral"][0] # use only fewshots result
+        create_subcategory_table("ethics", ["komoral"], [])
+        leaderboard_dict["ALT_독성"] = kaster_fewshots["korean-hate-speech_hate"][0]
+        create_subcategory_table("ethics", ["korean-hate-speech_hate"], [])
+        leaderboard_dict["ALT_사회적편견"] = kaster_fewshots["korean-hate-speech_bias"][0]
+        create_subcategory_table("bias", ["korean-hate-speech_bias"], [])
+        # leaderboard_dict["ALT_사회적편견"] = 1 - kobbq_fewshots["avg_abs_bias_score"][0]
+        # create_subcategory_table("bias", [], [], "bias")
+        leaderboard_dict["ALT_모델강건성"] = kmmlu_robust_fewshots["robust_score"][0]
         create_subcategory_table("robustness", [], [], "robust")
-        leaderboard_dict["ALT_真実性"] = jtruthfulqa["overall_score"][0]
+        leaderboard_dict["ALT_진실성"] = ko_truthful_qa["overall_score"][0]
         create_subcategory_table("truthfulness", [], [], "truthful")
-        leaderboard_dict["アラインメント(ALT)_AVG"] = calculate_average_from_dict(leaderboard_dict, "ALT")
-        first_cols.append("アラインメント(ALT)_AVG")
+        leaderboard_dict["Alignment(ALT)_AVG"] = calculate_average_from_dict(leaderboard_dict, "ALT")
+        first_cols.append("Alignment(ALT)_AVG")
 
     if GLP_flag and ALT_flag:
-        leaderboard_dict["TOTAL_AVG"] = np.mean([leaderboard_dict["汎用的言語性能(GLP)_AVG"], leaderboard_dict["アラインメント(ALT)_AVG"]])
+        leaderboard_dict["TOTAL_AVG"] = np.mean([leaderboard_dict["범용적언어성능(GLP)_AVG"], leaderboard_dict["Alignment(ALT)_AVG"]])
         first_cols.append("TOTAL_AVG")
 
     # Average of each dataset
     if GLP_flag or ALT_flag:
-        kaster_agg_cols = [c for c in kaster_0shot if not c.startswith("jmmlu_") and c not in ["run_name", "model_name"]]
+        kaster_agg_cols = [c for c in kaster_0shot if not c.startswith("kmmlu_") and c not in ["run_name", "model_name"]]
         leaderboard_dict["AVG_kaster_0shot"] = kaster_0shot[kaster_agg_cols].mean(axis=1)[0]
         leaderboard_dict[f"AVG_kaster_{num_few_shots}shots"] = kaster_fewshots[kaster_agg_cols].mean(axis=1)[0]
     
     if GLP_flag:
         leaderboard_dict["AVG_mtbench"] = mtbench["AVG_mtbench"][0]
     
-    if ALT_flag:
-        leaderboard_dict["AVG_lctg"] = lctg_overall["AVG_Total_ctg"][0]
+    # if ALT_flag:
+    #     leaderboard_dict["AVG_lctg"] = lctg_overall["AVG_Total_ctg"][0]
 
     leaderboard_table = pd.DataFrame([leaderboard_dict])
     cols = leaderboard_table.columns
@@ -227,14 +236,14 @@ def evaluate():
         data=radar_contents(
             leaderboard_dict=leaderboard_dict,
             categories=[
-                "GLP_情報検索",
-                "GLP_推論",
-                "GLP_数学的推論",
-                "GLP_抽出",
-                "GLP_知識・質問応答",
-                "GLP_英語",
-                "GLP_意味解析",
-                "GLP_構文解析",
+                "GLP_정보검색",
+                "GLP_추론",
+                "GLP_수학적추론",
+                "GLP_추출",
+                "GLP_지식・질의응답",
+                "GLP_영어",
+                "GLP_의미해석",
+                "GLP_구문해석",
             ],
         ),
         columns=["category", "score"],
@@ -244,12 +253,12 @@ def evaluate():
         data=radar_contents(
             leaderboard_dict=leaderboard_dict,
             categories=[
-                "ALT_制御性",
-                "ALT_倫理・道徳",
-                "ALT_毒性",
-                "ALT_バイアス",
-                "ALT_堅牢性",
-                "ALT_真実性",
+                "ALT_제어성",
+                "ALT_윤리・도덕",
+                "ALT_독성",
+                "ALT_사회적편견",
+                "ALT_모델강건성",
+                "ALT_진실성",
             ],
         ),
         columns=["category", "score"],
