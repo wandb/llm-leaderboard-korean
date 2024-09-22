@@ -13,15 +13,12 @@ def radar_contents(leaderboard_dict, categories: list[str]) -> list[list[str, fl
     return ret
 
 def update_flag(cfg, blend_cfg):
-    mtbench_flag = jbbq_flag = lctg_flag = toxicity_flag = jtruthfulqa_flag = jaster_flag = GLP_flag = ALT_flag = False
+    mtbench_flag = kobbq_flag = kaster_flag = GLP_flag = ALT_flag = False
 
     if hasattr(cfg, 'run'):
         mtbench_flag = cfg.run.mtbench
-        jbbq_flag = cfg.run.jbbq
-        lctg_flag = cfg.run.lctg
-        toxicity_flag = cfg.run.toxicity
-        jtruthfulqa_flag = cfg.run.jtruthfulqa
-        jaster_flag = cfg.run.jaster
+        kobbq_flag = cfg.run.kobbq
+        kaster_flag = cfg.run.kaster
 
     if blend_cfg:
         for old_run in blend_cfg.old_runs:
@@ -30,20 +27,20 @@ def update_flag(cfg, blend_cfg):
             for dataset in old_run.dataset:
                 if "mtbench" in dataset:
                     mtbench_flag = True
-                elif "jbbq" in dataset:
-                    jbbq_flag = True
+                elif "kobbq" in dataset:
+                    kobbq_flag = True
                 elif "lctg" in dataset:
                     lctg_flag = True
                 elif "toxicity" in dataset:
                     toxicity_flag = True
                 elif "jtruthfulqa" in dataset:
                     jtruthfulqa_flag = True
-                elif "jaster" in dataset:
-                    jaster_flag = True
+                elif "kaster" in dataset:
+                    kaster_flag = True
 
-    if mtbench_flag and jaster_flag:
+    if mtbench_flag and kaster_flag:
         GLP_flag = True
-    if jbbq_flag and lctg_flag and toxicity_flag and jtruthfulqa_flag:
+    if kobbq_flag and lctg_flag and toxicity_flag and jtruthfulqa_flag:
         ALT_flag = True
     return GLP_flag, ALT_flag
 
@@ -59,10 +56,10 @@ def evaluate():
 
     # Initialize empty variables
     if GLP_flag or ALT_flag:
-        jaster_0shot = jaster_fewshots = jmmlu_robust_fewshots = jaster_control_0shot = None
-        jaster_control_fewshots = lctg_overall = jbbq_fewshots = toxicity = mtbench = None
-        jaster_0shot = read_wandb_table(table_name=f"jaster_0shot_leaderboard_table", run=run)
-        jaster_fewshots = read_wandb_table(table_name=f"jaster_{num_few_shots}shot_leaderboard_table", run=run)
+        kaster_0shot = kaster_fewshots = jmmlu_robust_fewshots = kaster_control_0shot = None
+        kaster_control_fewshots = lctg_overall = kobbq_fewshots = toxicity = mtbench = None
+        kaster_0shot = read_wandb_table(table_name=f"kaster_0shot_leaderboard_table", run=run)
+        kaster_fewshots = read_wandb_table(table_name=f"kaster_{num_few_shots}shot_leaderboard_table", run=run)
 
     if GLP_flag:
         mtbench = read_wandb_table(table_name=f"mtbench_leaderboard_table", run=run)
@@ -71,19 +68,19 @@ def evaluate():
         lctg_overall = read_wandb_table(table_name=f"lctg_overall_leaderboard_table", run=run)
 
         jmmlu_robust_fewshots = read_wandb_table(table_name=f"jmmlu_robust_{num_few_shots}shot_leaderboard_table", run=run)
-        jaster_control_0shot = read_wandb_table(table_name=f"jaster_control_0shot_leaderboard_table", run=run)
-        jaster_control_fewshots = read_wandb_table(table_name=f"jaster_control_{num_few_shots}shot_leaderboard_table", run=run)
-        jbbq_fewshots = read_wandb_table(table_name=f"jbbq_{num_few_shots}shot_leaderboard_table", run=run)
+        kaster_control_0shot = read_wandb_table(table_name=f"kaster_control_0shot_leaderboard_table", run=run)
+        kaster_control_fewshots = read_wandb_table(table_name=f"kaster_control_{num_few_shots}shot_leaderboard_table", run=run)
+        kobbq_fewshots = read_wandb_table(table_name=f"kobbq_{num_few_shots}shot_leaderboard_table", run=run)
         toxicity = read_wandb_table(table_name=f"toxicity_leaderboard_table", run=run)
         jtruthfulqa = read_wandb_table(table_name=f"jtruthfulqa_leaderboard_table", run=run)
 
     print("-------- aggregating results ----------")
 
-    def calculate_combined_means(cols_jaster, cols_mtbench):
+    def calculate_combined_means(cols_kaster, cols_mtbench):
         means = []
-        if cols_jaster:
-            for col in cols_jaster:
-                mean_value = (jaster_0shot[col][0] + jaster_fewshots[col][0]) / 2
+        if cols_kaster:
+            for col in cols_kaster:
+                mean_value = (kaster_0shot[col][0] + kaster_fewshots[col][0]) / 2
                 means.append(mean_value)
 
         if cols_mtbench:
@@ -91,17 +88,17 @@ def evaluate():
                 means.append(mtbench[col][0] / 10)
         return np.mean(means)
 
-    def create_subcategory_table(category, cols_jaster, cols_mtbench, other=None):
+    def create_subcategory_table(category, cols_kaster, cols_mtbench, other=None):
         table_name = f"subcategory_table_{category}"
         data = {}
 
         if other is None:
             data["model_name"]=cfg.model.pretrained_model_name_or_path
-            data["AVG"] = calculate_combined_means(cols_jaster, cols_mtbench)
-            if cols_jaster:
-                for col in cols_jaster:
-                    data[f"{col}_0shot"] =  jaster_0shot[col][0]
-                    data[f"{col}_{num_few_shots}shot"] = jaster_fewshots[col][0]
+            data["AVG"] = calculate_combined_means(cols_kaster, cols_mtbench)
+            if cols_kaster:
+                for col in cols_kaster:
+                    data[f"{col}_0shot"] =  kaster_0shot[col][0]
+                    data[f"{col}_{num_few_shots}shot"] = kaster_fewshots[col][0]
             if cols_mtbench:
                 for col in cols_mtbench:
                     data[f"{col}_mtbench"] = mtbench[col][0] / 10
@@ -109,9 +106,9 @@ def evaluate():
         elif other == "control":
             data = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
-                "AVG": np.mean([np.mean([jaster_control_0shot["AVG"][0], jaster_control_fewshots["AVG"][0]]), lctg_overall["AVG_Total_ctg"][0]]),
-                "jaster_control_0shot":jaster_control_0shot["AVG"][0],
-                "jaster_control_2shot":jaster_control_fewshots["AVG"][0],
+                "AVG": np.mean([np.mean([kaster_control_0shot["AVG"][0], kaster_control_fewshots["AVG"][0]]), lctg_overall["AVG_Total_ctg"][0]]),
+                "kaster_control_0shot":kaster_control_0shot["AVG"][0],
+                "kaster_control_2shot":kaster_control_fewshots["AVG"][0],
                 "lctg_avg_score": lctg_overall["AVG_Total_ctg"][0],
             }
 
@@ -128,8 +125,8 @@ def evaluate():
         elif other == "bias":
             data = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
-                "AVG": 1 - jbbq_fewshots["avg_abs_bias_score"][0],
-                "abs_bias_score_fewshot": jbbq_fewshots["avg_abs_bias_score"][0],
+                "AVG": 1 - kobbq_fewshots["avg_abs_bias_score"][0],
+                "abs_bias_score_fewshot": kobbq_fewshots["avg_abs_bias_score"][0],
             }
 
         elif other == "robust":
@@ -189,13 +186,13 @@ def evaluate():
         first_cols.append("汎用的言語性能(GLP)_AVG")
 
     if ALT_flag:
-        leaderboard_dict["ALT_制御性"] = np.mean([np.mean([jaster_control_0shot["AVG"][0], jaster_control_fewshots["AVG"][0]]), lctg_overall["AVG_Total_ctg"][0]])
+        leaderboard_dict["ALT_制御性"] = np.mean([np.mean([kaster_control_0shot["AVG"][0], kaster_control_fewshots["AVG"][0]]), lctg_overall["AVG_Total_ctg"][0]])
         create_subcategory_table("controllability", [], [], "control")
-        leaderboard_dict["ALT_倫理・道徳"] = jaster_fewshots["commonsensemoralja"][0] # use only fewshots result
+        leaderboard_dict["ALT_倫理・道徳"] = kaster_fewshots["commonsensemoralja"][0] # use only fewshots result
         create_subcategory_table("ethics", ["commonsensemoralja"], [])
         leaderboard_dict["ALT_毒性"] = toxicity[["公平性", "社会規範", "禁止行為", "違反カテゴリ"]].values.mean() if 'toxicity' in locals() else np.nan
         create_subcategory_table("toxicity", [], [], "toxicity")
-        leaderboard_dict["ALT_バイアス"] = 1 - jbbq_fewshots["avg_abs_bias_score"][0]
+        leaderboard_dict["ALT_バイアス"] = 1 - kobbq_fewshots["avg_abs_bias_score"][0]
         create_subcategory_table("bias", [], [], "bias")
         leaderboard_dict["ALT_堅牢性"] = jmmlu_robust_fewshots["robust_score"][0]
         create_subcategory_table("robustness", [], [], "robust")
@@ -210,9 +207,9 @@ def evaluate():
 
     # Average of each dataset
     if GLP_flag or ALT_flag:
-        jaster_agg_cols = [c for c in jaster_0shot if not c.startswith("jmmlu_") and c not in ["run_name", "model_name"]]
-        leaderboard_dict["AVG_jaster_0shot"] = jaster_0shot[jaster_agg_cols].mean(axis=1)[0]
-        leaderboard_dict[f"AVG_jaster_{num_few_shots}shots"] = jaster_fewshots[jaster_agg_cols].mean(axis=1)[0]
+        kaster_agg_cols = [c for c in kaster_0shot if not c.startswith("jmmlu_") and c not in ["run_name", "model_name"]]
+        leaderboard_dict["AVG_kaster_0shot"] = kaster_0shot[kaster_agg_cols].mean(axis=1)[0]
+        leaderboard_dict[f"AVG_kaster_{num_few_shots}shots"] = kaster_fewshots[kaster_agg_cols].mean(axis=1)[0]
     
     if GLP_flag:
         leaderboard_dict["AVG_mtbench"] = mtbench["AVG_mtbench"][0]

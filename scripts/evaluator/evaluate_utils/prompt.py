@@ -20,7 +20,7 @@ def get_system_message(system_message_intro: str, instruction: str):
 def get_few_shot_messages(target_dataset_path: str, num_few_shots: int):
     dataset_json_name = target_dataset_path.name
     target_few_shot_path = (
-        target_dataset_path.resolve().parent.parent / "train" / dataset_json_name
+        target_dataset_path.resolve().parent.parent / "dev" / dataset_json_name #TODO retun to train from dev
     )
     assert (
         target_few_shot_path.exists()

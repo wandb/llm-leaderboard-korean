@@ -10,7 +10,7 @@ from vllm_server import shutdown_vllm_server
 from blend_run import blend_run
 from evaluator import (
     kaster,
-    kbbq,
+    kobbq,
     mtbench,
     aggregate,
 )
@@ -79,17 +79,17 @@ llm = get_llm_inference_engine()
 instance = WandbConfigSingleton.get_instance()
 instance.llm = llm
 
+# kaster
+if cfg.run.kaster:
+    kaster.evaluate()
 # mt-bench evaluation
 if cfg.run.mtbench:
     mtbench.evaluate()
 
-# kbbq
-if cfg.run.kbbq:
-    kbbq.evaluate()
+# kobbq
+if cfg.run.kobbq:
+    kobbq.evaluate()
 
-# kaster
-if cfg.run.kaster:
-    kaster.evaluate()
 
 # 6. Aggregation
 if cfg.run.aggregate:

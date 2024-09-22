@@ -31,16 +31,33 @@ def evaluate_n_shot(few_shots: bool):
 
     # download dataset
     dataset_name = "kaster"
-    artifact = run.use_artifact(cfg[dataset_name].artifacts_path, type="dataset")
-    artifact_dir = artifact.download()
+    # artifact = run.use_artifact(cfg[dataset_name].artifacts_path, type="dataset")
+    # artifact_dir = artifact.download()
+    artifact_dir = "artifacts/kaster:v0"
     dataset_dir = Path(artifact_dir) / cfg[dataset_name].dataset_dir
     if not dataset_dir.exists():
         print(f"skip {dataset_name} because it is not found in {artifact_dir}")
         raise FileNotFoundError(f"dataset_dir not found: {dataset_dir}")
 
-    tasks = [
-        # list up kaster category
-    ]
+    tasks = ['gsm8k',
+        'klue_ner',
+        'klue_re',
+        'kobest_sn',
+        'korean-hate-speech',
+        'kobest_copa',
+        'kobest_wic',
+        'korean-parallel-corpora-e2k',
+        'korean-parallel-corpora-k2e',
+        'kobest_hs',
+        'korsts',
+        'klue-re-v1.1',
+        'kobbq-amb-cnt',
+        'kobbq-amb-bsd',
+        'kornli',
+        'korea_cg',
+        'kobbq-dis-bsd',
+        'kobbq-dis-cnt',
+        'komoral']
     tasks.extend(sorted({p.stem for p in dataset_dir.glob("**/mmlu_en_*.json")}))
     tasks.extend(sorted({p.stem for p in dataset_dir.glob("**/kmmlu*.json") if not p.stem.endswith("Choice")}))
 
@@ -53,6 +70,7 @@ def evaluate_n_shot(few_shots: bool):
 
     if cfg.run.kmmlu_robustness and few_shots:
         tasks.extend(sorted({p.stem for p in dataset_dir.glob("**/kmmlu*.json") if p.stem.endswith("Choice")}))
+    print(tasks)
 
     evaluation_results = []
     for task in tasks:
@@ -91,6 +109,7 @@ def evaluate_n_shot(few_shots: bool):
                 num_samples = val_max_num_samples
             samples = task_data["samples"][:num_samples]
 
+            print(task_data_path)
             for idx, sample in enumerate(samples):
                 inputs = []
                 # compose messages
@@ -111,7 +130,7 @@ def evaluate_n_shot(few_shots: bool):
                 if "mmlu_en" in task:
                     message_intro = "The following text provides instructions for a certain task."
                 else:
-                    message_intro = "TBU"
+                    message_intro = "다음은 작업을 설명하는 지침과 컨텍스트 입력의 조합입니다. 요구를 적절하게 만족시키는 응답을 적으십시오."
                 
                 instruction = "\n".join(
                     [message_intro, task_data["instruction"]]
@@ -204,26 +223,29 @@ def evaluate_n_shot(few_shots: bool):
     test_table = output_df.query("subset == 'test'")
 
     # calculate later in kaster_translation.py
-    #leaderboard_table = pd.pivot_table(
-    #    data=test_table,
-    #    values="score",
-    #    index=["run_name", "model_name"],
-    #    columns="task",
-    #    aggfunc="mean",
-    #).reset_index()
-
-    leaderboard_table_control = pd.pivot_table(
-        data=test_table,
-        values="control_score",
-        index="model_name",
-        columns="task",
-        aggfunc="mean",
+    leaderboard_table = pd.pivot_table(
+       data=test_table,
+       values="score",
+       index="model_name",
+       columns="task",
+       aggfunc="mean",
     ).reset_index()
 
+    # leaderboard_table_control = pd.pivot_table(
+    #     data=test_table,
+    #     values="control_score",
+    #     index="model_name",
+    #     columns="task",
+    #     aggfunc="mean",
+    # ).reset_index()
+
     #leaderboard_table['AVG'] = leaderboard_table.iloc[:, 2:].mean(axis=1) # calculate later in kaster_translation.py
-    leaderboard_table_control.insert(0, 'AVG', leaderboard_table_control.iloc[:, 2:].mean(axis=1))
-    leaderboard_table_control.drop(columns=["model_name"], inplace=True)
-    leaderboard_table_control.insert(0, 'model_name', cfg.model.pretrained_model_name_or_path)
+    # leaderboard_table_control.insert(0, 'AVG', leaderboard_table_control.iloc[:, 2:].mean(axis=1))
+    # leaderboard_table_control.drop(columns=["model_name"], inplace=True)
+    # leaderboard_table_control.insert(0, 'model_name', cfg.model.pretrained_model_name_or_path)
+    leaderboard_table.insert(0, 'AVG', leaderboard_table.iloc[:, 2:].mean(axis=1))
+    leaderboard_table.drop(columns=["model_name"], inplace=True)
+    leaderboard_table.insert(0, 'model_name', cfg.model.pretrained_model_name_or_path)
     
     new_order=["model_name","task","index","input","raw_output","output","expected_output",
                "prompt","score","control_score","metrics","control_method",
@@ -235,8 +257,8 @@ def evaluate_n_shot(few_shots: bool):
         {
             f"{dataset_name}_{num_few_shots}shot_output_table_dev": dev_table,
             f"{dataset_name}_{num_few_shots}shot_output_table": test_table,
-            #f"{dataset_name}_{num_few_shots}shot_leaderboard_table": leaderboard_table,  # log later in kaster_translation.py
-            f"{dataset_name}_control_{num_few_shots}shot_leaderboard_table": leaderboard_table_control,
+            f"{dataset_name}_{num_few_shots}shot_leaderboard_table": leaderboard_table,  # log later in kaster_translation.py
+            # f"{dataset_name}_control_{num_few_shots}shot_leaderboard_table": leaderboard_table_control,
         }
     )
     
@@ -256,5 +278,5 @@ def evaluate_n_shot(few_shots: bool):
     )
         
 def evaluate():
-    evaluate_n_shot(few_shots=False)
     evaluate_n_shot(few_shots=True)
+    evaluate_n_shot(few_shots=False)
