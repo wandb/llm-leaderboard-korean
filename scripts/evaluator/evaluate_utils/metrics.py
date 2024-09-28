@@ -56,19 +56,23 @@ def weighted_f1(y_pred: str, y_true: str) -> float:
     pass
 
 
-def pearson(y_pred: str, y_true: str) -> float:
-    print(y_pred, y_true)
-    pearson: float = pearsonr(
-        list(map(float, [y_true])), list(map(parse_float, [y_pred]))
-    )[0]
-    if math.isnan(pearson):
-        pearson = 0.0
-    return 0.0
+def pearson(y_preds: list[str], y_trues: list[str]) -> float:
+    # print(y_preds, y_trues)
+    try:
+        pearson: float = pearsonr(
+            list(map(float, [y_trues])), list(map(parse_float, [y_preds]))
+        )[0]
+        if math.isnan(pearson):
+            pearson = 0.0
+        return 0.0
+    except:
+        return 0.0
 
 
-def spearman(y_pred: str, y_true: str) -> float:
+
+def spearman(y_preds: list[str], y_trues: list[str]) -> float:
     spearman: float = spearmanr(
-        list(map(float, [y_true])), list(map(parse_float, [y_pred]))
+        list(map(float, [y_trues])), list(map(parse_float, [y_preds]))
     )[0]
     if math.isnan(spearman):
         spearman = 0.0

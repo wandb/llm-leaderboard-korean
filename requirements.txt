@@ -204,3 +204,4 @@ xmltodict==0.13.0
 yarl==1.9.4
 zipp==3.19.1
 pyknp==0.4.6
+sacrebleu[ko]==2.3.3

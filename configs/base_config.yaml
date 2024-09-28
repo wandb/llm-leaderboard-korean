@@ -14,6 +14,7 @@ run:
   kmmlu_robustness: true # if this is set as true, kaster should set as true
   mtbench: true
   kobbq: false
+  # ko_truthful_qa: true
   # add other evaluation framework here
   aggregate: true
 

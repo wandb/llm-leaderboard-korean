@@ -19,9 +19,11 @@ def update_flag(cfg, blend_cfg):
         mtbench_flag = cfg.run.mtbench
         kobbq_flag = cfg.run.kobbq
         kaster_flag = cfg.run.kaster
+        # ko_truthful_qa_flag = cfg.run.ko_truthful_qa
 
     if blend_cfg:
         for old_run in blend_cfg.old_runs:
+            print(old_run.dataset)
             if old_run.dataset is None:
                 continue
             for dataset in old_run.dataset:
@@ -36,8 +38,9 @@ def update_flag(cfg, blend_cfg):
 
     if mtbench_flag and kaster_flag:
         GLP_flag = True
-    if kobbq_flag and ko_truthful_qa_flag:
-        ALT_flag = True
+    # if kobbq_flag and ko_truthful_qa_flag:
+    #     ALT_flag = True
+    ALT_flag = True
     return GLP_flag, ALT_flag
 
 
@@ -71,12 +74,23 @@ def evaluate():
         kaster_control_fewshots = read_wandb_table(table_name=f"kaster_control_{num_few_shots}shot_leaderboard_table", run=run)
         haerae_bench_v1_control_0shot = read_wandb_table(table_name=f"haerae_bench_v1_control_0shot_leaderboard_table", run=run)
         haerae_bench_v1_control_fewshots = read_wandb_table(table_name=f"haerae_bench_v1_control_{num_few_shots}shot_leaderboard_table", run=run)
-        kaster_control_0shot = pd.concat([kaster_control_0shot, haerae_bench_v1_control_0shot], axis=1)
-        kaster_control_fewshots = pd.concat([kaster_control_fewshots, haerae_bench_v1_control_fewshots], axis=1)
+        kaster_control_0shot = pd.concat([
+            kaster_control_0shot.drop(columns=["model_name", "AVG"]),
+            haerae_bench_v1_control_0shot.drop(columns=["model_name", "AVG"])],
+            axis=1)
+        kaster_control_0shot.insert(0, 'AVG', kaster_control_0shot.mean(axis=1))
+        kaster_control_0shot.insert(0, 'model_name', cfg.model.pretrained_model_name_or_path)
+        kaster_control_fewshots = pd.concat([
+            kaster_control_fewshots.drop(columns=["model_name", "AVG"]),
+            haerae_bench_v1_control_fewshots.drop(columns=["model_name", "AVG"])],
+            axis=1)
+        kaster_control_fewshots.insert(0, 'AVG', kaster_control_fewshots.mean(axis=1))
+        kaster_control_fewshots.insert(0, 'model_name', cfg.model.pretrained_model_name_or_path)
         
-        kobbq_fewshots = read_wandb_table(table_name=f"kobbq_{num_few_shots}shot_leaderboard_table", run=run)
-        toxicity = read_wandb_table(table_name=f"toxicity_leaderboard_table", run=run)
-        ko_truthful_qa = read_wandb_table(table_name=f"ko_truthful_qa_leaderboard_table", run=run)
+        #TODO
+        # kobbq_fewshots = read_wandb_table(table_name=f"kobbq_{num_few_shots}shot_leaderboard_table", run=run)
+        # toxicity = read_wandb_table(table_name=f"toxicity_leaderboard_table", run=run)
+        # ko_truthful_qa = read_wandb_table(table_name=f"ko_truthful_qa_leaderboard_table", run=run)
 
     print("-------- aggregating results ----------")
 
@@ -118,19 +132,31 @@ def evaluate():
         elif other == "toxicity":
             data = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
-                "AVG": toxicity[["公平性", "社会規範", "禁止行為", "違反カテゴリ"]].values.mean(),
-                "公平性": toxicity["公平性"][0],
-                "社会規範": toxicity["社会規範"][0],
-                "禁止行為": toxicity["禁止行為"][0],
-                "違反カテゴリ": toxicity["違反カテゴリ"][0],
+                "AVG": np.mean([np.mean([kaster_0shot["korean-hate-speech_hate"][0], kaster_fewshots["korean-hate-speech_hate"][0]])]),
+                "korean-hate-speech_hate_0shot": kaster_0shot["korean-hate-speech_hate"][0],
+                "korean-hate-speech_hate_2shot": kaster_fewshots["korean-hate-speech_hate"][0],
             }
+            # data = {
+            #     "model_name": cfg.model.pretrained_model_name_or_path,
+            #     "AVG": toxicity[["公平性", "社会規範", "禁止行為", "違反カテゴリ"]].values.mean(),
+            #     "公平性": toxicity["公平性"][0],
+            #     "社会規範": toxicity["社会規範"][0],
+            #     "禁止行為": toxicity["禁止行為"][0],
+            #     "違反カテゴリ": toxicity["違反カテゴリ"][0],
+            # }
 
         elif other == "bias":
             data = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
-                "AVG": 1 - kobbq_fewshots["avg_abs_bias_score"][0],
-                "abs_bias_score_fewshot": kobbq_fewshots["avg_abs_bias_score"][0],
+                "AVG": np.mean([np.mean([kaster_0shot["korean-hate-speech_bias"][0], kaster_fewshots["korean-hate-speech_bias"][0]])]),
+                "korean-hate-speech_bias_0shot": kaster_0shot["korean-hate-speech_bias"][0],
+                "korean-hate-speech_bias_2shot": kaster_fewshots["korean-hate-speech_bias"][0],
             }
+            # data = {
+            #     "model_name": cfg.model.pretrained_model_name_or_path,
+            #     "AVG": 1 - kobbq_fewshots["avg_abs_bias_score"][0],
+            #     "abs_bias_score_fewshot": kobbq_fewshots["avg_abs_bias_score"][0],
+            # }
 
         elif other == "robust":
             data = {
@@ -139,12 +165,13 @@ def evaluate():
                 "kmmlu_robust_fewshots": kmmlu_robust_fewshots["robust_score"][0],
             }
 
-        elif other == "truthful":
-            data = {
-                "model_name": cfg.model.pretrained_model_name_or_path,
-                "AVG": ko_truthful_qa["overall_score"][0],
-                "ko_truthful_qa_overall_score": ko_truthful_qa["overall_score"][0],
-            }
+        #TODO
+        # elif other == "truthful":
+        #     data = {
+        #         "model_name": cfg.model.pretrained_model_name_or_path,
+        #         "AVG": ko_truthful_qa["overall_score"][0],
+        #         "ko_truthful_qa_overall_score": ko_truthful_qa["overall_score"][0],
+        #     }
 
         # Convert data to DataFrame
         subcategory_table = pd.DataFrame([data])
@@ -198,15 +225,15 @@ def evaluate():
         leaderboard_dict["ALT_윤리・도덕"] = kaster_fewshots["komoral"][0] # use only fewshots result
         create_subcategory_table("ethics", ["komoral"], [])
         leaderboard_dict["ALT_독성"] = kaster_fewshots["korean-hate-speech_hate"][0]
-        create_subcategory_table("ethics", ["korean-hate-speech_hate"], [])
+        create_subcategory_table("toxicity", ["korean-hate-speech_hate"], [])
         leaderboard_dict["ALT_사회적편견"] = kaster_fewshots["korean-hate-speech_bias"][0]
         create_subcategory_table("bias", ["korean-hate-speech_bias"], [])
         # leaderboard_dict["ALT_사회적편견"] = 1 - kobbq_fewshots["avg_abs_bias_score"][0]
         # create_subcategory_table("bias", [], [], "bias")
         leaderboard_dict["ALT_모델강건성"] = kmmlu_robust_fewshots["robust_score"][0]
         create_subcategory_table("robustness", [], [], "robust")
-        leaderboard_dict["ALT_진실성"] = ko_truthful_qa["overall_score"][0]
-        create_subcategory_table("truthfulness", [], [], "truthful")
+        # leaderboard_dict["ALT_진실성"] = ko_truthful_qa["overall_score"][0]
+        # create_subcategory_table("truthfulness", [], [], "truthful")
         leaderboard_dict["Alignment(ALT)_AVG"] = calculate_average_from_dict(leaderboard_dict, "ALT")
         first_cols.append("Alignment(ALT)_AVG")
 
