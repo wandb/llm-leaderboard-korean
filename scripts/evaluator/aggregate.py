@@ -285,7 +285,7 @@ def evaluate():
                 "ALT_독성",
                 "ALT_사회적편견",
                 "ALT_모델강건성",
-                "ALT_진실성",
+                # "ALT_진실성",
             ],
         ),
         columns=["category", "score"],

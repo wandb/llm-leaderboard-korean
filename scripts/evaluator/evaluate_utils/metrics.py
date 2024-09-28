@@ -172,7 +172,7 @@ kaster_metrics_dict: dict[str, callable] = {
 task_to_sub_category = {
     "gsm8k": "GLP_mathematical_reasoning",
     "klue_ner": "GLP_entity_extraction",
-    "klue_re": "GLP_relation_extraction",
+    "klue_re": "GLP_syntactic_analysis",
     "kobest_copa": "GLP_reasoning",
     "kobest_hs": "GLP_reasoning",
     "kobest_sn": "GLP_sentiment_analysis",
@@ -186,7 +186,7 @@ task_to_sub_category = {
     "kornli": "GLP_semantic_analysis",
     "korsts": "GLP_semantic_analysis",
     "kmmlu": "GLP_knowledge_QA",
-    "mmlu_en": "GLP_semantic_analysis",
+    "mmlu_en": "GLP_english",
     "squad_kor_v1": "GLP_information_extraction",
     "haerae_bench-HI": "GLP_knowledge_QA",
     "haerae_bench-KGK": "GLP_knowledge_QA",
