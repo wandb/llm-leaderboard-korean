@@ -13,7 +13,7 @@ run:
   haerae_bench_v1: true
   kmmlu_robustness: true # if this is set as true, kaster should set as true
   mtbench: true
-  kobbq: false
+  kobbq: true
   # ko_truthful_qa: true
   # add other evaluation framework here
   aggregate: true
@@ -44,6 +44,11 @@ haerae_bench_v1:
   message_intro: "<prompt>"
   artifacts_path: "wandb-korea/llm-leaderboard3/eval_data:latest"
   dataset_dir: "haerae_bench_v1"
+
+kobbq:
+  message_intro: "<prompt>"
+  artifacts_path: "wandb-korea/llm-leaderboard3/eval_data:latest"
+  dataset_dir: "kobbq"
 
 mtbench:
   temperature_override:

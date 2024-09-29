@@ -91,8 +91,6 @@ def evaluate_n_shot(few_shots: bool):
 
             num_samples = test_max_num_samples
             samples = task_data["samples"][:num_samples]
-            print(len(samples))
-            print(samples[0])
             for idx, sample in enumerate(samples):
                 inputs = []
                 # compose messages

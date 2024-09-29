@@ -87,8 +87,8 @@ def evaluate():
         kaster_control_fewshots.insert(0, 'AVG', kaster_control_fewshots.mean(axis=1))
         kaster_control_fewshots.insert(0, 'model_name', cfg.model.pretrained_model_name_or_path)
         
+        kobbq_fewshots = read_wandb_table(table_name=f"kobbq_{num_few_shots}shot_leaderboard_table", run=run)
         #TODO
-        # kobbq_fewshots = read_wandb_table(table_name=f"kobbq_{num_few_shots}shot_leaderboard_table", run=run)
         # toxicity = read_wandb_table(table_name=f"toxicity_leaderboard_table", run=run)
         # ko_truthful_qa = read_wandb_table(table_name=f"ko_truthful_qa_leaderboard_table", run=run)
 
@@ -148,9 +148,21 @@ def evaluate():
         elif other == "bias":
             data = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
-                "AVG": np.mean([np.mean([kaster_0shot["korean-hate-speech_bias"][0], kaster_fewshots["korean-hate-speech_bias"][0]])]),
-                "korean-hate-speech_bias_0shot": kaster_0shot["korean-hate-speech_bias"][0],
-                "korean-hate-speech_bias_2shot": kaster_fewshots["korean-hate-speech_bias"][0],
+                "AVG": np.mean([np.mean([
+                    # kaster_0shot["korean-hate-speech_bias"][0],
+                    # kaster_fewshots["korean-hate-speech_bias"][0],
+                    kobbq_fewshots["avg"][0],
+                    # kobbq_fewshots["acc_a"][0],
+                    # kobbq_fewshots["acc_d"][0],
+                    # kobbq_fewshots["diff_bias_a"][0],
+                    # kobbq_fewshots["diff_bias_d"][0],
+                    ])]),
+                # "korean-hate-speech_bias_0shot": kaster_0shot["korean-hate-speech_bias"][0],
+                # "korean-hate-speech_bias_2shot": kaster_fewshots["korean-hate-speech_bias"][0],
+                "kobbq_ACC_amb_2shot": kobbq_fewshots["acc_a"][0],
+                "kobbq_ACC_disamb_2shot": kobbq_fewshots["acc_d"][0],
+                "kobbq_DIFF_bias_amb_2shot": kobbq_fewshots["diff_bias_a"][0],
+                "kobbq_DIFF_bias_disamb_2shot": kobbq_fewshots["diff_bias_d"][0],
             }
             # data = {
             #     "model_name": cfg.model.pretrained_model_name_or_path,
@@ -204,14 +216,10 @@ def evaluate():
         create_subcategory_table("mathematical_reasoning", ["gsm8k"], ["math"])
         leaderboard_dict["GLP_추출"] = calculate_combined_means(["klue_ner"], ["extraction"])
         create_subcategory_table("entity_extraction", ["klue_ner"], ["extraction"])
-        # leaderboard_dict["GLP_지식・질의응답"] = calculate_combined_means(["kmmlu"], ["stem"])
-        # create_subcategory_table("knowledge_QA", ["kmmlu"], ["stem"])
         leaderboard_dict["GLP_지식・질의응답"] = calculate_combined_means(["kmmlu", "haerae_bench-HI", "haerae_bench-KGK", "haerae_bench-LW", "haerae_bench-RW", "haerae_bench-SN"], ["stem"])
         create_subcategory_table("knowledge_QA", ["kmmlu", "haerae_bench-HI", "haerae_bench-KGK", "haerae_bench-LW", "haerae_bench-RW", "haerae_bench-SN"], ["stem"])
         leaderboard_dict["GLP_영어"] = calculate_combined_means(["mmlu_en"], [])
         create_subcategory_table("english", ["mmlu_en"], [])
-        # leaderboard_dict["GLP_의미해석"] = calculate_combined_means(["kobest_sn", "kornli", "kobest_wic"], [])
-        # create_subcategory_table("semantic_analysis", ["kobest_sn", "kornli", "kobest_wic"], [])
         leaderboard_dict["GLP_의미해석"] = calculate_combined_means(["kobest_sn", "kornli", "kobest_wic", "haerae_bench-RC"], [])
         create_subcategory_table("semantic_analysis", ["kobest_sn", "kornli", "kobest_wic", "haerae_bench-RC"], [])
         leaderboard_dict["GLP_구문해석"] = calculate_combined_means(["klue_re"], [])   
@@ -226,10 +234,10 @@ def evaluate():
         create_subcategory_table("ethics", ["komoral"], [])
         leaderboard_dict["ALT_독성"] = kaster_fewshots["korean-hate-speech_hate"][0]
         create_subcategory_table("toxicity", ["korean-hate-speech_hate"], [])
-        leaderboard_dict["ALT_사회적편견"] = kaster_fewshots["korean-hate-speech_bias"][0]
-        create_subcategory_table("bias", ["korean-hate-speech_bias"], [])
-        # leaderboard_dict["ALT_사회적편견"] = 1 - kobbq_fewshots["avg_abs_bias_score"][0]
-        # create_subcategory_table("bias", [], [], "bias")
+        # leaderboard_dict["ALT_사회적편견"] = kaster_fewshots["korean-hate-speech_bias"][0]
+        # create_subcategory_table("bias", ["korean-hate-speech_bias"], [])
+        leaderboard_dict["ALT_사회적편견"] = kobbq_fewshots["avg"][0]
+        create_subcategory_table("bias", [], [], "bias")
         leaderboard_dict["ALT_모델강건성"] = kmmlu_robust_fewshots["robust_score"][0]
         create_subcategory_table("robustness", [], [], "robust")
         # leaderboard_dict["ALT_진실성"] = ko_truthful_qa["overall_score"][0]
