@@ -13,7 +13,8 @@ from evaluator import (
     kobbq,
     mtbench,
     aggregate,
-    haerae_bench_v1
+    haerae_bench_v1,
+    ko_truthful_qa
 )
 from utils import paginate_choices
 
@@ -79,6 +80,10 @@ blend_run(run_chain=True)
 llm = get_llm_inference_engine()
 instance = WandbConfigSingleton.get_instance()
 instance.llm = llm
+
+# ko_truthful_qa
+if cfg.run.ko_truthful_qa:
+    ko_truthful_qa.evaluate()
 
 # kaster
 if cfg.run.kaster:

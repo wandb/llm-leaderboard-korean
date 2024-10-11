@@ -90,7 +90,7 @@ def evaluate():
         kobbq_fewshots = read_wandb_table(table_name=f"kobbq_{num_few_shots}shot_leaderboard_table", run=run)
         #TODO
         # toxicity = read_wandb_table(table_name=f"toxicity_leaderboard_table", run=run)
-        # ko_truthful_qa = read_wandb_table(table_name=f"ko_truthful_qa_leaderboard_table", run=run)
+        ko_truthful_qa = read_wandb_table(table_name=f"ko_truthful_qa_0shot_leaderboard_table", run=run)
 
     print("-------- aggregating results ----------")
 
@@ -178,12 +178,12 @@ def evaluate():
             }
 
         #TODO
-        # elif other == "truthful":
-        #     data = {
-        #         "model_name": cfg.model.pretrained_model_name_or_path,
-        #         "AVG": ko_truthful_qa["overall_score"][0],
-        #         "ko_truthful_qa_overall_score": ko_truthful_qa["overall_score"][0],
-        #     }
+        elif other == "truthful":
+            data = {
+                "model_name": cfg.model.pretrained_model_name_or_path,
+                "AVG": ko_truthful_qa["ko_truthful_qa-generation"][0],
+                "ko_truthful_qa_overall_score": ko_truthful_qa["ko_truthful_qa-generation"][0],
+            }
 
         # Convert data to DataFrame
         subcategory_table = pd.DataFrame([data])
@@ -234,14 +234,12 @@ def evaluate():
         create_subcategory_table("ethics", ["komoral"], [])
         leaderboard_dict["ALT_독성"] = kaster_fewshots["korean-hate-speech_hate"][0]
         create_subcategory_table("toxicity", ["korean-hate-speech_hate"], [])
-        # leaderboard_dict["ALT_사회적편견"] = kaster_fewshots["korean-hate-speech_bias"][0]
-        # create_subcategory_table("bias", ["korean-hate-speech_bias"], [])
         leaderboard_dict["ALT_사회적편견"] = kobbq_fewshots["avg"][0]
         create_subcategory_table("bias", [], [], "bias")
         leaderboard_dict["ALT_모델강건성"] = kmmlu_robust_fewshots["robust_score"][0]
         create_subcategory_table("robustness", [], [], "robust")
-        # leaderboard_dict["ALT_진실성"] = ko_truthful_qa["overall_score"][0]
-        # create_subcategory_table("truthfulness", [], [], "truthful")
+        leaderboard_dict["ALT_진실성"] = ko_truthful_qa["overall_score"][0]
+        create_subcategory_table("truthfulness", [], [], "truthful")
         leaderboard_dict["Alignment(ALT)_AVG"] = calculate_average_from_dict(leaderboard_dict, "ALT")
         first_cols.append("Alignment(ALT)_AVG")
 

@@ -14,7 +14,7 @@ run:
   kmmlu_robustness: true # if this is set as true, kaster should set as true
   mtbench: true
   kobbq: true
-  # ko_truthful_qa: true
+  ko_truthful_qa: true
   # add other evaluation framework here
   aggregate: true
 
@@ -49,6 +49,11 @@ kobbq:
   message_intro: "<prompt>"
   artifacts_path: "wandb-korea/llm-leaderboard3/eval_data:latest"
   dataset_dir: "kobbq"
+
+ko_truthful_qa:
+  message_intro: "<prompt>"
+  artifacts_path: "wandb-korea/llm-leaderboard3/eval_data:latest"
+  dataset_dir: "ko_truthful_qa"
 
 mtbench:
   temperature_override:
