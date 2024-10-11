@@ -20,6 +20,7 @@ from .evaluate_utils import (
     normalize,
     text_formatter,
     evaluate_robustness,
+    commet_score
 )
 
 def evaluate_n_shot(few_shots: bool):
@@ -176,6 +177,11 @@ def evaluate_n_shot(few_shots: bool):
     )
     results = llm_ap.get_results()
 
+    comet_data = {
+        'e2k': [],
+        'k2e': []
+    }
+
     for response, evaluation_result in tqdm(zip(results, evaluation_results)):
         raw_output = response.content
         y_pred: str = pipe(
@@ -189,14 +195,41 @@ def evaluate_n_shot(few_shots: bool):
         )
         metrics_func = evaluation_result["metrics_func"]
         control_func = evaluation_result["control_func"]
-        score = metrics_func(y_pred, evaluation_result["expected_output"])        
-        control_score = control_func(y_pred)
-        evaluation_result["raw_output"] = raw_output
-        evaluation_result["output"] = y_pred
-        evaluation_result["score"] = score
-        evaluation_result["control_score"] = control_score
-        del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
-        
+        if "korean-parallel-corpora" in evaluation_result["task"]:
+            comet_data[evaluation_result["task"].split('-')[-1]].append(
+                {
+                'src': evaluation_result["input"],
+                'mt': y_pred,
+                'ref': evaluation_result["expected_output"]
+                }
+            )
+            control_score = control_func(y_pred)
+            evaluation_result["raw_output"] = raw_output
+            evaluation_result["output"] = y_pred
+            evaluation_result["control_score"] = control_score
+        else:
+            score = metrics_func(y_pred, evaluation_result["expected_output"])        
+            control_score = control_func(y_pred)
+            evaluation_result["raw_output"] = raw_output
+            evaluation_result["output"] = y_pred
+            evaluation_result["score"] = score
+            evaluation_result["control_score"] = control_score
+            del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
+    # comet score for translation task - korean-parallel-corpora
+    scores_e2k = commet_score(comet_data["e2k"])
+    scores_k2e = commet_score(comet_data["k2e"])
+    i = 0
+    for response, evaluation_result in tqdm(zip(results, evaluation_results)):
+        if "korean-parallel-corpora-e2k" in evaluation_result["task"]:
+            evaluation_result["score"] = scores_e2k[i]
+            del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
+            i+=1
+    i = 0
+    for response, evaluation_result in tqdm(zip(results, evaluation_results)):
+        if "korean-parallel-corpora-k2e" in evaluation_result["task"]:
+            evaluation_result["score"] = scores_k2e[i]
+            del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
+            i+=1
     output_df = pd.DataFrame(evaluation_results)
     # group mmlu_en and kmmlu task category
     output_df["task"] = output_df["task"].apply(lambda x: "mmlu_en" if x.startswith("mmlu_en") else x)

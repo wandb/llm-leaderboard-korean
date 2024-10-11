@@ -128,17 +128,10 @@ def bert_score_ja_f1(y_pred:str, y_true:str) -> float:
 def comet_wmt22(): #this is fake func
     pass
 
-def commet_score(commet_srcs, commet_mt, commet_ref):
+def commet_score(comet_data):
     print("--------downloading comet model to evaluate translation task--------")
     comet_model_path = download_model("Unbabel/wmt22-comet-da")
     comet_model = load_from_checkpoint(comet_model_path)
-    comet_data = []
-    for i in range(len(commet_srcs)):
-        comet_instance = {}
-        comet_instance["src"] = commet_srcs[i]
-        comet_instance["mt"] = commet_mt[i]
-        comet_instance["ref"] = commet_ref[i]
-        comet_data.append(comet_instance)
     scores = comet_model.predict(comet_data, batch_size=8, gpus=1, progress_bar=False).scores
     #delete_model_directory(comet_model_path)
     return scores
@@ -167,6 +160,7 @@ kaster_metrics_dict: dict[str, callable] = {
     #"bert_score_en_f1": bert_score_en_f1,
     #"bert_score_ja_f1": bert_score_ja_f1,
     "comet_wmt22": comet_wmt22,
+    "commet_score": commet_score,
 }
 
 task_to_sub_category = {
