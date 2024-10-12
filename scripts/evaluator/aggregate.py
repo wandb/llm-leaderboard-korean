@@ -238,7 +238,7 @@ def evaluate():
         create_subcategory_table("bias", [], [], "bias")
         leaderboard_dict["ALT_모델강건성"] = kmmlu_robust_fewshots["robust_score"][0]
         create_subcategory_table("robustness", [], [], "robust")
-        leaderboard_dict["ALT_진실성"] = ko_truthful_qa["overall_score"][0]
+        leaderboard_dict["ALT_진실성"] = ko_truthful_qa["ko_truthful_qa-generation"][0]
         create_subcategory_table("truthfulness", [], [], "truthful")
         leaderboard_dict["Alignment(ALT)_AVG"] = calculate_average_from_dict(leaderboard_dict, "ALT")
         first_cols.append("Alignment(ALT)_AVG")
@@ -291,7 +291,7 @@ def evaluate():
                 "ALT_독성",
                 "ALT_사회적편견",
                 "ALT_모델강건성",
-                # "ALT_진실성",
+                "ALT_진실성",
             ],
         ),
         columns=["category", "score"],

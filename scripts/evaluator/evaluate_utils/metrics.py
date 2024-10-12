@@ -214,7 +214,7 @@ correct_answer:
         )
         try:
             score = eval(response.choices[0].message.content)
-            scores.append(score)
+            scores.append(score/10)
         except:
             scores.append(None)
     return scores

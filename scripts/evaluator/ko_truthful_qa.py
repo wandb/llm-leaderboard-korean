@@ -209,19 +209,7 @@ def evaluate_n_shot(few_shots: bool):
        aggfunc="mean",
     ).reset_index()
 
-    leaderboard_table_control = pd.pivot_table(
-        data=test_table,
-        values="control_score",
-        index="model_name",
-        columns="task",
-        aggfunc="mean",
-    ).reset_index()
-
-    # leaderboard_table['AVG'] = leaderboard_table.iloc[:, 2:].mean(axis=1) # calculate later in kaster_translation.py
-    leaderboard_table_control.insert(0, 'AVG', leaderboard_table_control.iloc[:, 2:].mean(axis=1))
-    leaderboard_table_control.drop(columns=["model_name"], inplace=True)
-    leaderboard_table_control.insert(0, 'model_name', cfg.model.pretrained_model_name_or_path)
-    leaderboard_table.insert(0, 'AVG', leaderboard_table.iloc[:, 2:].mean(axis=1))
+    leaderboard_table.insert(0, 'AVG', leaderboard_table.iloc[:, 1:].mean(axis=1))
     leaderboard_table.drop(columns=["model_name"], inplace=True)
     leaderboard_table.insert(0, 'model_name', cfg.model.pretrained_model_name_or_path)
     
@@ -236,7 +224,6 @@ def evaluate_n_shot(few_shots: bool):
             f"{dataset_name}_{num_few_shots}shot_output_table_dev": dev_table,
             f"{dataset_name}_{num_few_shots}shot_output_table": test_table,
             f"{dataset_name}_{num_few_shots}shot_leaderboard_table": leaderboard_table,  # log later in kaster_translation.py
-            f"{dataset_name}_control_{num_few_shots}shot_leaderboard_table": leaderboard_table_control,
         }
     )
         
