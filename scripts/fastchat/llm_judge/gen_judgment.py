@@ -171,13 +171,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--bench-name",
         type=str,
-        default="japanese_mt_bench",
+        default="korean_mt_bench",
         help="The name of the benchmark question set.",
     )
     parser.add_argument(
         "--judge-file",
         type=str,
-        default="data/judge_ja_prompts.jsonl",
+        default="data/judge_ko_prompts.jsonl",
         help="The file of judge prompts.",
     )
     parser.add_argument("--judge-model", type=str, default="gpt-4")

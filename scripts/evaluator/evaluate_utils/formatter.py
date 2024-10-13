@@ -26,14 +26,14 @@ def text_formatter(input_str: str, dataset: str) -> str:
             output_str = output_str.replace(r, "")
         output_str = output_str.strip().lower()
 
-    elif dataset.startswith("jmmlu_IncorrectChoice"):
+    elif dataset.startswith("kmmlu_IncorrectChoice"):
         output_str = copy.copy(input_str)
         replacements = ["応答:", "回答:", "答え:"]
         for r in replacements:
             output_str = output_str.replace(r, "")
         output_str = output_str.strip().upper()
 
-    elif dataset.startswith("jmmlu_"):
+    elif dataset.startswith("kmmlu_"):
         output_str = copy.copy(input_str)
         replacements = ["応答:", "回答:", "答え:"]
         for r in replacements:

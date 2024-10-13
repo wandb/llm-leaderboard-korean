@@ -20,7 +20,7 @@ def get_system_message(system_message_intro: str, instruction: str):
 def get_few_shot_messages(target_dataset_path: str, num_few_shots: int):
     dataset_json_name = target_dataset_path.name
     target_few_shot_path = (
-        target_dataset_path.resolve().parent.parent / "train" / dataset_json_name
+        target_dataset_path.resolve().parent.parent / "dev" / dataset_json_name #TODO retun to train from dev
     )
     assert (
         target_few_shot_path.exists()
@@ -40,11 +40,11 @@ def get_few_shot_samples_by_bbq_category(target_dataset_path: Path, num_few_shot
         return defaultdict(list)
     
     if sample_class is None:
-        from evaluator.bbq import BBQSample
+        from evaluator.kobbq import BBQSample
         sample_class = BBQSample
     
     dataset_json_name = target_dataset_path.name
-    target_few_shot_path = target_dataset_path.resolve().parent.parent / "train" / dataset_json_name
+    target_few_shot_path = target_dataset_path.resolve().parent.parent / "test" / dataset_json_name
 
     assert target_few_shot_path.exists(), f"Wrong path {target_few_shot_path.resolve()}, can not extract few-shot samples"
 
@@ -66,7 +66,7 @@ def get_few_shot_samples_by_bbq_category(target_dataset_path: Path, num_few_shot
         for sample in selected_samples:
             few_shot_samples[category].append({"role": "user", "content": sample.input})
             few_shot_samples[category].append({"role": "assistant", "content": sample.output})
-
+    print(len(few_shot_samples))
     return few_shot_samples
 
 

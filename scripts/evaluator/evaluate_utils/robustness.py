@@ -96,7 +96,7 @@ def evaluate_robustness(subset: str, df: pd.DataFrame):
             aggfunc="mean",
         ).reset_index()
 
-        leaderboard_table = leaderboard_table.rename(columns={"jaster": "robust_score"})
+        leaderboard_table = leaderboard_table.rename(columns={"kaster": "robust_score"})
     else:
         leaderboard_table = []
     

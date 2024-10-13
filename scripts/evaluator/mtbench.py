@@ -79,7 +79,7 @@ def evaluate():
     model_answers = {cfg.mtbench.model_id: model_answers[cfg.mtbench.model_id]}
     ref_answers = load_model_answers(ref_answer_dir)
     artifact_dir = run.use_artifact(cfg.mtbench.judge_prompt_artifacts_path, type='dataset').download()
-    judge_prompts = load_judge_prompts(artifact_dir + "/judge_prompts.jsonl")
+    judge_prompts = load_judge_prompts(artifact_dir + "/judge_ko_prompts.jsonl")
 
     if cfg.mtbench.first_n:
         questions = questions[: cfg.mtbench.first_n]
@@ -181,6 +181,13 @@ def evaluate():
     # load judge results
     output_file_turn1 = output_file + "/"+ cfg.mtbench.model_id + "__1turn.jsonl"
     output_file_turn2 = output_file + "/"+ cfg.mtbench.model_id + "__2turn.jsonl"
+    print(output_file_turn1)
+    # with open(output_file_turn1, 'r') as f:
+    #     data = [json.loads(line) for line in f]
+    # df_judge1 = pd.DataFrame(data)
+    # with open(output_file_turn2, 'r') as f:
+    #     data = [json.loads(line) for line in f]
+    # df_judge2 = pd.DataFrame(data)
     df_judge1 = pd.read_json(output_file_turn1, lines=True)
     df_judge2 = pd.read_json(output_file_turn2, lines=True)
     df_judge = pd.concat([df_judge1, df_judge2], ignore_index=True)
