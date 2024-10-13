@@ -11,17 +11,22 @@ import wandb
 from config_singleton import WandbConfigSingleton
 from .evaluate_utils import (
     apply_chat_template,
-    get_few_shot_messages,
     kaster_metrics_dict,
     controllability_dict,
     task_to_sub_category,
-    kmmlu_dict,
     LLMAsyncProcessor,
     normalize,
     text_formatter,
-    evaluate_robustness,
-    commet_score
 )
+
+def get_few_shot_messages(target_dataset_path: str, num_few_shots: int):
+    samples = json.loads(target_dataset_path.read_text(encoding="utf-8"))["samples"]
+
+    few_shot_messages = []
+    for i in range(num_few_shots):
+        few_shot_messages.append({"role": "user", "content": samples[i]["input"]})
+        few_shot_messages.append({"role": "assistant", "content": samples[i]["output"]})
+    return few_shot_messages
 
 def evaluate_n_shot(few_shots: bool):
     # Retrieve the instance from WandbConfigSingleton and load the W&B run and configuration
@@ -31,33 +36,23 @@ def evaluate_n_shot(few_shots: bool):
     llm = instance.llm
 
     # download dataset
-    dataset_name = "kaster"
+    dataset_name = "haerae_bench_v1"
     artifact = run.use_artifact(cfg[dataset_name].artifacts_path, type="dataset")
     artifact_dir = artifact.download()
     # artifact_dir = "artifacts/eval_data:latest"
     dataset_dir = Path(artifact_dir) / cfg[dataset_name].dataset_dir
+    print(dataset_dir)
     if not dataset_dir.exists():
         print(f"skip {dataset_name} because it is not found in {artifact_dir}")
         raise FileNotFoundError(f"dataset_dir not found: {dataset_dir}")
 
-    tasks = ['gsm8k',
-        'klue_ner',
-        'klue_re',
-        'kobest_sn',
-        'korean-hate-speech_hate',
-        'korean-hate-speech_bias',
-        'kobest_copa',
-        'kobest_wic',
-        'korean-parallel-corpora-e2k',
-        'korean-parallel-corpora-k2e',
-        'kobest_hs',
-        'korsts',
-        'squad_kor_v1',
-        'kornli',
-        'korea_cg',
-        'komoral']
-    tasks.extend(sorted({p.stem for p in dataset_dir.glob("**/mmlu_en_*.json")}))
-    tasks.extend(sorted({p.stem for p in dataset_dir.glob("**/kmmlu*.json") if not p.stem.endswith("Choice")}))
+    #HI, KGK, LW, RC, RW, SN
+    tasks = ['haerae_bench-HI',
+        'haerae_bench-KGK',
+        'haerae_bench-LW',
+        'haerae_bench-RC',
+        'haerae_bench-RW',
+        'haerae_bench-SN']
 
     if few_shots:
         num_few_shots = cfg.get("num_few_shots", None)
@@ -66,14 +61,10 @@ def evaluate_n_shot(few_shots: bool):
     else:
         num_few_shots = 0
 
-    if cfg.run.kmmlu_robustness and few_shots:
-        tasks.extend(sorted({p.stem for p in dataset_dir.glob("**/kmmlu*.json") if p.stem.endswith("Choice")}))
-    print(tasks)
-
     evaluation_results = []
     for task in tasks:
         # execute evaluation
-        for subset in ("test", "dev"):
+        for subset in ["test"]:
             eval_matainfo = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
                 "dataset": dataset_name,
@@ -83,7 +74,7 @@ def evaluate_n_shot(few_shots: bool):
             }
 
             # read task data
-            task_data_path = dataset_dir / subset / f"{task}.json"
+            task_data_path = dataset_dir / f"{task}.json"
             if not task_data_path.exists():
                 print(f"skip {task} because it is not found in {artifact_dir}")
                 continue
@@ -94,20 +85,12 @@ def evaluate_n_shot(few_shots: bool):
             if cfg.testmode:
                 test_max_num_samples = 1
                 val_max_num_samples = 1
-            elif "mmlu" in task:
-                test_max_num_samples = 5
-                val_max_num_samples = 1
             else:
                 test_max_num_samples = 100
                 val_max_num_samples = 10
 
-            if subset == "test":
-                num_samples = test_max_num_samples
-            elif subset == "dev":
-                num_samples = val_max_num_samples
+            num_samples = test_max_num_samples
             samples = task_data["samples"][:num_samples]
-
-            print(task_data_path)
             for idx, sample in enumerate(samples):
                 inputs = []
                 # compose messages
@@ -120,9 +103,11 @@ def evaluate_n_shot(few_shots: bool):
                         num_few_shots=num_few_shots,
                     )
                     messages.extend(few_shot_messages)
-
-                # user input
-                messages.append({"role": "user", "content": sample["input"]})
+                    # user input
+                    messages.append({"role": "user", "content": sample["input"][num_few_shots:]})
+                else:
+                    # user input
+                    messages.append({"role": "user", "content": sample["input"]})
 
                 # instruction message
                 if "mmlu_en" in task:
@@ -176,12 +161,6 @@ def evaluate_n_shot(few_shots: bool):
         inputs=all_inputs,
     )
     results = llm_ap.get_results()
-
-    comet_data = {
-        'e2k': [],
-        'k2e': []
-    }
-
     for response, evaluation_result in tqdm(zip(results, evaluation_results)):
         raw_output = response.content
         y_pred: str = pipe(
@@ -195,57 +174,16 @@ def evaluate_n_shot(few_shots: bool):
         )
         metrics_func = evaluation_result["metrics_func"]
         control_func = evaluation_result["control_func"]
-        if "korean-parallel-corpora" in evaluation_result["task"]:
-            comet_data[evaluation_result["task"].split('-')[-1]].append(
-                {
-                'src': evaluation_result["input"],
-                'mt': y_pred,
-                'ref': evaluation_result["expected_output"]
-                }
-            )
-            control_score = control_func(y_pred)
-            evaluation_result["raw_output"] = raw_output
-            evaluation_result["output"] = y_pred
-            evaluation_result["control_score"] = control_score
-        else:
-            score = metrics_func(y_pred, evaluation_result["expected_output"])        
-            control_score = control_func(y_pred)
-            evaluation_result["raw_output"] = raw_output
-            evaluation_result["output"] = y_pred
-            evaluation_result["score"] = score
-            evaluation_result["control_score"] = control_score
-            del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
-    # comet score for translation task - korean-parallel-corpora
-    scores_e2k = commet_score(comet_data["e2k"])
-    scores_k2e = commet_score(comet_data["k2e"])
-    i = 0
-    for response, evaluation_result in tqdm(zip(results, evaluation_results)):
-        if "korean-parallel-corpora-e2k" in evaluation_result["task"]:
-            evaluation_result["score"] = scores_e2k[i]
-            del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
-            i+=1
-    i = 0
-    for response, evaluation_result in tqdm(zip(results, evaluation_results)):
-        if "korean-parallel-corpora-k2e" in evaluation_result["task"]:
-            evaluation_result["score"] = scores_k2e[i]
-            del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
-            i+=1
+        score = metrics_func(y_pred, evaluation_result["expected_output"])        
+        control_score = control_func(y_pred)
+        evaluation_result["raw_output"] = raw_output
+        evaluation_result["output"] = y_pred
+        evaluation_result["score"] = score
+        evaluation_result["control_score"] = control_score
+        del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
+        
     output_df = pd.DataFrame(evaluation_results)
-    # group mmlu_en and kmmlu task category
-    output_df["task"] = output_df["task"].apply(lambda x: "mmlu_en" if x.startswith("mmlu_en") else x)
-    output_df['task'] = output_df['task'].apply(lambda x: kmmlu_dict.get(x, x))
-    output_df['task'] = output_df['task'].apply(
-                                    lambda task: 'kmmlu_SymbolChoice' if task.endswith('_SymbolChoice') 
-                                    else 'kmmlu_IncorrectChoice' if task.endswith('_IncorrectChoice') 
-                                    else task
-                                    )
-
-    # log table
-    if cfg.run.kmmlu_robustness and few_shots:
-        output_robust_df = output_df[output_df["task"].str.contains("kmmlu")].copy()
-        output_robust_df.loc[:,"sub_category"] = "robust"
-    output_df = output_df[~output_df['task'].isin(['kmmlu_SymbolChoice', 'kmmlu_IncorrectChoice'])]
-
+    output_df.to_csv('./test.csv')
 
     # group mmlu_en and kmmlu task
     output_df['sub_category'] = output_df['task'].map(task_to_sub_category)  
@@ -289,21 +227,6 @@ def evaluate_n_shot(few_shots: bool):
             f"{dataset_name}_{num_few_shots}shot_output_table": test_table,
             f"{dataset_name}_{num_few_shots}shot_leaderboard_table": leaderboard_table,  # log later in kaster_translation.py
             f"{dataset_name}_control_{num_few_shots}shot_leaderboard_table": leaderboard_table_control,
-        }
-    )
-    
-
-    if cfg.run.kmmlu_robustness and few_shots:
-        # need to be updated
-        dev_robust_table = output_robust_df.query("subset == 'dev'")
-        test_robust_table= output_robust_df.query("subset == 'test'")
-        dev_robust_table_for_log,_ = evaluate_robustness(subset="dev", df=dev_robust_table)
-        test_robust_table_for_log, leaderboard_robust_table= evaluate_robustness(subset="test", df=test_robust_table)
-        run.log(
-        {
-            f"kmmlu_robust_{num_few_shots}shot_output_table_dev": dev_robust_table_for_log,
-            f"kmmlu_robust_{num_few_shots}shot_output_table": test_robust_table_for_log,
-            f"kmmlu_robust_{num_few_shots}shot_leaderboard_table": leaderboard_robust_table
         }
     )
         

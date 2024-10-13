@@ -42,19 +42,19 @@ def process_task(
             "toxicity_output_table",
             "toxicity_radar_table",
         ]
-    elif dataset == "jaster":
+    elif dataset == "kaster":
         table_names = [
-            f"jaster_0shot_output_table_dev",
-            f"jaster_0shot_output_table",
-            f"jaster_control_0shot_leaderboard_table",
-            f"jaster_0shot_leaderboard_table",
-            f"jaster_{num_few_shots}shot_output_table_dev",
-            f"jaster_{num_few_shots}shot_output_table",
-            f"jaster_control_{num_few_shots}shot_leaderboard_table",
-            f"jaster_{num_few_shots}shot_leaderboard_table",
-            f"jmmlu_robust_{num_few_shots}shot_output_table_dev",
-            f"jmmlu_robust_{num_few_shots}shot_output_table",
-            f"jmmlu_robust_{num_few_shots}shot_leaderboard_table",
+            f"kaster_0shot_output_table_dev",
+            f"kaster_0shot_output_table",
+            f"kaster_control_0shot_leaderboard_table",
+            f"kaster_0shot_leaderboard_table",
+            f"kaster_{num_few_shots}shot_output_table_dev",
+            f"kaster_{num_few_shots}shot_output_table",
+            f"kaster_control_{num_few_shots}shot_leaderboard_table",
+            f"kaster_{num_few_shots}shot_leaderboard_table",
+            f"kmmlu_robust_{num_few_shots}shot_output_table_dev",
+            f"kmmlu_robust_{num_few_shots}shot_output_table",
+            f"kmmlu_robust_{num_few_shots}shot_leaderboard_table",
         ]
     elif dataset == "jtruthfulqa":
         table_names = [
@@ -84,12 +84,12 @@ def process_task(
                     new_cols = [f"{col}_{dataset}_ad_text" for col in output_table.columns]
             elif dataset == "toxicity":
                 new_cols = [f"{col}_{dataset}" for col in output_table.columns]
-            elif dataset == "jaster":
+            elif dataset == "kaster":
                 if "control" in table_name:
                     new_cols = [f"{col}_{dataset}_control_{num_few_shots}shot" for col in output_table.columns]
                 else:
                     new_cols = [f"{col}_{dataset}_{num_few_shots}shot" for col in output_table.columns]
-            elif dataset == "jmmlu":
+            elif dataset == "kmmlu":
                 new_cols = [f"{col}_{dataset}_robust_{num_few_shots}shot" for col in output_table.columns]
             elif dataset == "jtruthfulqa":
                 new_cols = [f"{col}_{dataset}" for col in output_table.columns]
