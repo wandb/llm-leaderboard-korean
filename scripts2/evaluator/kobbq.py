@@ -121,6 +121,7 @@ class KoBBQEvaluator(AbstractEvaluator):
         self.tasks.extend(sorted({p.stem for p in dataset_dir.glob("**/kmmlu*.json") if not p.stem.endswith("Choice")}))
         print(self.tasks)
         # collect test data
+        inputs = []
         for task in self.tasks:
             if self.cfg.testmode:
                 self.test_max_num_samples = 1
@@ -128,7 +129,7 @@ class KoBBQEvaluator(AbstractEvaluator):
             else:
                 self.test_max_num_samples = 100
                 self.val_max_num_samples = 10
-            for subset in ("test"):
+            for subset in ["test"]:
                 if subset == "test":
                     num_samples = self.test_max_num_samples
                 elif subset == "dev":
@@ -149,8 +150,6 @@ class KoBBQEvaluator(AbstractEvaluator):
                     selected_samples = category_samples[:num_samples]
 
                     for idx, sample in tqdm(enumerate(selected_samples)):
-                        inputs = []
-
                         # 新しいメッセージリストを作成
                         messages = []
                         for message in few_shots_dict[category]:
@@ -200,8 +199,7 @@ class KoBBQEvaluator(AbstractEvaluator):
                             }
                         )
         
-        all_inputs = [er["inputs"] for er in evaluation_results]
-        llm_ap = LLMAsyncProcessor(llm=self.llm, inputs=all_inputs)
+        llm_ap = LLMAsyncProcessor(llm=self.llm, inputs=inputs)
         results = llm_ap.get_results()
         evaluation_results = self.process_results(results=results, evaluation_results=evaluation_results)
 

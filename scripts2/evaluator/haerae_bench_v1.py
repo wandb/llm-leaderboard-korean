@@ -78,7 +78,7 @@ class HaeraeBenchV1Evaluator(AbstractEvaluator):
 
                     # add fewshots samples
                     if self.few_shots:
-                        few_shot_messages = get_few_shot_messages(
+                        few_shot_messages = self.get_few_shot_messages(
                             target_dataset_path=task_data_path,
                             num_few_shots=self.num_few_shots,
                         )

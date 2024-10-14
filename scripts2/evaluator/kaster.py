@@ -189,13 +189,18 @@ class KasterEvaluator(AbstractEvaluator):
         # comet score for translation task - korean-parallel-corpora
         scores_e2k = commet_score(comet_data["e2k"])
         scores_k2e = commet_score(comet_data["k2e"])
-        for score_e2k, score_k2e, evaluation_result in tqdm(zip(scores_e2k, scores_k2e, evaluation_results)):
+        i = 0
+        for evaluation_result in tqdm(evaluation_results):
             if "korean-parallel-corpora-e2k" in evaluation_result["task"]:
-                evaluation_result["score"] = score_e2k
+                evaluation_result["score"] = scores_e2k[i]
                 del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
+                i+=1
+        i = 0
+        for evaluation_result in tqdm(evaluation_results):
             if "korean-parallel-corpora-k2e" in evaluation_result["task"]:
-                evaluation_result["score"] = score_k2e
+                evaluation_result["score"] = scores_k2e[i]
                 del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
+                i+=1
         
         output_df = pd.DataFrame(evaluation_results)
         # group mmlu_en and kmmlu task category
@@ -213,19 +218,21 @@ class KasterEvaluator(AbstractEvaluator):
             output_robust_df.loc[:,"sub_category"] = "robust"
         output_df = output_df[~output_df['task'].isin(['kmmlu_SymbolChoice', 'kmmlu_IncorrectChoice'])]
 
-
+        output_df.to_csv('./test1.csv')
         # group mmlu_en and kmmlu task
         output_df['sub_category'] = output_df['task'].map(task_to_sub_category)  
+        output_df.to_csv('./test2.csv')
         dev_table = output_df.query("subset == 'dev'")
         test_table = output_df.query("subset == 'test'")
+        test_table.to_csv('./test3.csv')
 
         # calculate later in kaster_translation.py
         leaderboard_table = pd.pivot_table(
-        data=test_table,
-        values="score",
-        index="model_name",
-        columns="task",
-        aggfunc="mean",
+            data=test_table,
+            values="score",
+            index="model_name",
+            columns="task",
+            aggfunc="mean",
         ).reset_index()
 
         leaderboard_table_control = pd.pivot_table(
