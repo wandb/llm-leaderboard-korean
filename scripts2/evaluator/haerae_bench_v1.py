@@ -94,9 +94,10 @@ class HaeraeBenchV1Evaluator(AbstractEvaluator):
                         message_intro = "The following text provides instructions for a certain task."
                     else:
                         message_intro = "다음은 작업을 설명하는 지침과 컨텍스트 입력의 조합입니다. 요구를 적절하게 만족시키는 응답을 적으십시오."
+                    task_data_instruction = self.instructions[self.instructions['dataset'] == 'haerae_bench_v1'].iloc[0]['instruction']
                     
                     instruction = "\n".join(
-                        [message_intro, task_data["instruction"]]
+                        [message_intro, task_data_instruction]
                     )
 
                     # Add instruction message at the beginning
@@ -107,7 +108,7 @@ class HaeraeBenchV1Evaluator(AbstractEvaluator):
                     prompt = apply_chat_template(messages=messages)
                     y_pred = None
                     y_true: str = pipe(sample["output"], normalize)
-                    metrics: str = task_data["metrics"][0]
+                    metrics: str = self.instructions[self.instructions['dataset'] == 'haerae_bench_v1'].iloc[0]['metric']
                     metrics_func: callable = kaster_metrics_dict[metrics]
                     control_task = "mmlu_en" if "mmlu_en" in task else "kmmlu" if "kmmlu" in task else task
                     control_method: str = controllability_dict[control_task].__name__

@@ -101,9 +101,12 @@ class KasterEvaluator(AbstractEvaluator):
                         message_intro = "The following text provides instructions for a certain task."
                     else:
                         message_intro = "다음은 작업을 설명하는 지침과 컨텍스트 입력의 조합입니다. 요구를 적절하게 만족시키는 응답을 적으십시오."
+
+                    dataset = 'mmlu_en' if 'mmlu_en' in task else 'kmmlu' if 'kmmlu' in task else task
+                    task_data_instruction = self.instructions[self.instructions['dataset'] == dataset].iloc[0]['instruction']
                     
                     instruction = "\n".join(
-                        [message_intro, task_data["instruction"]]
+                        [message_intro, task_data_instruction]
                     )
 
                     # Add instruction message at the beginning
