@@ -158,7 +158,8 @@ class KoBBQEvaluator(AbstractEvaluator):
 
                         # 最初のシステムメッセージにインストラクションを追加
                         first_content = messages[0]["content"]
-                        instruction = task_data["instruction"]
+                        
+                        instruction = self.instructions[self.instructions['dataset'] == 'kobbq'].iloc[0]['instruction']
                         messages[0]["content"] = f"{instruction}\n\n{first_content}"
 
                         # メッセージの内容を文字列に変換

@@ -22,6 +22,7 @@ class AbstractEvaluator(ABC):
         self.val_max_num_samples = None
         self.few_shots = few_shots
         self.num_few_shots = self.cfg.get("num_few_shots", None) if few_shots else 0
+        self.instructions = pd.read_csv("scripts2/evaluator/instructions.csv")
 
     def retrieve_wandb_instance(self):
         # Retrieve the instance from WandbConfigSingleton and load the W&B run and configuration

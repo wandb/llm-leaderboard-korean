@@ -52,8 +52,10 @@ class KoTruthfulQAEvaluator(AbstractEvaluator):
 
                 # instruction message
                 message_intro = "다음은 작업을 설명하는 지침과 컨텍스트 입력의 조합입니다. 요구를 적절하게 만족시키는 응답을 적으십시오."
+                task_data_instruction = self.instructions[self.instructions['dataset'] == 'ko_truthful_qa-generation'].iloc[0]['instruction']
+                    
                 instruction = "\n".join(
-                    [message_intro, task_data["instruction"]]
+                    [message_intro, task_data_instruction]
                 )
 
                 # Add instruction message at the beginning
@@ -64,7 +66,7 @@ class KoTruthfulQAEvaluator(AbstractEvaluator):
                 prompt = apply_chat_template(messages=messages)
                 y_pred = None
                 y_true: str = pipe(sample["best_answer"], normalize)
-                metrics: str = task_data["metrics"][0]
+                metrics: str = self.instructions[self.instructions['dataset'] == 'haerae_bench_v1'].iloc[0]['metric']
                 metrics_func: callable = ko_truthful_qa_judge
 
                 generator_config = {"max_tokens": task_data["output_length"]}
