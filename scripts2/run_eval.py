@@ -90,3 +90,5 @@ evaluator.evaluate()
 # 6. Aggregation
 if cfg.run.aggregate:
     aggregate.evaluate()
+
+shutdown_vllm_server()
