@@ -34,13 +34,13 @@ class KasterEvaluator(AbstractEvaluator):
             'klue_re',
             'kobest_sn',
             'korean-hate-speech_hate',
-            'korean-hate-speech_bias',
+            # 'korean-hate-speech_bias',
             'kobest_copa',
             'kobest_wic',
             'korean-parallel-corpora-e2k',
             'korean-parallel-corpora-k2e',
             'kobest_hs',
-            'korsts',
+            # 'korsts',
             'squad_kor_v1',
             'kornli',
             'korea_cg',
@@ -117,7 +117,7 @@ class KasterEvaluator(AbstractEvaluator):
                     prompt = apply_chat_template(messages=messages)
                     y_pred = None
                     y_true: str = pipe(sample["output"], normalize)
-                    metrics: str = task_data["metrics"][0]
+                    metrics: str = self.instructions[self.instructions['dataset'] == dataset].iloc[0]['metric']
                     metrics_func: callable = kaster_metrics_dict[metrics]
                     control_task = "mmlu_en" if "mmlu_en" in task else "kmmlu" if "kmmlu" in task else task
                     control_method: str = controllability_dict[control_task].__name__
