@@ -9,12 +9,8 @@ from llm_inference_adapter import get_llm_inference_engine
 from vllm_server import shutdown_vllm_server
 from blend_run import blend_run
 from evaluator import (
-    kaster,
-    kobbq,
-    mtbench,
-    aggregate,
-    haerae_bench_v1,
-    ko_truthful_qa
+    Evaluator,
+    aggregate
 )
 from utils import paginate_choices
 
@@ -81,26 +77,19 @@ llm = get_llm_inference_engine()
 instance = WandbConfigSingleton.get_instance()
 instance.llm = llm
 
-# ko_truthful_qa
-if cfg.run.ko_truthful_qa:
-    ko_truthful_qa.evaluate()
+evaluator = Evaluator(
+    cfg.run.kaster,
+    cfg.run.haerae_bench_v1,
+    cfg.run.mtbench,
+    cfg.run.kobbq,
+    cfg.run.ko_truthful_qa,
+)
 
-# kaster
-if cfg.run.kaster:
-    kaster.evaluate()
-
-# haerae_bench_v1
-if cfg.run.haerae_bench_v1:
-    haerae_bench_v1.evaluate()
-
-# mt-bench evaluation
-if cfg.run.mtbench:
-    mtbench.evaluate()
-
-# kobbq
-if cfg.run.kobbq:
-    kobbq.evaluate()
+evaluator.evaluate()
 
 # 6. Aggregation
 if cfg.run.aggregate:
     aggregate.evaluate()
+
+if cfg.api == "vllm":
+    shutdown_vllm_server()
