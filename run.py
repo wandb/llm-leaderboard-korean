@@ -31,9 +31,20 @@ config_list_qwen = [
     # "Qwen1-5-72B-Chat",
 ]
 
+config_list_llama = [
+    "Llama-3-2-1B-Instruct",
+    "Llama-3-2-3B-Instruct",
+    "Meta-Llama-3-8B-Instruct",
+    # "Meta-Llama-3-70B-Instruct",
+    # "Llama-3-1-8B-Instruct",
+    # "Llama-3-1-70B-Instruct",
+    # "Llama-3-1-405B-Instruct-FP8",
+]
+
 config_list_korean = [
     "EXAONE-3-0-7-8B-Instruct",
     "EEVE-Korean-Instruct-10-8B-v1-0"
 ]
-for config in ["solar-pro", "solar-mini", "Qwen2-5-14B-Instruct", "Qwen2-5-32B-Instruct"]:
+# for config in ["gemma-2-2b-it", "gemma-2-9b-it", "solar-pro", "solar-mini", "Qwen2-5-14B-Instruct", "Qwen2-5-32B-Instruct", "EXAONE-3-0-7-8B-Instruct"]:
+for config in config_list_llama:
     os.system(f"python3 scripts2/run_eval.py --config config-{config}")

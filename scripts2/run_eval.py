@@ -91,4 +91,5 @@ evaluator.evaluate()
 if cfg.run.aggregate:
     aggregate.evaluate()
 
-shutdown_vllm_server()
+if cfg.api == "vllm":
+    shutdown_vllm_server()
