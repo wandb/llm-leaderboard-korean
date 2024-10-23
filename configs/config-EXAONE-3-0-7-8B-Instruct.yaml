@@ -11,6 +11,6 @@ model:
   pretrained_model_name_or_path: "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct" #if you use openai api, put the name of model
   chat_template: "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct"
   size_category: "<10B"
-  size: null
+  size: 7820000000
   release_date: "8/7/2024"
   max_model_len: 2500

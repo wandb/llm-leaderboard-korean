@@ -11,6 +11,6 @@ model:
   pretrained_model_name_or_path: "solar-mini" #if you use openai api, put the name of model
   size_category: "10B≤ <30B"
   base_url: "https://api.upstage.ai/v1/solar"
-  size: null
+  size: 10700000000
   release_date: "6/12/2024"
 

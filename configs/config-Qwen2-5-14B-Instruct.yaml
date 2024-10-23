@@ -11,5 +11,5 @@ model:
   pretrained_model_name_or_path: "Qwen/Qwen2.5-14B-Instruct" #if you use openai api, put the name of model
   chat_template: "Qwen/Qwen2.5-14B-Instruct"
   size_category: "10B≤ <30B"
-  size: 7615616512
+  size: 14000000000
   release_date: "9/19/2024"
