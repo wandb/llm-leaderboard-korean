@@ -1,0 +1,1 @@
+{% for message in messages %}{% if loop.first and messages[0]['role'] != 'system' %}{{ '[|system|]You are EXAONE model from LG AI Research, a helpful assistant.　[|endofturn|]\n' }}{% endif %}{{'[|' + message['role'] + '|]'+ '\n' + message['content'] + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '[|assistant|]\n' }}{% endif %}
