@@ -48,5 +48,5 @@ config_list_korean = [
     "EEVE-Korean-Instruct-10-8B-v1-0"
 ]
 
-for config in config_list_gpt + config_list_google + config_list_llama + config_list_qwen + config_list_korean + config_list_claude:
+for config in config_list_claude + config_list_gpt + config_list_google + config_list_llama + config_list_qwen + config_list_korean:
     os.system(f"python3 scripts/run_eval.py --config config-{config}")
