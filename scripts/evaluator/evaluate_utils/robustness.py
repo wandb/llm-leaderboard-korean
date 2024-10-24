@@ -31,7 +31,6 @@ def evaluate_robustness(subset: str, df: pd.DataFrame):
     # normal
     normal_df = df[~df["task"].str.endswith('Choice')]
     normal_df = normal_df[use_cols + ["output"]].rename(columns={"output": "output_normal"})
-    normal_df.to_csv('./test2.csv')
 
     # symbol
     symbol_suffix = "_SymbolChoice"
@@ -78,7 +77,6 @@ def evaluate_robustness(subset: str, df: pd.DataFrame):
 
     # calculate score
     normal_df["score"] = normal_df.apply(eval_robustness, axis=1)
-    normal_df.to_csv('./test3.csv')
 
     normal_df = normal_df.rename(columns={"input": "input_normal","expected_output":"expected_output_normal"})
     new_order=["model_name","index","score",
