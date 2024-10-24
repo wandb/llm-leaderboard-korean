@@ -1,5 +1,5 @@
 wandb:
-  run_name: "anthropic/claude-3-opus-2024229" # use run_name defined above
+  run_name: "anthropic/claude-3-opus-20240229" # use run_name defined above
 
 # if you don't use api, please set "api" as "false"
 # if you use api, please select from "openai", "anthoropic", "google", "cohere", "vllm"
@@ -8,7 +8,7 @@ batch_size: 32 # vllmは256, apiは32を推奨
 inference_interval: 1 # seconds
 
 model:
-  pretrained_model_name_or_path: "claude-3-opus-2024229" #if you use openai api, put the name of model
+  pretrained_model_name_or_path: "claude-3-opus-20240229" #if you use openai api, put the name of model
   size_category: "api"
   size: null 
   release_date: "2/29/2024"
