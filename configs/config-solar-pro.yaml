@@ -9,7 +9,7 @@ batch_size: 32 # vllmは256, apiは32を推奨
 
 model:
   pretrained_model_name_or_path: "solar-pro" #if you use openai api, put the name of model
-  size_category: "api"
+  size_category: "10B≤ <30B"
   base_url: "https://api.upstage.ai/v1/solar"
-  size: null
+  size: 22100000000
   release_date: "9/10/2024"

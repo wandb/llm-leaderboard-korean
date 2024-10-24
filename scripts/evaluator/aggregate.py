@@ -177,7 +177,6 @@ def evaluate():
                 "kmmlu_robust_fewshots": kmmlu_robust_fewshots["robust_score"][0],
             }
 
-        #TODO
         elif other == "truthful":
             data = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
