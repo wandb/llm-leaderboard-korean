@@ -13,10 +13,10 @@ config_list_gpt = [
     "solar-mini"
 ]
 config_list_claude = [
-    "anthropic-claude-3-5-sonnet-20240620-v1:0",
-    "anthropic-claude-3-haiku-20240307-v1:0",
-    "anthropic-claude-3-opus-20240229-v1:0",
-    "anthropic-claude-3-sonnet-20240229-v1:0"
+    "anthropic-claude-3-5-sonnet-20241022",
+    "anthropic-claude-3-haiku-20240307",
+    "anthropic-claude-3-opus-20240229",
+    "anthropic-claude-3-sonnet-20240229"
 ]
 config_list_qwen = [
     "Qwen2-5-0-5B-Instruct",
@@ -46,5 +46,5 @@ config_list_korean = [
     "EEVE-Korean-Instruct-10-8B-v1-0"
 ]
 # for config in ["gemma-2-2b-it", "gemma-2-9b-it", "solar-pro", "solar-mini", "Qwen2-5-14B-Instruct", "Qwen2-5-32B-Instruct", "EXAONE-3-0-7-8B-Instruct"]:
-for config in config_list_llama:
+for config in config_list_claude:
     os.system(f"python3 scripts/run_eval.py --config config-{config}")
