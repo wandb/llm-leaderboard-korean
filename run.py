@@ -46,5 +46,5 @@ config_list_korean = [
     "EEVE-Korean-Instruct-10-8B-v1-0"
 ]
 # for config in ["gemma-2-2b-it", "gemma-2-9b-it", "solar-pro", "solar-mini", "Qwen2-5-14B-Instruct", "Qwen2-5-32B-Instruct", "EXAONE-3-0-7-8B-Instruct"]:
-for config in config_list_claude:
+for config in config_list_llama:
     os.system(f"python3 scripts/run_eval.py --config config-{config}")
