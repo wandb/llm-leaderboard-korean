@@ -14,9 +14,9 @@ config_list_gpt = [
 ]
 config_list_claude = [
     "anthropic-claude-3-haiku-20240307",
-    "anthropic-claude-3-opus-20240229",
-    "anthropic-claude-3-sonnet-20240229"
+    "anthropic-claude-3-sonnet-20240229",
     "anthropic-claude-3-5-sonnet-20241022",
+    "anthropic-claude-3-opus-20240229",
 ]
 config_list_google = [
     "gemma-2-2b-it",
@@ -48,5 +48,5 @@ config_list_korean = [
     "EEVE-Korean-Instruct-10-8B-v1-0"
 ]
 
-for config in config_list_claude + config_list_gpt + config_list_google + config_list_llama + config_list_qwen + config_list_korean:
+for config in config_list_claude:
     os.system(f"python3 scripts/run_eval.py --config config-{config}")
