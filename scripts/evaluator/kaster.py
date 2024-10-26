@@ -221,13 +221,10 @@ class KasterEvaluator(AbstractEvaluator):
             output_robust_df.loc[:,"sub_category"] = "robust"
         output_df = output_df[~output_df['task'].isin(['kmmlu_SymbolChoice', 'kmmlu_IncorrectChoice'])]
 
-        output_df.to_csv('./test1.csv')
         # group mmlu_en and kmmlu task
-        output_df['sub_category'] = output_df['task'].map(task_to_sub_category)  
-        output_df.to_csv('./test2.csv')
+        output_df['sub_category'] = output_df['task'].map(task_to_sub_category)
         dev_table = output_df.query("subset == 'dev'")
         test_table = output_df.query("subset == 'test'")
-        test_table.to_csv('./test3.csv')
 
         # calculate later in kaster_translation.py
         leaderboard_table = pd.pivot_table(
