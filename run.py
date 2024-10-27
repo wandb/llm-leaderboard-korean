@@ -24,30 +24,30 @@ config_list_qwen = [
     # "Qwen2-5-3B-Instruct",
     # "Qwen2-5-7B-Instruct",
     # "Qwen2-5-14B-Instruct",
-    "Qwen2-5-32B-Instruct",
+    # "Qwen2-5-32B-Instruct",
+    # "Qwen2-5-72B-Instruct",
     # "Qwen2-1-5B-Instruct",
     # "Qwen2-7B-Instruct",
-    "Qwen2-72B-Instruct",
-    "Qwen1-5-72B-Chat",
+    # "Qwen2-72B-Instruct",
+    # "Qwen1-5-72B-Chat",
 ]
 
 config_list_llama = [
     # "Llama-3-2-1B-Instruct",
     # "Llama-3-2-3B-Instruct",
     # "Meta-Llama-3-8B-Instruct",
-    "Meta-Llama-3-70B-Instruct",
+    # "Meta-Llama-3-70B-Instruct",
     # "Llama-3-1-8B-Instruct",
-    "Llama-3-1-70B-Instruct",
+    # "Llama-3-1-70B-Instruct",
     "Llama-3-1-405B-Instruct-FP8",
 ]
 
 config_list_korean = [
     # "EXAONE-3-0-7-8B-Instruct",
     # "EEVE-Korean-Instruct-10-8B-v1-0",
-    "rtzr-ko-gemma-2-9b-it",
-    "saltware-sapie-gemma2-9B-IT",
-    
+    # "rtzr-ko-gemma-2-9b-it",
+    # "saltware-sapie-gemma2-9B-IT",
 ]
 
-for config in config_list_claude:
+for config in config_list_qwen + config_list_llama:
     os.system(f"python3 scripts/run_eval.py --config config-{config}")
