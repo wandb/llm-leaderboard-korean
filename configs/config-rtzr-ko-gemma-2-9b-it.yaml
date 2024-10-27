@@ -12,5 +12,5 @@ model:
   pretrained_model_name_or_path: "rtzr/ko-gemma-2-9b-it" #if you use openai api, put the name of model
   chat_template: "rtzr/ko-gemma-2-9b-it"
   size_category: "<10B"
-  size: null
+  size: 9240000000
   release_date: "7/1/2024"
