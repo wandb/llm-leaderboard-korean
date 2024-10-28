@@ -12,4 +12,4 @@ model:
   chat_template: "google/gemma-2-2b-it"
   size_category: "<10B"
   size: 2610000000
-  release_date: "8/1/2024"
+  release_date: "7/31/2024"
