@@ -548,6 +548,7 @@ def chat_completion_openai_azure(model, conv, temperature, max_tokens, api_dict=
 
 
 def chat_completion_anthropic(model, conv, temperature, max_tokens, api_dict=None):
+    from langchain_anthropic.chat_models import ChatAnthropic
     if api_dict is not None and "api_key" in api_dict:
         api_key = api_dict["api_key"]
     else:
@@ -555,38 +556,37 @@ def chat_completion_anthropic(model, conv, temperature, max_tokens, api_dict=Non
 
     output = API_ERROR_OUTPUT
     for _ in range(API_MAX_RETRY):
-        if model in {"claude-3-opus-20240229", "claude-3-5-sonnet"}:
-            llm = ChatAnthropic(model_name=model)
-            max_retries = 3
-            retry_count = 0
-            prompt = conv.get_prompt()
-            print(prompt)
-            while retry_count < max_retries:
-                try:
-                    output = llm.invoke(prompt).content
-                    # print(output)
-                    time.sleep(60)
-                    break 
-                except Exception as e:
-                    print(f"Error happened!!! : {e}")
-                    retry_count += 1
-                    time.sleep(1)
-        else:
+        # if model in {"claude-3-opus-20240229", "claude-3-5-sonnet", "claude-3-haiku-20240307", "claude-3-sonnet-20240229", "cluade-3-5-sonnet-20241022"}:
+        llm = ChatAnthropic(model_name=model)
+        max_retries = 3
+        retry_count = 0
+        prompt = conv.get_prompt()
+        while retry_count < max_retries:
             try:
-                c = anthropic.Anthropic(api_key=api_key)
-                prompt = conv.get_prompt()
-                response = c.completions.create(
-                    model=model,
-                    prompt=prompt,
-                    stop_sequences=[anthropic.HUMAN_PROMPT],
-                    max_tokens_to_sample=max_tokens,
-                    temperature=temperature,
-                )
-                output = response.completion
-                break
-            except anthropic.APIError as e:
-                print(type(e), e)
-                time.sleep(API_RETRY_SLEEP)
+                output = llm.invoke(prompt).content
+                # print(output)
+                time.sleep(60)
+                break 
+            except Exception as e:
+                print(f"Error happened!!! : {e}")
+                retry_count += 1
+                time.sleep(1)
+        # else:
+        #     try:
+        #         c = anthropic.Anthropic(api_key=api_key)
+        #         prompt = conv.get_prompt()
+        #         response = c.completions.create(
+        #             model=model,
+        #             prompt=prompt,
+        #             stop_sequences=[anthropic.HUMAN_PROMPT],
+        #             max_tokens_to_sample=max_tokens,
+        #             temperature=temperature,
+        #         )
+        #         output = response.completion
+        #         break
+        #     except anthropic.APIError as e:
+        #         print(type(e), e)
+        #         time.sleep(API_RETRY_SLEEP)
     return output.strip()
 
 """
