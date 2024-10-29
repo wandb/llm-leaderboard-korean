@@ -1,0 +1,16 @@
+wandb:
+  run_name: "ai-human-lab/EEVE-Korean_Instruct-10.8B-expo" # use run_name defined above
+
+# if you don't use api, please set "api" as "false"
+# if you use api, please select from "openai", "anthoropic", "google", "cohere", "vllm"
+api: vllm
+batch_size: 128 # vllmは256, apiは32を推奨
+
+model:
+  use_wandb_artifacts: false
+  pretrained_model_name_or_path: "ai-human-lab/EEVE-Korean_Instruct-10.8B-expo" #if you use openai api, put the name of model
+  chat_template: "ai-human-lab/EEVE-Korean_Instruct-10.8B-expo"
+  size_category: "10B≤ <30B"
+  size: 10800000000
+  release_date: "7/1/2024"
+  max_model_len: 2500
