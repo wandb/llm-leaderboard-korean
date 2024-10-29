@@ -114,7 +114,7 @@ blend_run_configs/blend_config.yaml
 # generated data
 dataset/
 logs/
-fastchat/llm_judge/data/japanese_mt_bench
+fastchat/llm_judge/data/
 
 # vllm
 *.pid
