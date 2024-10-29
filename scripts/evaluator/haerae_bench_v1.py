@@ -164,7 +164,6 @@ class HaeraeBenchV1Evaluator(AbstractEvaluator):
             del evaluation_result["metrics_func"], evaluation_result["control_func"], evaluation_result["inputs"]
             
         output_df = pd.DataFrame(evaluation_results)
-        output_df.to_csv('./test.csv')
 
         # group mmlu_en and kmmlu task
         output_df['sub_category'] = output_df['task'].map(task_to_sub_category)  
