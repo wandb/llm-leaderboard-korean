@@ -222,7 +222,7 @@ class KasterEvaluator(AbstractEvaluator):
         output_df = output_df[~output_df['task'].isin(['kmmlu_SymbolChoice', 'kmmlu_IncorrectChoice'])]
 
         # group mmlu_en and kmmlu task
-        output_df['sub_category'] = output_df['task'].map(task_to_sub_category)
+        output_df['sub_category'] = output_df['task'].map(task_to_sub_category)  
         dev_table = output_df.query("subset == 'dev'")
         test_table = output_df.query("subset == 'test'")
 
