@@ -7,7 +7,6 @@ import questionary
 from config_singleton import WandbConfigSingleton
 from llm_inference_adapter import get_llm_inference_engine
 from vllm_server import shutdown_vllm_server
-from blend_run import blend_run
 from evaluator import (
     Evaluator,
     aggregate
@@ -68,9 +67,6 @@ cfg = WandbConfigSingleton.get_instance().config
 artifact = wandb.Artifact("config", type="config")
 artifact.add_file(custom_cfg_path)
 run.log_artifact(artifact)
-
-# Inherit old runs
-blend_run(run_chain=True)
 
 # Start inference server
 llm = get_llm_inference_engine()

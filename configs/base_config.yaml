@@ -37,22 +37,22 @@ num_few_shots: 2
 
 kaster:
   message_intro: "<prompt>"
-  artifacts_path: "wandb-korea/llm-leaderboard3/eval_data:latest"
+  artifacts_path: "wandb-korea/llm-leaderboard-dataset/eval_data:latest"
   dataset_dir: "kaster"
 
 haerae_bench_v1:
   message_intro: "<prompt>"
-  artifacts_path: "wandb-korea/llm-leaderboard3/eval_data:latest"
+  artifacts_path: "wandb-korea/llm-leaderboard-dataset/eval_data:latest"
   dataset_dir: "haerae_bench_v1"
 
 kobbq:
   message_intro: "<prompt>"
-  artifacts_path: "wandb-korea/llm-leaderboard3/eval_data:latest"
+  artifacts_path: "wandb-korea/llm-leaderboard-dataset/eval_data:latest"
   dataset_dir: "kobbq"
 
 ko_truthful_qa:
   message_intro: "<prompt>"
-  artifacts_path: "wandb-korea/llm-leaderboard3/eval_data:latest"
+  artifacts_path: "wandb-korea/llm-leaderboard-dataset/eval_data:latest"
   dataset_dir: "ko_truthful_qa"
 
 mtbench:
