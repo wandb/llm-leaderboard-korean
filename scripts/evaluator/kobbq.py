@@ -11,13 +11,17 @@ from config_singleton import WandbConfigSingleton
 from .evaluate_utils import (
     apply_chat_template,
     get_few_shot_samples_by_bbq_category,
-    Sample,
     normalize,
     text_formatter,
     LLMAsyncProcessor,
 )
 
 from .abstract import AbstractEvaluator
+
+@dataclass(frozen=True)
+class Sample:
+    input: str
+    output: str
 
 @dataclass(frozen=True)
 class BBQSample(Sample):

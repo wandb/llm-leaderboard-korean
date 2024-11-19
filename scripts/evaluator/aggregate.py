@@ -19,7 +19,7 @@ def update_flag(cfg, blend_cfg):
         mtbench_flag = cfg.run.mtbench
         kobbq_flag = cfg.run.kobbq
         kaster_flag = cfg.run.kaster
-        # ko_truthful_qa_flag = cfg.run.ko_truthful_qa
+        ko_truthful_qa_flag = cfg.run.ko_truthful_qa
 
     if blend_cfg:
         for old_run in blend_cfg.old_runs:
@@ -38,9 +38,8 @@ def update_flag(cfg, blend_cfg):
 
     if mtbench_flag and kaster_flag:
         GLP_flag = True
-    # if kobbq_flag and ko_truthful_qa_flag:
-    #     ALT_flag = True
-    ALT_flag = True
+    if kobbq_flag and ko_truthful_qa_flag:
+        ALT_flag = True
     return GLP_flag, ALT_flag
 
 
@@ -88,8 +87,6 @@ def evaluate():
         kaster_control_fewshots.insert(0, 'model_name', cfg.model.pretrained_model_name_or_path)
         
         kobbq_fewshots = read_wandb_table(table_name=f"kobbq_{num_few_shots}shot_leaderboard_table", run=run)
-        #TODO
-        # toxicity = read_wandb_table(table_name=f"toxicity_leaderboard_table", run=run)
         ko_truthful_qa = read_wandb_table(table_name=f"ko_truthful_qa_0shot_leaderboard_table", run=run)
 
     print("-------- aggregating results ----------")
@@ -136,39 +133,18 @@ def evaluate():
                 "korean-hate-speech_hate_0shot": kaster_0shot["korean-hate-speech_hate"][0],
                 "korean-hate-speech_hate_2shot": kaster_fewshots["korean-hate-speech_hate"][0],
             }
-            # data = {
-            #     "model_name": cfg.model.pretrained_model_name_or_path,
-            #     "AVG": toxicity[["公平性", "社会規範", "禁止行為", "違反カテゴリ"]].values.mean(),
-            #     "公平性": toxicity["公平性"][0],
-            #     "社会規範": toxicity["社会規範"][0],
-            #     "禁止行為": toxicity["禁止行為"][0],
-            #     "違反カテゴリ": toxicity["違反カテゴリ"][0],
-            # }
 
         elif other == "bias":
             data = {
                 "model_name": cfg.model.pretrained_model_name_or_path,
                 "AVG": np.mean([np.mean([
-                    # kaster_0shot["korean-hate-speech_bias"][0],
-                    # kaster_fewshots["korean-hate-speech_bias"][0],
                     kobbq_fewshots["avg"][0],
-                    # kobbq_fewshots["acc_a"][0],
-                    # kobbq_fewshots["acc_d"][0],
-                    # kobbq_fewshots["diff_bias_a"][0],
-                    # kobbq_fewshots["diff_bias_d"][0],
                     ])]),
-                # "korean-hate-speech_bias_0shot": kaster_0shot["korean-hate-speech_bias"][0],
-                # "korean-hate-speech_bias_2shot": kaster_fewshots["korean-hate-speech_bias"][0],
                 "kobbq_ACC_amb_2shot": kobbq_fewshots["acc_a"][0],
                 "kobbq_ACC_disamb_2shot": kobbq_fewshots["acc_d"][0],
                 "kobbq_DIFF_bias_amb_2shot": kobbq_fewshots["diff_bias_a"][0],
                 "kobbq_DIFF_bias_disamb_2shot": kobbq_fewshots["diff_bias_d"][0],
             }
-            # data = {
-            #     "model_name": cfg.model.pretrained_model_name_or_path,
-            #     "AVG": 1 - kobbq_fewshots["avg_abs_bias_score"][0],
-            #     "abs_bias_score_fewshot": kobbq_fewshots["avg_abs_bias_score"][0],
-            # }
 
         elif other == "robust":
             data = {
@@ -254,16 +230,13 @@ def evaluate():
     
     if GLP_flag:
         leaderboard_dict["AVG_mtbench"] = mtbench["AVG_mtbench"][0]
-    
-    # if ALT_flag:
-    #     leaderboard_dict["AVG_lctg"] = lctg_overall["AVG_Total_ctg"][0]
 
     leaderboard_table = pd.DataFrame([leaderboard_dict])
     cols = leaderboard_table.columns
     new_cols = first_cols + [c for c in cols if c not in first_cols]
     leaderboard_table = leaderboard_table[new_cols]
+    
     # Radar table
-
     glp_radar_table = pd.DataFrame(
         data=radar_contents(
             leaderboard_dict=leaderboard_dict,
