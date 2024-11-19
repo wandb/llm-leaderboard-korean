@@ -120,7 +120,7 @@ class KoBBQEvaluator(AbstractEvaluator):
     def evaluate(self):
         evaluation_results = []
         # execute evaluation
-        artifact_dir, dataset_dir = self.download_dataset(self.dataset_name)
+        artifact_dir, dataset_dir = self.download_dataset()
         self.tasks.extend(sorted({p.stem for p in dataset_dir.glob("**/mmlu_en_*.json")}))
         self.tasks.extend(sorted({p.stem for p in dataset_dir.glob("**/kmmlu*.json") if not p.stem.endswith("Choice")}))
         print(self.tasks)

@@ -55,9 +55,9 @@ class MTBenchEvaluator(AbstractEvaluator):
         ## file path
         #question
         if self.cfg.testmode:
-            artifact_dir = self.run.use_artifact(self.cfg.mtbench.question_artifacts_path_test, type='dataset').download()
+            artifact_dir = self.cfg.mtbench.question_artifacts_path_test
         else:
-            artifact_dir = self.run.use_artifact(self.cfg.mtbench.question_artifacts_path, type='dataset').download()
+            artifact_dir = self.cfg.mtbench.question_artifacts_path
         question_file = artifact_dir + f"/question.jsonl"
         
         #create answerfile and answerdir
@@ -66,9 +66,9 @@ class MTBenchEvaluator(AbstractEvaluator):
 
         #reference answer
         if self.cfg.testmode:
-            ref_answer_dir = self.run.use_artifact(self.cfg.mtbench.referenceanswer_artifacts_path_test, type='dataset').download()
+            ref_answer_dir = self.cfg.mtbench.referenceanswer_artifacts_path_test
         else:
-            ref_answer_dir = self.run.use_artifact(self.cfg.mtbench.referenceanswer_artifacts_path, type='dataset').download()
+            ref_answer_dir = self.cfg.mtbench.referenceanswer_artifacts_path
 
         
         # 1. generate model answers
@@ -85,7 +85,7 @@ class MTBenchEvaluator(AbstractEvaluator):
         model_answers = load_model_answers(answer_dir)
         model_answers = {self.cfg.mtbench.model_id: model_answers[self.cfg.mtbench.model_id]}
         ref_answers = load_model_answers(ref_answer_dir)
-        artifact_dir = self.run.use_artifact(self.cfg.mtbench.judge_prompt_artifacts_path, type='dataset').download()
+        artifact_dir = self.cfg.mtbench.judge_prompt_artifacts_path
         judge_prompts = load_judge_prompts(artifact_dir + "/judge_ko_prompts.jsonl")
 
         if self.cfg.mtbench.first_n:

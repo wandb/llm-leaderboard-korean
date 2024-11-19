@@ -37,22 +37,22 @@ num_few_shots: 2
 
 kaster:
   message_intro: "<prompt>"
-  artifacts_path: "wandb-korea/llm-leaderboard-dataset/eval_data:latest"
+  artifacts_path: "/workspace/llm-leaderboard-korean/artifacts/eval_data:v0"
   dataset_dir: "kaster"
 
 haerae_bench_v1:
   message_intro: "<prompt>"
-  artifacts_path: "wandb-korea/llm-leaderboard-dataset/eval_data:latest"
+  artifacts_path: "/workspace/llm-leaderboard-korean/artifacts/eval_data:v0"
   dataset_dir: "haerae_bench_v1"
 
 kobbq:
   message_intro: "<prompt>"
-  artifacts_path: "wandb-korea/llm-leaderboard-dataset/eval_data:latest"
+  artifacts_path: "/workspace/llm-leaderboard-korean/artifacts/eval_data:v0"
   dataset_dir: "kobbq"
 
 ko_truthful_qa:
   message_intro: "<prompt>"
-  artifacts_path: "wandb-korea/llm-leaderboard-dataset/eval_data:latest"
+  artifacts_path: "/workspace/llm-leaderboard-korean/artifacts/eval_data:v0"
   dataset_dir: "ko_truthful_qa"
 
 mtbench:
@@ -65,11 +65,11 @@ mtbench:
     reasoning: 0.0
     stem: 0.1
     humanities": 0.1
-  question_artifacts_path: "wandb-korea/korean-llm-leaderboard/mtbench_ko_question:v0" # if testmode is true, small dataset will be used
-  question_artifacts_path_test: "wandb-korea/korean-llm-leaderboard/mtbench_ko_question:v0"
-  referenceanswer_artifacts_path: "wandb-korea/korean-llm-leaderboard/mtbench_ko_referenceanswer:v0" # if testmode is true, small dataset will be used
-  referenceanswer_artifacts_path_test: "wandb-korea/korean-llm-leaderboard/mtbench_ko_referenceanswer:v0"
-  judge_prompt_artifacts_path: "wandb-korea/korean-llm-leaderboard/mtbench_ko_prompt:v0"
+  question_artifacts_path: "/workspace/llm-leaderboard-korean/artifacts/mtbench_ko_question:v0" # if testmode is true, small dataset will be used
+  question_artifacts_path_test: "/workspace/llm-leaderboard-korean/artifacts/mtbench_ko_question:v0"
+  referenceanswer_artifacts_path: "/workspace/llm-leaderboard-korean/artifacts/mtbench_ko_referenceanswer:v0" # if testmode is true, small dataset will be used
+  referenceanswer_artifacts_path_test: "/workspace/llm-leaderboard-korean/artifacts/mtbench_ko_referenceanswer:v0"
+  judge_prompt_artifacts_path: "/workspace/llm-leaderboard-korean/artifacts/mtbench_ko_prompt:v0"
   bench_name: 'korean_mt_bench'
   model_id: null # cannot use '<', '>', ':', '"', '/', '\\', '|', '?', '*', '.'
   question_begin: null 

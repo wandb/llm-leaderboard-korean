@@ -31,15 +31,10 @@ class AbstractEvaluator(ABC):
         self.cfg = self.instance.config
         self.llm = self.instance.llm
 
-    def download_dataset(self, dataset_name):
+    def download_dataset(self):
         # download dataset
-        artifact = self.run.use_artifact(self.cfg[dataset_name].artifacts_path, type="dataset")
-        artifact_dir = artifact.download()
-        dataset_dir = Path(artifact_dir) / self.cfg[dataset_name].dataset_dir
-        print(dataset_dir)
-        if not dataset_dir.exists():
-            print(f"skip {dataset_name} because it is not found in {artifact_dir}")
-            raise FileNotFoundError(f"self.dataset_dir not found: {dataset_dir}")
+        artifact_dir = Path(self.cfg.kaster.artifacts_path)
+        dataset_dir = Path(self.cfg.kaster.artifacts_path + "/" + self.cfg.kaster.dataset_dir)
         return artifact_dir, dataset_dir
     
     def read_task_data(self, artifact_dir, dataset_dir, task, subset=""):
