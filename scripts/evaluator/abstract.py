@@ -31,12 +31,6 @@ class AbstractEvaluator(ABC):
         self.cfg = self.instance.config
         self.llm = self.instance.llm
 
-    def download_dataset(self):
-        # download dataset
-        artifact_dir = Path(self.cfg.kaster.artifacts_path)
-        dataset_dir = Path(self.cfg.kaster.artifacts_path + "/" + self.cfg.kaster.dataset_dir)
-        return artifact_dir, dataset_dir
-    
     def read_task_data(self, artifact_dir, dataset_dir, task, subset=""):
         # read task data
         dataset_dir = dataset_dir.joinpath(subset)

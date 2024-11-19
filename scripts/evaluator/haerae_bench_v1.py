@@ -48,7 +48,8 @@ class HaeraeBenchV1Evaluator(AbstractEvaluator):
     def evaluate(self):
         evaluation_results = []
         # execute evaluation
-        artifact_dir, dataset_dir = self.download_dataset()
+        artifact_dir = Path(self.cfg.haerae_bench_v1.artifacts_path)
+        dataset_dir = Path(self.cfg.haerae_bench_v1.artifacts_path + "/" + self.cfg.haerae_bench_v1.dataset_dir)
         # collect test data
         for task in self.tasks:
             if self.cfg.testmode:

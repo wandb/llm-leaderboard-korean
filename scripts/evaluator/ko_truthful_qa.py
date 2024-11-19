@@ -32,7 +32,8 @@ class KoTruthfulQAEvaluator(AbstractEvaluator):
     def evaluate(self):
         evaluation_results = []
         # execute evaluation
-        artifact_dir, dataset_dir = self.download_dataset()
+        artifact_dir = Path(self.cfg.ko_truthful_qa.artifacts_path)
+        dataset_dir = Path(self.cfg.ko_truthful_qa.artifacts_path + "/" + self.cfg.ko_truthful_qa.dataset_dir)
         # collect test data
         for task in self.tasks:
             task_data, task_data_path = self.read_task_data(artifact_dir, dataset_dir, task)
