@@ -1,39 +1,7 @@
 # Horangi Leaderboard 3
 ## Overview
 
-This repository is for the Horangi Leaderboard 3, a comprehensive evaluation platform for large language models. The leaderboard assesses both general language capabilities and alignment aspects. For detailed information about the leaderboard, please visit [Nejumi Leaderboard](https://wandb.ai/wandb-japan/llm-leaderboard3/reports/Nejumi-LLM-3--Vmlldzo3OTg2NjM2) website.
-
-## Evaluation Metrics
-Our evaluation framework incorporates a diverse set of metrics to provide a holistic assessment of model performance:
-
-
-| Main Category | Subcategory | Automated Evaluation with Correct Data | AI Evaluation | Note |
-|---------------|-------------|----------------------------------------|---------------|------|
-| General Language Processing | Expression | | MT-bench/roleplay (0shot)<br>MT-bench/humanities (0shot)<br>MT-bench/writing (0shot) | |
-| ^   | Translation | ALT e-to-j (jaster) (0shot, 2shot)<br>ALT j-to-e (jaster) (0shot, 2shot)<br>wikicorpus-e-to-j(jaster) (0shot, 2shot)<br>wikicorpus-j-to-e(jaster) (0shot, 2shot) | | |
-| ^   | Summarization | | | |
-| ^   | Information Extraction | JSQuaD (jaster) (0shot, 2shot) | | |
-| ^   | Reasoning | | MT-bench/reasoning (0shot) | |
-| ^   | Mathematical Reasoning | MAWPS*(jaster) (0shot, 2shot)<br>MGSM*(jaster) (0shot, 2shot) | MT-bench/math (0shot) | |
-| ^   | (Entity) Extraction | wiki_ner*(jaster) (0shot, 2shot)<br>wiki_coreference(jaster) (0shot, 2shot)<br>chABSA*(jaster) (0shot, 2shot) | MT-bench/extraction (0shot) | |
-| ^   | Knowledge / Question Answering | JCommonsenseQA*(jaster) (0shot, 2shot)<br>JEMHopQA*(jaster) (0shot, 2shot)<br>JMMLU*(0shot, 2shot)<br>NIILC*(jaster) (0shot, 2shot)<br>aio*(jaster) (0shot, 2shot) | MT-bench/stem (0shot) | |
-| ^   | English | MMLU_en (0shot, 2shot) | | |
-| ^   | semantic analysis | JNLI*(jaster) (0shot, 2shot)<br>JaNLI*(jaster) (0shot, 2shot)<br>JSeM*(jaster) (0shot, 2shot)<br>JSICK*(jaster) (0shot, 2shot)<br>Jamp*(jaster) (0shot, 2shot) | | |
-| ^   | syntactic analysis | JCoLA-in-domain*(jaster) (0shot, 2shot)<br>JCoLA-out-of-domain*(jaster) (0shot, 2shot)<br>JBLiMP*(jaster) (0shot, 2shot)<br>wiki_reading*(jaster) (0shot, 2shot)<br>wiki_pas*(jaster) (0shot, 2shot)<br>wiki_dependency*(jaster) (0shot, 2shot) | | |
-| Alignment | Controllability | jaster* (0shot, 2shot)<br>LCTG | | LCTG cannot be used for business purposes. Usage for research and using the result in the press release are acceptable. |
-| ^   | Ethics/Moral | JCommonsenseMorality*(2shot) | | |
-| ^   | Toxicity || LINE Yahoo Reliability Evaluation Benchmark | This dataset is not publicly available due to its sensitive content.| <TBU> |
-| ^   | Bias | JBBQ (2shot) | | JBBQ needs to be downloaded from [JBBQ github repository](https://github.com/ynklab/JBBQ_data?tab=readme-ov-file). |
-| ^   | Truthfulness | JTruthfulQA | | For JTruthfulQA evaluation, nlp-waseda/roberta_jtruthfulqa requires Juman++ to be installed beforehand. You can install it by running the script/install_jumanpp.sh script. |
-| ^   | Robustness | Test multiple patterns against JMMLU (W&B original) (0shot, 2shot)<br>- Standard method<br>- Choices are symbols<br>- Select anything but the correct answer | | |
-
-
-- metrics with (0, 2-shot) are averaged across both settings.
-- Metrics marked with an asterisk (*) evaluate control capabilities.
-- For MT-bench, [StabilityAI's MT-Bench JP](https://github.com/Stability-AI/FastChat/tree/jp-stable) is used with GPT-4o-2024-05-13 as the model to evaluate.
-- For LCTG, the only quantity test is conducted. (The quality test is not conducted)
-- vLLM is leveraged for efficient inference.
-- **Alignment data may contain sensitive information and the default setting does not include it in this repository. If you want to evaluate your models agains Alinghment data, please check each dataset instruction carefully**
+This repository is for the Horangi Leaderboard 3, a comprehensive evaluation platform for large language models. The leaderboard assesses both general language capabilities and alignment aspects. For detailed information about the leaderboard, please visit [Horangi: W&B Korean LLM Leaderboard 3](horangi.ai) website.
 
 ## Implementation Guide
 
@@ -41,9 +9,10 @@ Our evaluation framework incorporates a diverse set of metrics to provide a holi
 1. Set up environment variables
 ```
 export WANDB_API_KEY=<your WANDB_API_KEY>
-export OPENAI_API_KEY=<your OPENAI_API_KEY>
-export LANG=ja_JP.UTF-8
+export MKL_THREADING_LAYER=GNU
+export LANG=ko_KR.UTF-8
 # if needed, set the following API KEY too
+export OPENAI_API_KEY=<your OPENAI_API_KEY>
 export ANTHROPIC_API_KEY=<your ANTHROPIC_API_KEY>
 export GOOGLE_API_KEY=<your GOOGLE_API_KEY>
 export COHERE_API_KEY=<your COHERE_API_KEY>
@@ -58,27 +27,15 @@ huggingface-cli login
 
 2. Clone the repository
 ```bash
-git clone https://github.com/wandb/llm-leaderboard.git
+git clone https://github.com/wandb/llm-leaderboard-korean
 cd llm-leaderboard
 ```
 
-3. Set up a Python environment with `requirements.txt`
-
-### Dataset Preparation
-
-For detailed instructions on dataset preparation and caveate, please refer to [scripts/data_uploader/README.md](./scripts/data_uploader/README.md).
-
-In Nejumi Leadeboard3, the following dataset are used.
-
-**Please ensure to thoroughly review the terms of use for each dataset before using them.**
-
-1. [jaster](https://github.com/llm-jp/llm-jp-eval/tree/nejumi3-data)(Apache-2.0 license)
-2. [MT-Bench-JA](https://github.com/Stability-AI/FastChat/tree/jp-stable) (Apache-2.0 license)
-3. [LCTG](https://github.com/CyberAgentAILab/LCTG-Bench) (Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License. Permission from AI shift to use for the leaderboard and was received.)
-4. [JBBQ](https://github.com/ynklab/JBBQ_data?tab=readme-ov-file) (Creative Commons Attribution 4.0 International License.)
-5. LINE Yahoo Inappropriate Speech Evaluation Dataset (not publically available)
-6. [JTruthfulQA](https://github.com/nlp-waseda/JTruthfulQA) (Creative Commons Attribution 4.0 International License.)
-
+3. Set up a Python environment
+```bash
+sudo apt install -y build-essential
+pip install -r requirements.txt
+```
 
 
 ### Configuration
@@ -115,29 +72,21 @@ Below, you will find a detailed description of the variables utilized in the `ba
 
 - **github_version:** For recording, not required to be changed.
 
-- **jaster:**  Settings for the Jaster dataset.
-    - `artifacts_path`: URL of the WandB Artifact for the Jaster dataset.
-    - `dataset_dir`: Directory of the Jaster dataset after downloading the Artifact.
+- **kaster:**  Settings for the Kaster dataset.
+    - `artifacts_path`: URL of the WandB Artifact for the Kaster dataset.
+    - `dataset_dir`: Directory of the Kaster dataset after downloading the Artifact.
 
-- **jmmlu_robustness:** Whether to include the JMMLU Robustness evaluation. Default is True.
+- **haerae_bench_v1:**  Settings for the haerae_bench_v1 dataset.
+    - `artifacts_path`: URL of the WandB Artifact for the haerae_bench_v1 dataset.
+    - `dataset_dir`: Directory of the haerae_bench_v1 dataset after downloading the Artifact.
 
-- **lctg:** Settings for the LCTG dataset.
-    - `artifacts_path`: URL of the WandB Artifact for the LCTG dataset.
-    - `dataset_dir`: Directory of the LCTG dataset after downloading the Artifact.
+- **kobbq:** Settings for the KoBBQ dataset.
+    - `artifacts_path`: URL of the WandB Artifact for the KoBBQ dataset.
+    - `dataset_dir`: Directory of the KoBBQ dataset after downloading the Artifact.
 
-- **jbbq:** Settings for the JBBQ dataset.
-    - `artifacts_path`: URL of the WandB Artifact for the JBBQ dataset.
-    - `dataset_dir`: Directory of the JBBQ dataset after downloading the Artifact.
-
-- **toxicity:** Settings for the toxicity evaluation.
-    - `artifact_path`: URL of the WandB Artifact of the toxicity dataset.
-    - `judge_prompts_path`: URL of the WandB Artifact of the toxicity judge prompts.
-    - `max_workers`: Number of workers for parallel processing.
-    - `judge_model`: Model used for toxicity judgment. Default is `gpt-4o-2024-05-13`
-
-- **jtruthfulqa:** Settings for the LCTG dataset.
-    - `artifact_path`: URL of the WandB Artifact for the JTruthfulQA dataset.
-    - `roberta_model_name`: Name of the RoBERTa model used for evaluation. Default is 'nlp-waseda/roberta_jtruthfulqa'.
+- **ko_truthful_qa:** Settings for the KoTruthfulQA dataset.
+    - `artifacts_path`: URL of the WandB Artifact for the KoTruthfulQA dataset.
+    - `dataset_dir`: Directory of the KoTruthfulQA dataset after downloading the Artifact.
 
 - **mtbench:** Settings for the MT-Bench evaluation.
     - `temperature_override`: Override the temperature for each category of the MT-Bench.
@@ -234,4 +183,4 @@ Contributions to this repository is welcom. Please submit your suggestions via p
 This repository is available for commercial use. However, please adhere to the respective rights and licenses of each evaluation dataset used.
 
 ## Contact
-For questions or support, please concatct to contact-jp@wandb.com.
+For questions or support, please concatct to contact-kr@wandb.com.
