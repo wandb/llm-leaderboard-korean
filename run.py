@@ -47,7 +47,10 @@ config_list_korean = [
     # "EEVE-Korean-Instruct-10-8B-v1-0",
     # "rtzr-ko-gemma-2-9b-it",
     # "saltware-sapie-gemma2-9B-IT",
+    # "EXAONE-3-5-2-4B-Instruct",
+    # "EXAONE-3-5-7-8B-Instruct",
+    "EXAONE-3-5-32B-Instruct"
 ]
 
-for config in config_list_qwen + config_list_llama:
+for config in config_list_korean:
     os.system(f"python3 scripts/run_eval.py --config config-{config}")
