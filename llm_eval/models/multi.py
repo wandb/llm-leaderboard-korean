@@ -29,78 +29,57 @@ multi.py
 """
 from typing import List, Dict, Any, Optional
 
-from .base import BaseModel
+from .base import BaseModel, BaseJudge, BaseRewardModel
 from . import load_model, register_model
 
 
-
 @register_model("multi")
-class MultiModel(BaseModel):
+class MultiModel:
     """
-    여러 모델(서브 모델) 인스턴스를 내부에 보관하고,
-    'generate_batch' 호출 시 각 서브 모델을 순회하여 
-    결과를 한 번에 모으는 모델 클래스.
+    여러 모델(또는 Judge, Reward 모델)을 내부에 보관하고,
+    호출 방식에 따라 'generate_batch' / 'judge_batch' / 'score_batch' 등을
+    각각 순차 실행 가능하게 설계한 클래스.
 
     Attributes:
-        models_config (List[Dict[str, Any]]): 
-            - 서브 모델을 로드하기 위한 설정 목록.
-            - 각 항목은 
-              {
-                "name": <str: MODEL_REGISTRY 키>,
-                ... (모델 별 필요한 인자)
-              }
+        items_config: 
+            - 서브 모델(혹은 Judge/Reward)의 설정 목록.
             - 예: [
-                {"name": "vllm", "endpoint": "http://127.0.0.1:8000"},
-                {"name": "huggingface", "model_name": "gpt2"},
-                ...
+                {"name": "vllm", "endpoint": "...", "type": "model"},
+                {"name": "judge_llm", "some_judge_config": "...", "type": "judge"},
+                {"name": "rm_model", "some_reward_config": "...", "type": "reward"}
               ]
-
-        aggregate_strategy (str): 
-            - 여러 서브 모델의 결과를 최종적으로 어떻게 합칠지 결정.
-            - "first"    : 첫 번째 모델 결과만 최종 prediction으로 사용
-            - "vote"     : 간단한 majority voting (동일 문자열 가장 많은 것)
-            - "combine"  : 모든 모델 결과를 리스트로 보관 (prediction은 None)
-            - (필요하다면 추가 전략 구현 가능)
-
-        models (List[BaseModel]):
-            - 실제 서브 모델 인스턴스들의 리스트
+        sub_items:
+            - 실제 인스턴스들(BaseModel, BaseJudge, BaseRewardModel).
     """
 
     def __init__(
         self,
-        models_config: Optional[List[Dict[str, Any]]] = None,
-        aggregate_strategy: str = "first",
+        items_config: Optional[List[Dict[str, Any]]] = None,
         **kwargs
     ):
         """
-        MultiModel 초기화 메서드.
-
         Args:
-            models_config (List[Dict[str, Any]]): 
-                여러 서브 모델을 로드하기 위한 설정 목록.
-            aggregate_strategy (str, optional):
-                여러 모델 출력 중 최종 prediction을 결정하는 방식.
-                Defaults to "first".
-            **kwargs:
-                BaseModel에서 물려받을 수 있는 추가 파라미터 (필요시 사용).
+            items_config (List[Dict[str, Any]]): 
+                여러 서브 엔티티를 로드하기 위한 설정.
+                각 item은 최소 'name' 키(레지스트리 키)와 'type' 키(model/judge/reward 등)를 가져야 함.
         """
-        super().__init__(**kwargs)
-        if models_config is None:
-            models_config = []
+        super().__init__()
+        if items_config is None:
+            items_config = []
 
-        self.models_config: List[Dict[str, Any]] = models_config
-        self.aggregate_strategy = aggregate_strategy
+        self.items_config: List[Dict[str, Any]] = items_config
+        self.sub_items: List[Union[BaseModel, BaseJudge, BaseRewardModel]] = []
+        
+        # 로딩
+        for idx, cfg in enumerate(self.items_config):
+            model_name = cfg.pop("name", None)
+            item_type = cfg.pop("type", None)  # "model", "judge", "reward" 등
+            if not model_name or not item_type:
+                raise ValueError(f"Config {idx} must have 'name' and 'type' fields.")
 
-        # 실제 서브 모델 인스턴스 보관
-        self.models: List[BaseModel] = []
-
-        # 모델 불러오기
-        for idx, mc in enumerate(self.models_config):
-            model_name = mc.pop("name", None)
-            if not model_name:
-                raise ValueError(f"Model config {idx} is missing 'name' field.")
-            sub_model = load_model(model_name, **mc)
-            self.models.append(sub_model)
+            sub_obj = load_model(model_name, **cfg)
+            # sub_obj가 BaseModel, BaseJudge, BaseRewardModel 중 하나
+            self.sub_items.append(sub_obj)
 
     def generate_batch(
         self,
@@ -108,114 +87,39 @@ class MultiModel(BaseModel):
         return_logits: bool = False
     ) -> List[Dict[str, Any]]:
         """
-        여러 서브 모델에 대해 순차적으로 generate_batch를 호출한 뒤,
-        각 샘플에 "multi_outputs" 필드로 모든 모델의 결과를 기록한다.
-        이후 aggregate_strategy에 따라 최종 "prediction" 필드를 결정.
-
-        Args:
-            inputs (List[Dict[str, Any]]): 
-                [{ "input": str, "reference": str, ... }, ...]
-            return_logits (bool, optional):
-                모델 로그 확률 정보 등 반환 여부. Defaults to False.
-
-        Returns:
-            List[Dict[str, Any]]:
-                각 아이템은 다음 필드를 가질 수 있음:
-                {
-                  "input": ...,
-                  "reference": ...,
-                  "multi_outputs": [
-                    {
-                      "model_name": <str>,
-                      "prediction": <str>,
-                      "logits": (optional, if return_logits=True)
-                      ...
-                    },
-                    ...
-                  ],
-                  "prediction": <str or None> (aggregate_strategy에 따라)
-                }
+        모든 'BaseModel' 타입의 서브 아이템에 대해서만 generate_batch를 호출.
+        Judge/Reward 타입인 경우 무시(혹은 에러).
         """
-        if not self.models:
-            return inputs
-
-        # 먼저, "multi_outputs"를 초기화
-        for item in inputs:
-            item["multi_outputs"] = []
-
-        # 1) 각 모델에 대해 순차적으로 generate_batch 호출
-        #    (병렬로 처리하고 싶다면 concurrent.futures 등을 사용할 수도 있음)
-        for idx, sub_model in enumerate(self.models):
-            # 서브 모델이 inputs를 in-place로 수정 후 반환할 수도 있으니,
-            # 복사본 없이 바로 부르는 방식을 사용 (주의)
-            sub_results = sub_model.generate_batch(inputs, return_logits=return_logits)
-
-            # 2) sub_results = inputs (동일 객체 참조) 이므로, 
-            #    각 아이템에 해당 모델의 결과를 담아둔다.
-            for item, sub_item in zip(inputs, sub_results):
-                # sub_item["prediction"]가 모델의 생성 결과
-                # sub_item.get("logits") 등등이 있을 수 있음
-                item["multi_outputs"].append({
-                    "model_name": type(sub_model).__name__,  # or registry key
-                    "prediction": sub_item.get("prediction", None),
-                    "logits": sub_item.get("logits", None) if return_logits else None
-                })
-
-        # 3) aggregate_strategy에 따라 최종 "prediction" 결정
-        self._apply_aggregate_strategy(inputs)
-
+        for sub_item in self.sub_items:
+            if isinstance(sub_item, BaseModel):
+                sub_item.generate_batch(inputs, return_logits=return_logits)
+            else:
+                # Judge나 Reward는 실제 텍스트 생성을 하지 않으므로 패스
+                pass
         return inputs
 
-    def _apply_aggregate_strategy(self, batch: List[Dict[str, Any]]) -> None:
+    def judge_batch(self, inputs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        내부 헬퍼 메서드: batch 내 각 아이템에 대해 aggregate_strategy를 적용해
-        최종 prediction을 결정하거나, 보관만 해둘 수 있다.
+        모든 'BaseJudge' 타입의 서브 아이템에 대해 judge_batch 호출.
         """
-        if self.aggregate_strategy == "first":
-            self._aggregate_first(batch)
-        elif self.aggregate_strategy == "vote":
-            self._aggregate_vote(batch)
-        elif self.aggregate_strategy == "combine":
-            self._aggregate_combine(batch)
-        else:
-            raise
-
-    def _aggregate_first(self, batch: List[Dict[str, Any]]) -> None:
-        """
-        첫 번째 모델 결과를 그대로 최종 prediction으로 사용.
-        """
-        for item in batch:
-            outputs = item["multi_outputs"]
-            if not outputs:
-                item["prediction"] = None
+        for sub_item in self.sub_items:
+            if isinstance(sub_item, BaseJudge):
+                judge_outputs = sub_item.judge_batch(inputs)
+                # judge_outputs가 inputs와 동일 객체(혹은 새 객체)인지 여부는 구현마다 다름
+                # 여기서는 sub_item이 in-place로 inputs에 "judge_score" 등 붙인다고 가정
             else:
-                item["prediction"] = outputs[0]["prediction"]
+                # model/reward는 pass
+                pass
+        return inputs
 
-    def _aggregate_vote(self, batch: List[Dict[str, Any]]) -> None:
+    def score_batch(self, inputs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        간단한 Majority Voting 로직:
-        동일한 문자열 결과가 가장 빈번히 등장하는 것을 최종 prediction으로 설정.
+        모든 'BaseRewardModel' 타입의 서브 아이템에 대해 score_batch 호출.
         """
-        for item in batch:
-            outputs = item["multi_outputs"]
-            if not outputs:
-                item["prediction"] = None
-                continue
-
-            count_map = {}
-            for out in outputs:
-                pred = out["prediction"]
-                count_map[pred] = count_map.get(pred, 0) + 1
-
-            # 빈도수가 가장 높은 문자열
-            best_pred = max(count_map, key=count_map.get)
-            item["prediction"] = best_pred
-
-    def _aggregate_combine(self, batch: List[Dict[str, Any]]) -> None:
-        """
-        여러 모델의 결과를 전부 리스트로 보관하고, 
-        최종 prediction은 None으로 두는 모드.
-        - 스케일링 메서드나 상위 로직에서 따로 처리하게끔 할 수 있음.
-        """
-        for item in batch:
-            item["prediction"] = None  # 실제 prediction은 multi_outputs에만 저장
+        for sub_item in self.sub_items:
+            if isinstance(sub_item, BaseRewardModel):
+                reward_outputs = sub_item.score_batch(inputs)
+                # 역시 reward_outputs가 inputs와 동일 객체인지 체크
+            else:
+                pass
+        return inputs

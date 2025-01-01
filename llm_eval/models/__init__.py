@@ -7,18 +7,19 @@ MODEL_REGISTRY: Dict[str, Type[BaseModel]] = {}
 # 2) 레지스트리에 등록할 헬퍼 함수
 def register_model(name: str):
     """
-    Model 클래스를 레지스트리에 등록하기 위한 데코레이터.
+    Model /Judge/ Reward 클래스를 레지스트리에 등록하기 위한 데코레이터.
     사용 예:
         @register_model("vllm")
         class VLLMModel(BaseModel):
             ...
     """
-    def decorator(cls: Type[BaseModel]):
+    def decorator(cls: Type[ModelType]):
         if name in MODEL_REGISTRY:
             raise ValueError(f"Model '{name}' already registered.")
         MODEL_REGISTRY[name] = cls
         return cls
     return decorator
+
 
 
 # 3) 레지스트리에서 model 인스턴스를 생성하는 함수

@@ -20,12 +20,71 @@ class BaseModel:
         pass
 
     def generate_batch(
-        self, 
-        inputs: List[Dict[str, Any]], 
+        self,
+        inputs: List[Dict[str, Any]],
         return_logits: bool = False
     ) -> List[Dict[str, Any]]:
         """
-        실제 모델 호출(로컬 or API)을 통해 'prediction' (문자열) 
-        + 필요한 경우 'logits' 정보를 반환.
+        LLM으로부터 텍스트(답안)를 생성하는 메서드.
+        Args:
+            inputs: [{"input": str, "reference": str, ...}, ...]
+            return_logits: True일 경우, logits나 logprobs 등 추가 정보를 반환 가능.
+        Returns:
+            동일 리스트(또는 복사본)에 
+            [
+              {
+                "input": ...,
+                "reference": ...,
+                "prediction": <생성된 답변>,
+                "logits": (선택),
+                ...
+              },
+              ...
+            ]
         """
         raise NotImplementedError("Subclasses must implement generate_batch().")
+    
+    class BaseJudge:
+        """
+        Judge 모델(LLM-as-a-Judge) 기본 추상 클래스.
+        '이미 생성된 텍스트(답변)'를 입력으로 받아, 품질/적합도를 평가하는 역할.
+        예) Chain-of-Thought 기반 Self-Consistency 평가, 별점(1~5점) 등
+        """
+    def __init__(self, **kwargs):
+        pass
+
+    def judge_batch(
+        self,
+        inputs: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Args:
+            inputs: [{"input": ..., "prediction": ..., "reference": ...}, ...]
+                    - 보통 'prediction'(생성된 답안)을 활용해 품질 평가를 진행
+        Returns:
+            [{"judge_score": float or int, "judge_explanation": str, ...}, ...]
+            - 각 샘플에 대해 평가 점수/판단을 추가해서 반환
+        """
+        raise NotImplementedError("Subclasses must implement judge_batch().")
+
+class BaseRewardModel:
+    """
+    Reward 모델(주로 RLHF나 PPO 등에서 사용) 전용 추상 클래스.
+    '문자열 답안' -> '스칼라 보상 값'을 추정하는 역할.
+    """
+    def __init__(self, **kwargs):
+        pass
+
+    def score_batch(
+        self,
+        inputs: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Args:
+            inputs: [{"input":..., "prediction":..., "reference":...}, ...]
+                    - 보통 'prediction'을 인풋 삼아, 보상 점수를 산출
+        Returns:
+            [{"reward": float, ...}, ...]
+            - 각 샘플에 'reward' 필드를 추가
+        """
+        raise NotImplementedError("Subclasses must implement score_batch().")
