@@ -18,18 +18,21 @@ class BaseDataset:
       - info(): 데이터셋 정보
     """
 
-    def __init__(self, dataset_name: str, split: str = "test", **kwargs):
+    def __init__(self, dataset_name: str, split: str = "test", subset:str = None, **kwargs):
         """
         Args:
             dataset_name (str): 
                 데이터셋 고유 식별자
             split (str): 
                 train/validation/test 등을 구분하기 위한 문자열 (load 시)
+            subset (str): 
+                하위 태스크나 config (예: "abstract_algebra")
             kwargs: 
                 기타 데이터셋 로딩에 필요한 파라미터(예: HF config, version, 인증 토큰 등)
         """
         self.dataset_name = dataset_name
         self.split = split
+        self.subset = subset
         self.kwargs = kwargs  # 확장 가능하도록 저장
 
     def load(self) -> List[Dict[str, Any]]:
