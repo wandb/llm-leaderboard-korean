@@ -69,7 +69,7 @@ class BaseModel:
 
 class BaseRewardModel:
     """
-    Reward 모델(주로 RLHF나 PPO 등에서 사용) 전용 추상 클래스.
+    Reward 모델(DVTS 등에 활용 가능) 전용 추상 클래스.
     '문자열 답안' -> '스칼라 보상 값'을 추정하는 역할.
     """
     def __init__(self, **kwargs):
