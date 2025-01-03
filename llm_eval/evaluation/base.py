@@ -16,6 +16,7 @@ class BaseEvaluator:
     
     필요시 requires_logits, requires_chain_of_thought 등 속성을 둬서 
     모델을 호출할 때 logits, CoT를 요청하는 등의 분기 처리가 가능.
+    # TODO : requires_chain_of_thought 추가, scaling method와의 연동
     """
 
     name: str = "base"
