@@ -44,12 +44,12 @@ class BaseModel:
         """
         raise NotImplementedError("Subclasses must implement generate_batch().")
     
-    class BaseJudge:
-        """
-        Judge 모델(LLM-as-a-Judge) 기본 추상 클래스.
-        '이미 생성된 텍스트(답변)'를 입력으로 받아, 품질/적합도를 평가하는 역할.
-        예) Chain-of-Thought 기반 Self-Consistency 평가, 별점(1~5점) 등
-        """
+class BaseJudge:
+    """
+    Judge 모델(LLM-as-a-Judge) 기본 추상 클래스.
+    '이미 생성된 텍스트(답변)'를 입력으로 받아, 품질/적합도를 평가하는 역할.
+    예) Chain-of-Thought 기반 Self-Consistency 평가, 별점(1~5점) 등
+    """
     def __init__(self, **kwargs):
         pass
 

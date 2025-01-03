@@ -27,7 +27,7 @@ multi.py
     #   ]
     # 그리고 최종 "prediction"은 aggregate_strategy="first"에 따라 첫 모델 결과만 사용
 """
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 
 from .base import BaseModel, BaseJudge, BaseRewardModel
 from . import load_model, register_model
