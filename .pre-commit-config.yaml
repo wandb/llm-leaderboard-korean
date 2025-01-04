@@ -1,18 +1,27 @@
 repos:
+  # pre-commit 기본 훅 모음
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # 파일 끝의 불필요한 공백 제거
       - id: trailing-whitespace
+      # 파일 끝에 빈 줄 추가
       - id: end-of-file-fixer
+
+  # black: Python 코드 포매터
   - repo: https://github.com/psf/black
     rev: 24.10.0
     hooks:
       - id: black
-        args: ["--line-length=88"]
+        args: ["--line-length=88"] # 최대 줄 길이 설정
+
+  # isort: import 문 정렬
   - repo: https://github.com/PyCQA/isort
     rev: 5.13.2
     hooks:
       - id: isort
+
+  # mypy: Python 타입 검사 도구
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.14.0
     hooks:
