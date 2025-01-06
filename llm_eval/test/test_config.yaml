@@ -1,5 +1,5 @@
 datasets:
-  - hae_rae # 예시, 구현되는 대로 추가하기기
+  - hae_rae # 예시, 구현되는 대로 추가하기
 
 models:
   - huggingface
