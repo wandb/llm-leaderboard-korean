@@ -8,12 +8,18 @@ repos:
       # 파일 끝에 빈 줄 추가
       - id: end-of-file-fixer
 
-  # black: Python 코드 포매터
-  - repo: https://github.com/psf/black
-    rev: 24.10.0
+  # flake8: Python 코드 린터
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
     hooks:
-      - id: black
-        args: ["--line-length=88"] # 최대 줄 길이 설정
+      - id: flake8
+
+  # autopep8: Python 코드 스타일 자동 정리
+  - repo: https://github.com/pre-commit/mirrors-autopep8
+    rev: v1.6.0
+    hooks:
+      - id: autopep8
+        args: ["--max-line-length=80"] # 최대 줄 길이 설정
 
   # isort: import 문 정렬
   - repo: https://github.com/PyCQA/isort
