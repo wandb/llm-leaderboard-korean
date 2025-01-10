@@ -11,12 +11,6 @@ class OpenAIModel(BaseModel):
         model_name: str = "gpt-4o",  # gpt-4o-mini, gpt-4o-turo 등
         **kwargs,
     ):
-        """
-        Args:
-            api_base: API 엔드포인트 URL
-            api_key: OpenAI API 키 (또는 호환 서버용 키)
-            model_name: 사용할 모델명
-        """
         super().__init__()
         if not api_key:
             raise ValueError("API key is required")
@@ -31,13 +25,7 @@ class OpenAIModel(BaseModel):
     def generate_batch(
         self, inputs: List[Dict[str, Any]], return_logits: bool = False
     ) -> List[Dict[str, Any]]:
-        """
-        OpenAI API를 사용해 배치 추론 수행
 
-        Args:
-            inputs: [{"input": str, "reference": str, ...}, ...]
-            return_logits: logprobs 반환 여부
-        """
         outputs = []
 
         for item in inputs:
