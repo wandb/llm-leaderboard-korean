@@ -2,6 +2,8 @@
 
 **Haerae-Evaluation-Toolkit** is an emerging open-source Python library designed to streamline and standardize the evaluation of **Large Language Models (LLMs)**.
 
+**Currently on Develop!**
+
 ---
 
 ## ✨ Key Features
