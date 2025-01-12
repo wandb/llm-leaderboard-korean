@@ -1,6 +1,8 @@
 from typing import List, Dict, Any
 from .base import BaseEvaluator
+from . import register_evaluator
 
+@register_evaluator("string_match")  
 class StringMatchEvaluator(BaseEvaluator):
     """
     문자열 정확도를 평가하는 Evaluator.
@@ -12,12 +14,12 @@ class StringMatchEvaluator(BaseEvaluator):
     """
     name = "string_match"
 
-    def parse_prediction(self, raw_output: str) -> str:
+    def parse_prediction(self, raw_output: Any) -> str: 
         """
         예측 값을 파싱하여 비교하기 쉽게 정제합니다.
         
         Args:
-            raw_output (str): 모델의 원본 출력
+            raw_output (Any): 모델의 원본 출력
             
         Returns:
             str: 정제된 문자열 (공백/대소문자 정규화)
@@ -25,8 +27,8 @@ class StringMatchEvaluator(BaseEvaluator):
         if raw_output is None:
             return "none"
         if not isinstance(raw_output, str):
-            return str(raw_output).lower()  # 문자열이 아닌 경우 변환 후 소문자로
-        return " ".join(raw_output.strip().lower().split())  # 연속된 공백도 정규화
+            return str(raw_output).lower()
+        return " ".join(raw_output.strip().lower().split())
 
     def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
         """
