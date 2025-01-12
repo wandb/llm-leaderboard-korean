@@ -1,8 +1,10 @@
 from typing import Dict, Type
 from .base import BaseEvaluator
+from . import string_match
 
 # 1) evaluator들을 등록할 전역 레지스트리 (dict)
 EVALUATION_REGISTRY: Dict[str, Type[BaseEvaluator]] = {}
+EVALUATION_REGISTRY["string_match"] = string_match.StringMatchEvaluator
 
 # 2) 레지스트리에 등록할 헬퍼 함수
 def register_evaluator(name: str):
@@ -33,7 +35,3 @@ def get_evaluator(name: str) -> BaseEvaluator:
 # logit_based.py, exact_match.py, 등등 안에 구현된 클래스들을 import
 #  -> import * 해서 해당 파일 안에서 @register_evaluator 붙인 클래스를 등록
 #  -> 혹은 여기서 직접 import 후 등록해도 됨
-
-from . import logit_based
-from . import exact_match
-from . import cot_evaluator
