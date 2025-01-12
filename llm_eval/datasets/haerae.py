@@ -88,16 +88,13 @@ class HaeraeDataset(BaseDataset):
         {"input":..., "reference":..., "options":..., "_subset_name": subset_name} 형태로 변환.
         """
         processed_list = []
-        # (예) 고정된 선택지
-        fallback_options = ["(A)", "(B)", "(C)", "(D)", "(E)"]
+        # 고정 선택지 A~E
+        options = ["(A)", "(B)", "(C)", "(D)", "(E)"]
 
         for item in hf_dataset:
-            # 원본 데이터에서 query, answer, options 필드 추출 (실제 이름과 맞춰야 함)
+            # 원본 데이터에서 query, answer 필드 추출 (없으면 빈 문자열)
             query = item.get("query", "")
             answer = item.get("answer", "")
-            # 원본에 options 필드가 없으면 fallback
-            options = item.get("options", fallback_options)
-
             processed_list.append({
                 "input": query.strip(),
                 "reference": answer.strip(),
