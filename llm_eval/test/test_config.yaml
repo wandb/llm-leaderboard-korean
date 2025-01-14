@@ -1,12 +1,11 @@
 datasets:
-  - hae_rae # 예시, 구현되는 대로 추가하기
+  - haerae_bench # 예시, 구현되는 대로 추가하기
 
 models:
   - huggingface
 
 evaluations:
-  - logit_based
+  - string_match
 
 scalers:
-  - best_of_n
-  - beam_search
+  - self_consistency

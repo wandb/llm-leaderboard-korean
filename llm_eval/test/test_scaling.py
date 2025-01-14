@@ -28,8 +28,8 @@ def test_scaler_apply(scaler_key):
         def generate_batch(self, inputs, return_logits=False):
             return [
                 {
-                    "input": inp["input"],
-                    "reference": inp["reference"],
+                    "input": inp.get("input", ""),
+                    "reference": inp.get("reference", ""),  
                     "prediction": "Hello world",
                 }
                 for inp in inputs
