@@ -31,6 +31,7 @@ def load_scaling_method(name: str, **kwargs) -> BaseScalingMethod:
     return scaling_cls(**kwargs)
 
 # 4) import -> 데코레이터로 등록
-from .best_of_n import BestOfN
-from .beam_search import BeamSearch
+from .self_consistency import SelfConsistencyScalingMethod
+# from .best_of_n import BestOfN
+# from .beam_search import BeamSearch
 

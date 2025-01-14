@@ -24,8 +24,9 @@ class BaseScalingMethod:
       ]
     """
 
-    def __init__(self, model: BaseModel = None, **kwargs):
+    def __init__(self, model: BaseModel = None, use_cot: bool = False, **kwargs):
         self.model = model
+        self.use_cot = use_cot
         self.kwargs = kwargs  # n, beam_width, etc.
 
     def apply(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
