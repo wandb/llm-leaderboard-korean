@@ -1,6 +1,6 @@
 import openai
 import time
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from .base import BaseModel, register_model
 
 
@@ -27,6 +27,7 @@ class OpenAIModel(BaseModel):
         self,
         inputs: Union[str, List[Dict]],
         return_logits: bool = False,
+        use_chat_api: bool = True,
         **kwargs,
     ) -> Dict[str, Any]:
         params = self.default_params.copy()
@@ -34,7 +35,7 @@ class OpenAIModel(BaseModel):
 
         payload = {"model": self.model_name}
 
-        if not self.model_name.startswith("gpt"):
+        if not use_chat_api:
             payload = {"model": self.model_name, "prompt": inputs, **params}
             if return_logits:
                 payload["logprobs"] = 5
@@ -64,6 +65,7 @@ class OpenAIModel(BaseModel):
     def generate_batch(
         self,
         inputs: List[Dict[str, Any]],
+        use_chat_api: bool = True,
         return_logits: bool = False,
         raise_error: bool = False,
         max_retries: int = 3,
@@ -83,7 +85,7 @@ class OpenAIModel(BaseModel):
                         **kwargs,
                     )
 
-                    if not self.model_name.startswith("gpt"):
+                    if not use_chat_api:
                         response = self._client.completions.create(**payload)
                         result = {
                             "prediction": response.choices[0].text,
@@ -111,10 +113,12 @@ class OpenAIModel(BaseModel):
                     if attempt == max_retries - 1:
                         if raise_error:
                             raise
-                        item["error"] = str(e)
+                        result = {"error": str(e), "prediction": None}
                     else:
                         time.sleep(1 * (attempt + 1))
 
-            outputs.append(**item, **(result or {"error": "Failed to generate"}))
+            outputs.append(
+                item | (result or {"error": "Failed to generate", "prediiction": None})
+            )
 
         return outputs
