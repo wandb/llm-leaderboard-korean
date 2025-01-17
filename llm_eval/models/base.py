@@ -22,13 +22,16 @@ class BaseModel:
     def generate_batch(
         self,
         inputs: List[Dict[str, Any]],
-        return_logits: bool = False
+        return_logits: bool = False,
+        cot: bool = False,
     ) -> List[Dict[str, Any]]:
         """
         LLM으로부터 텍스트(답안)를 생성하는 메서드.
         Args:
             inputs: [{"input": str, "reference": str, ...}, ...]
             return_logits: True일 경우, logits나 logprobs 등 추가 정보를 반환 가능.
+            cot: True이면, 1) 모델 프롬프트에 'Let's think step by step' 등을 추가,
+        2) 모델이 reasoning을 "chain_of_thought" 필드에 담아 반환할 수 있음.
         Returns:
             동일 리스트(또는 복사본)에 
             [
@@ -37,6 +40,7 @@ class BaseModel:
                 "reference": ...,
                 "prediction": <생성된 답변>,
                 "logits": (선택),
+                "chain_of_thought": "...(중간 reasoning)..."
                 ...
               },
               ...
