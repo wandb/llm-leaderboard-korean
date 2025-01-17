@@ -2,7 +2,7 @@ from typing import Dict, Type
 from .base import BaseDataset
 
 # 1) dataset들을 등록할 전역 레지스트리 (dict)
-DATASET_REGISTRY = Dict[str, Type[BaseDataset]] = {}
+DATASET_REGISTRY: Dict[str, Type[BaseDataset]] = {}
 
 # 2) 레지스트리에 등록할 헬퍼 함수
 def register_dataset(name: str):
