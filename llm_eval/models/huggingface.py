@@ -7,7 +7,7 @@ from .base import BaseModel
 from . import register_model
 from llm_eval.utils.logging import get_logger
 
-logger = get_logger(name="runner", level=logging.INFO)
+logger = get_logger(name="huggingface", level=logging.INFO)
 
 @register_model("huggingface")
 class HuggingFaceModel(BaseModel):

@@ -10,27 +10,19 @@ from llm_eval.utils.logging import get_logger
 
 logger = get_logger(name="runner", level=logging.INFO)
 
+
 class PipelineRunner:
     """
     전체 LLM 평가 파이프라인을 캡슐화하는 Runner 클래스.
     'dataset_name/subset/split' -> 데이터셋 로딩
-    'model_name' -> 모델(백엔드) 로딩
-    'scaling_method_name' -> 여러 추론 후보 중 최종 답을 고르는 스케일링(디코딩) 전략
-    'evaluation_method_name' -> 최종적으로 모델 출력을 평가하는 방법
+    'model_backend_name' -> 모델 백엔드(등록된 것)
+    'scaling_method_name' -> 디코딩/스케일링 방법(등록된 것)
+    'evaluation_method_name' -> 평가 방법(등록된 것)
 
-    사용 예시:
-        runner = PipelineRunner(
-            dataset_name="haerae_bench",
-            subset=None,
-            split="test",
-            model_name="vllm",
-            scaling_method_name="beam_search",
-            evaluation_method_name="string_match",
-            model_params={"endpoint": "http://localhost:8000"},
-            scaling_params={"beam_size": 3, "num_iterations": 5},
-        )
-        results = runner.run()
-        # results -> {"metrics": {...}, "samples": [...]} 식의 평가 결과
+    이번 버전: 
+     - dataset_params: dict 형태로 dataset 로더에 전달 (HF config, auth 등)
+     - dataset.info()에서 "evaluation_only", "scaling_only" 필드를 확인하여 
+       허용되지 않은 방법을 선택하면 에러 또는 경고
     """
 
     def __init__(
@@ -38,35 +30,38 @@ class PipelineRunner:
         dataset_name: str,
         subset: Union[str, List[str], None] = None,
         split: str = "test",
-        model_name: str = "vllm",
+        model_backend_name: str = "huggingface",
         scaling_method_name: Optional[str] = None,
         evaluation_method_name: str = "string_match",
-        dataset_params:  Optional[Dict[str, Any]] = None,
-        model_params: Optional[Dict[str, Any]] = None,
+
+        dataset_params: Optional[Dict[str, Any]] = None,
+        model_backend_params: Optional[Dict[str, Any]] = None,
         scaling_params: Optional[Dict[str, Any]] = None,
         evaluator_params: Optional[Dict[str, Any]] = None,
     ):
         """
         Args:
-            dataset_name (str): 데이터셋 이름(레지스트리 등록된 것)
-            subset (str | list[str] | None): 하위 태스크(예: "csat_geo" 등)
+            dataset_name (str): 데이터셋 식별자
+            subset (str | list[str] | None): 하위 태스크(예: "csat_geo")
             split (str): "train"/"valid"/"test" 등
-            model_name (str): 모델 식별자(레지스트리 등록된 것)
+            model_backend_name (str): 모델 백엔드 식별자 ("huggingface", "openai", "vllm", "multi" 등)
             scaling_method_name (str | None): 스케일링(디코딩) 방법 식별자
             evaluation_method_name (str): 평가 방법 식별자
-            model_params (dict): 모델 초기화 시 필요한 추가 파라미터 (endpoint, API key, 등)
-            scaling_params (dict): 스케일링 메서드 초기화 시 필요한 추가 파라미터 (beam_size, n, 등)
-            evaluator_params (dict): evaluator 초기화 시 필요한 추가 파라미터
+
+            dataset_params (dict): Dataset 로더에 전달할 추가 파라미터 (HF config, 토큰 등)
+            model_backend_params (dict): 모델 백엔드 초기화 시 사용할 파라미터 (endpoint, API key 등)
+            scaling_params (dict): 스케일링 메서드 초기화 시 파라미터 (beam_size, n 등)
+            evaluator_params (dict): evaluator 초기화 시 필요한 파라미터
         """
         self.dataset_name = dataset_name
         self.subset = subset
         self.split = split
-        self.model_name = model_name
+        self.model_backend_name = model_backend_name
         self.scaling_method_name = scaling_method_name
         self.evaluation_method_name = evaluation_method_name
 
         self.dataset_params = dataset_params or {}
-        self.model_params = model_params or {}
+        self.model_backend_params = model_backend_params or {}
         self.scaling_params = scaling_params or {}
         self.evaluator_params = evaluator_params or {}
 
@@ -80,7 +75,8 @@ class PipelineRunner:
 
     def _load_components(self) -> None:
         """
-        내부적으로 dataset, model, scaler, evaluator를 로드하거나 초기화한다.
+        내부적으로 dataset, model, scaler, evaluator를 로드하고,
+        dataset.info()를 통해 'scaling_only', 'evaluation_only' 같은 제약을 확인함.
         """
         # 1) Dataset
         logger.info(f"[Pipeline] Loading dataset: {self.dataset_name}, subset={self.subset}, split={self.split}")
@@ -88,32 +84,60 @@ class PipelineRunner:
             name=self.dataset_name,
             subset=self.subset,
             split=self.split,
-            **self.dataset_params  # => 여기서는 dataset kwargs와 model_params 구분이 필요할 수도 있음
+            **self.dataset_params  # dataset_params 적용
         )
 
+        ds_info = self.dataset.info()
+        # ds_info 내부에 { ..., "scaling_only": [...], "evaluation_only": [...], ... } 등이 있을 수 있음
+        scaling_only = ds_info.get("scaling_only", None)       # 예: ["beam_search", "best_of_n"]
+        evaluation_only = ds_info.get("evaluation_only", None) # 예: ["llm_judge", "string_match"]
+
         # 2) Model
-        logger.info(f"[Pipeline] Loading model: {self.model_name} with {self.model_params}")
-        self.model = load_model(self.model_name, **self.model_params)
+        logger.info(f"[Pipeline] Loading model backend: {self.model_backend_name} with {self.model_backend_params}")
+        self.model = load_model(self.model_backend_name, **self.model_backend_params)
 
         # 3) Scaling Method (optional)
         if self.scaling_method_name:
+            if scaling_only is not None:
+                # 데이터셋에서 특정 스케일링만 허용한다고 명시된 경우
+                if self.scaling_method_name not in scaling_only:
+                    raise ValueError(
+                        f"Dataset '{self.dataset_name}' only allows scaling methods {scaling_only}, "
+                        f"but got '{self.scaling_method_name}'."
+                    )
             logger.info(f"[Pipeline] Loading scaling method: {self.scaling_method_name} with {self.scaling_params}")
             self.scaler = load_scaling_method(
                 self.scaling_method_name,
                 model=self.model,  # 모델 인스턴스 주입
                 **self.scaling_params
             )
+        else:
+            if scaling_only is not None:
+                # 데이터셋이 특정 스케일링만 허용한다고 했는데, None이면 => 에러 or 경고
+                raise ValueError(
+                    f"Dataset '{self.dataset_name}' requires a scaling method from {scaling_only}, "
+                    f"but scaling_method_name=None."
+                )
 
         # 4) Evaluator
+        if evaluation_only is not None:
+            # 데이터셋이 특정 evaluation만 허용
+            if self.evaluation_method_name not in evaluation_only:
+                raise ValueError(
+                    f"Dataset '{self.dataset_name}' only allows evaluation methods {evaluation_only}, "
+                    f"but got '{self.evaluation_method_name}'."
+                )
+
         logger.info(f"[Pipeline] Loading evaluator: {self.evaluation_method_name} with {self.evaluator_params}")
         self.evaluator = get_evaluator(self.evaluation_method_name)
-        # evaluator_params를 내부적으로 쓸 수 있도록 세팅
-        # (BaseEvaluator에 set_params 같은 메서드가 있다면 호출)
-        # ex) self.evaluator.set_params(**self.evaluator_params)
+        # evaluator_params를 세팅하고 싶다면 아래처럼:
+        # if hasattr(self.evaluator, "set_params"):
+        #     self.evaluator.set_params(**self.evaluator_params)
 
     def run(self) -> Dict[str, Any]:
         """
-        실제 파이프라인 실행: Dataset 로드 -> (Scaling) Inference -> Evaluation -> 결과 반환
+        실제 파이프라인 실행: 
+            - Dataset load -> (Scaling) Inference -> Evaluation -> 결과 반환
         Returns:
             {
                 "metrics": {...},
@@ -124,8 +148,9 @@ class PipelineRunner:
         if not self.dataset or not self.model or not self.evaluator:
             raise RuntimeError("Pipeline components are not fully loaded.")
 
-        # 1) Dataset load
         start_time = time.time()
+
+        # 1) Dataset load
         data = self.dataset.load()  # [{"input":..., "reference":..., ...}, ...]
         logger.info(f"[Pipeline] Dataset loaded. # of samples: {len(data)}")
 
@@ -134,7 +159,7 @@ class PipelineRunner:
             logger.info(f"[Pipeline] Applying scaling method: {self.scaling_method_name}")
             predictions = self.scaler.apply(data)  
         else:
-            logger.info("[Pipeline] Direct model inference (no scaling).")
+            logger.info("[Pipeline] Direct model_backend inference (no scaling).")
             predictions = self.model.generate_batch(data)
         logger.info(f"[Pipeline] Inference done for {len(predictions)} items.")
 
@@ -148,16 +173,15 @@ class PipelineRunner:
         elapsed = end_time - start_time
         logger.info(f"[Pipeline] Done. Elapsed: {elapsed:.2f} sec")
 
-        # 필요하다면 추가 정보 기록
+        # 추가 정보
         eval_results["info"] = {
             "dataset_name": self.dataset_name,
             "subset": self.subset,
             "split": self.split,
-            "model_name": self.model_name,
+            "model_backend_name": self.model_backend_name,
             "scaling_method_name": self.scaling_method_name,
             "evaluation_method_name": self.evaluation_method_name,
             "elapsed_time_sec": elapsed,
-            # etc.
         }
 
         return eval_results
@@ -165,9 +189,7 @@ class PipelineRunner:
 
 if __name__ == "__main__":
     """
-    이 부분은 '프로덕션 레벨'에서 별도의 CLI 스크립트를 두는 대신,
-    필요하다면 여기서 간단히 테스트하거나
-    python runner.py --some_args 로 쓸 수 있도록 구성한 용도
+    (Optional) CLI 진입점. 
     """
     import argparse
     import json
@@ -176,7 +198,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", required=True, help="Name of dataset in registry")
     parser.add_argument("--subset", default=None, help="Subset or config name")
     parser.add_argument("--split", default="test", help="Dataset split")
-    parser.add_argument("--model", required=True, help="Model name in registry")
+    parser.add_argument("--model_backend", required=True, help="Model backend name in registry")
     parser.add_argument("--scaling_method", default=None, help="Scaling method name in registry")
     parser.add_argument("--evaluation_method", default="string_match", help="Evaluator name in registry")
     parser.add_argument("--output_file", default=None, help="Where to save JSON results (optional)")
@@ -187,13 +209,14 @@ if __name__ == "__main__":
         dataset_name=args.dataset,
         subset=args.subset,
         split=args.split,
-        model_name=args.model,
+        model_backend_name=args.model_backend,
         scaling_method_name=args.scaling_method,
         evaluation_method_name=args.evaluation_method,
-        dataset_params={},
-        model_params={},       # 여기에 endpoint, api_key 등...
-        scaling_params={},     # 예: {"beam_size": 3, "num_iterations": 5}
-        evaluator_params={}    # 평가 메서드가 필요로 하는 파라미터들
+
+        dataset_params={},           # ex) {"revision":"main", "use_auth_token": True} 
+        model_backend_params={},     # ex) {"endpoint":"http://localhost:8000"}
+        scaling_params={},           # ex) {"beam_size":4, "num_iterations":5}
+        evaluator_params={},         # ex) {"some_eval_param":"val"}
     )
     results = runner.run()
 
