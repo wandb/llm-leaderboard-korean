@@ -126,5 +126,6 @@ class KMMLUDataset(BaseDataset):
                 "KMMLU Benchmark. https://arxiv.org/abs/2402.11548 "
                 "subset=list -> load partial subsets, "
                 "subset=str -> load single subset."
-            )
+            ),
+            "evaluation_only": None
         }
