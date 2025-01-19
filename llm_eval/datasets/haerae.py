@@ -138,5 +138,6 @@ class HaeraeDataset(BaseDataset):
                 "Haerae Bench dataset. "
                 "subset=list -> load partial subsets, "
                 "subset=str -> load single subset."
-            )
+            ),
+            "evaluation_only": None
         }
