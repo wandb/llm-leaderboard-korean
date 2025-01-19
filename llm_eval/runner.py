@@ -14,15 +14,13 @@ logger = get_logger(name="runner", level=logging.INFO)
 class PipelineRunner:
     """
     전체 LLM 평가 파이프라인을 캡슐화하는 Runner 클래스.
-    'dataset_name/subset/split' -> 데이터셋 로딩
-    'model_backend_name' -> 모델 백엔드(등록된 것)
-    'scaling_method_name' -> 디코딩/스케일링 방법(등록된 것)
-    'evaluation_method_name' -> 평가 방법(등록된 것)
+    'dataset_name/subset/split' -> 데이터셋 Load
+    (참고) dataset.info()에서 "evaluation_only", "scaling_only" 필드를 확인하여 
+            허용되지 않은 방법을 선택하면 에러 또는 경고
+    'model_backend_name' -> 모델 백엔드
+    'scaling_method_name' -> 스케일링 
+    'evaluation_method_name' -> 평가 
 
-    이번 버전: 
-     - dataset_params: dict 형태로 dataset 로더에 전달 (HF config, auth 등)
-     - dataset.info()에서 "evaluation_only", "scaling_only" 필드를 확인하여 
-       허용되지 않은 방법을 선택하면 에러 또는 경고
     """
 
     def __init__(
@@ -44,7 +42,7 @@ class PipelineRunner:
             dataset_name (str): 데이터셋 식별자
             subset (str | list[str] | None): 하위 태스크(예: "csat_geo")
             split (str): "train"/"valid"/"test" 등
-            model_backend_name (str): 모델 백엔드 식별자 ("huggingface", "openai", "vllm", "multi" 등)
+            model_backend_name (str): 모델 백엔드 식별자 ("huggingface", "openai", "multi" 등)
             scaling_method_name (str | None): 스케일링(디코딩) 방법 식별자
             evaluation_method_name (str): 평가 방법 식별자
 
@@ -70,7 +68,7 @@ class PipelineRunner:
         self.scaler: Optional[BaseScalingMethod] = None
         self.evaluator: Optional[BaseEvaluator] = None
 
-        # 사전 로드/초기화 (필요하다면 lazy-load 형태로 바꿀 수도 있음)
+        # 사전 로드/초기화 (lazy-load가 나을지도..?)
         self._load_components()
 
     def _load_components(self) -> None:
@@ -129,10 +127,7 @@ class PipelineRunner:
                 )
 
         logger.info(f"[Pipeline] Loading evaluator: {self.evaluation_method_name} with {self.evaluator_params}")
-        self.evaluator = get_evaluator(self.evaluation_method_name)
-        # evaluator_params를 세팅하고 싶다면 아래처럼:
-        # if hasattr(self.evaluator, "set_params"):
-        #     self.evaluator.set_params(**self.evaluator_params)
+        self.evaluator = get_evaluator(self.evaluation_method_name, **self.evaluator_params)
 
     def run(self) -> Dict[str, Any]:
         """
@@ -189,7 +184,7 @@ class PipelineRunner:
 
 if __name__ == "__main__":
     """
-    (Optional) CLI 진입점. 
+    (Optional) Test 용도. 이후 제거. CLI 진입점. 
     """
     import argparse
     import json
