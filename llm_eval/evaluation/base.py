@@ -1,6 +1,7 @@
 # llm_eval/evaluation/base.py
-from typing import List, Dict, Any
-from llm_eval.models.base import BaseModel 
+from typing import List, Dict, Any, Union
+from llm_eval.models.base import BaseModel
+from llm_eval.models.multi import MultiModel 
 from llm_eval.utils.metrics import * # 기타 메트릭들을 import
 
 class BaseEvaluator:
@@ -16,7 +17,6 @@ class BaseEvaluator:
     
     필요시 requires_logits, requires_chain_of_thought 등 속성을 둬서 
     모델을 호출할 때 logits, CoT를 요청하는 등의 분기 처리가 가능.
-    # TODO : requires_chain_of_thought 추가, scaling method와의 연동
     """
 
     name: str = "base"
@@ -67,61 +67,39 @@ class BaseEvaluator:
         """
         raise NotImplementedError("Subclasses must implement evaluate_predictions().")
 
+
     def evaluate(
-        self, 
-        data: List[Dict[str, Any]], 
-        model: BaseModel
+        self,
+        data: List[Dict[str, Any]],
+        model: Union[BaseModel, MultiModel, None] = None
     ) -> Dict[str, Any]:
         """
-        전체 평가 프로세스:
-        1) 각 sample에 대해 prepare_prompt로 prompt 생성
-        2) 모델에 입력 -> (logits, raw_output) 획득 (requires_logits에 따라 옵션 분기)
-        3) parse_prediction으로 결과 파싱
-        4) 모든 샘플에 대해 evaluate_predictions()로 최종 점수 계산
-        5) 결과 리턴
-        
         Args:
-            data: [{"input":..., "reference":...}, ...] 형태의 전처리된 데이터.
-            model: BaseModel을 상속한 모델 객체.
+            data: [{"input":..., "reference":..., "prediction":...}, ...] 형태.
+                  - 이미 'prediction'이 최종 확정됨 (Runner, ScalingMethod 등에서 처리).
+            model: MultiModel이면 judge_batch를 호출하여 judge_score 등 추가 가능.
+                   BaseModel이거나 None이면 그냥 지나감.
         Returns:
-            {"metrics": { ... }, "samples": [ ... ] }
+            {
+              "metrics": {...},
+              "samples": [...]
+            }
         """
-        processed_samples = []
 
-        # 1) prompt 준비
+        # 1) parse_prediction
         for sample in data:
-            prompt_text = self.prepare_prompt(sample["input"])
-            sample["prompt"] = prompt_text  # 어떤 프롬프트로 모델을 호출했는지 기록
-            processed_samples.append(sample)
+            raw_pred = sample.get("prediction", "")
+            sample["prediction"] = self.parse_prediction(raw_pred)
 
-        # 2) 모델 호출
-        #    requires_logits=True인 경우, model.generate_batch 등에서 logits도 반환하도록 구현 필요
-        #    여기서는 pseudo-code 형태로, 이후에 model 구현 후 이에 맞게 변형 필요
-        if self.requires_logits:
-            # 모델에서 logits까지 함께 반환한다고 가정
-            predictions = model.generate_batch(
-                processed_samples, 
-                return_logits=True
-            )
-        else:
-            predictions = model.generate_batch(
-                processed_samples
-            )
+        # 2) (옵션) MultiModel + Judge가 있으면 judge_batch 호출
+        if isinstance(model, MultiModel):
+            # multi_model이 있다면, 내부 sub_items 중 Judge 모델이 있는 경우
+            # judge_batch()를 호출 → 각 sample에 {"judge_score": float, ...} 등이 기록될 수 있음.
+            data = model.judge_batch(data)
 
-        # (generate_batch가 predictions에 raw_output, logits 등을 채워넣어 반환한다고 가정)
-        # 예: [{"prompt":"...", "reference":"...", "raw_output":"...", "logits":..., ...}, ...]
-
-        # 3) parse_prediction
-        for sample in predictions:
-            raw_output = sample.get("raw_output", "")
-            parsed_pred = self.parse_prediction(raw_output)
-            sample["prediction"] = parsed_pred
-
-        # 4) 메트릭 계산
-        metrics = self.evaluate_predictions(predictions)
-
-        # 5) 결과 리턴
+        # 3) compute_metrics
+        metrics = self.evaluate_predictions(data)
         return {
             "metrics": metrics,
-            "samples": predictions
+            "samples": data
         }
