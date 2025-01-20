@@ -35,5 +35,5 @@ def load_dataset(name: str, split: str = "test", **kwargs) -> BaseDataset:
 # 4) 실제로 .py 모듈들을 import 하여 데코레이터가 실행되도록 함
 # 예:
 from .haerae import HaeraeDataset
-# from .kmmlu import KMMLUDataset
+from .kmmlu import KMMLUDataset
 # ...
