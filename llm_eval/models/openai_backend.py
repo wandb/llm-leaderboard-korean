@@ -1,8 +1,8 @@
 import openai
 import time
 from typing import List, Dict, Any, Optional, Union
-from .base import BaseModel, register_model
-
+from .base import BaseModel
+from . import register_model
 
 @register_model("openai")
 class OpenAIModel(BaseModel):

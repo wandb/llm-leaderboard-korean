@@ -21,7 +21,7 @@ def register_dataset(name: str):
     return decorator
 
 # 3) 실제로 Dataset 클래스를 인스턴스화해주는 헬퍼 함수
-def load_dataset(name: str, split: str = "test", **kwargs) -> BaseDataset:
+def load_datasets(name: str, split: str = "test", **kwargs) -> BaseDataset:
     """
     문자열 이름(name)을 받아 해당 데이터셋 클래스를 찾아 인스턴스를 생성/반환.
     """
@@ -30,7 +30,7 @@ def load_dataset(name: str, split: str = "test", **kwargs) -> BaseDataset:
     
     # registry에 저장된 것은 '클래스'이므로 여기서 instantiate
     dataset_class = DATASET_REGISTRY[name]
-    return dataset_class(dataset_name=name, split=split, **kwargs)
+    return dataset_class(split=split, **kwargs)
 
 # 4) 실제로 .py 모듈들을 import 하여 데코레이터가 실행되도록 함
 # 예:
