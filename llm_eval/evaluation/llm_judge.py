@@ -1,17 +1,18 @@
-from typing import Optional, Dict, Any, List, Callable, Union
+from typing import Optional, Dict, Any, List, Union
 from dataclasses import dataclass
-import json
-from enum import Enum
 import logging
 import time
-from abc import ABC, abstractmethod
-from openai import OpenAI
-import os
+from enum import Enum
+from ..models.multi import MultiModel
+from .base import BaseEvaluator
+from ..utils.prompt_template import JUDGE_PROMPTS
+
 
 class JudgeType(Enum):
     RUBRIC_AND_RESPONSE = "rubric_and_response"
     RUBRIC_RESPONSE_AND_GOLD = "rubric_response_and_gold"
     RESPONSE_COMPARISON = "response_comparison"
+
 
 @dataclass
 class JudgeInput:
@@ -21,75 +22,77 @@ class JudgeInput:
     gold_response: Optional[str] = None
     model_response_b: Optional[str] = None
 
-class ResponseParser(ABC):
-    @abstractmethod
+
+class ResponseParser:
     def parse(self, response: str) -> Dict[str, Any]:
-        pass
+        """Base parser interface"""
+        raise NotImplementedError
+
 
 class PairwiseComparisonParser(ResponseParser):
     def parse(self, response: str) -> Dict[str, Any]:
-        """
-        [[A]], [[B]], 또는 [[C]] 형식을 찾아 응답을 파싱합니다
-        """
+        if not response:  # 널 체크 추가
+            raise ValueError("Response is None")
         if "[[A]]" in response:
             return {"winner": "A"}
         elif "[[B]]" in response:
             return {"winner": "B"}
         elif "[[C]]" in response:
             return {"winner": "tie"}
-        raise ValueError("No valid verdict found in response")
+        raise ValueError(f"No valid verdict found in response: {response}")
+
 
 class RubricScoreParser(ResponseParser):
     def parse(self, response: str) -> Dict[str, Any]:
-        """
-        지정된 형식의 점수를 찾아 응답을 파싱합니다
-        예시: [[score: 8.5]]
-        """
+        if not response:  # 널 체크 추가
+            raise ValueError("Response is None")
         import re
         score_pattern = r"\[\[score:\s*(\d+\.?\d*)\]\]"
         match = re.search(score_pattern, response)
         if match:
             return {"score": float(match.group(1))}
-        raise ValueError("No valid score found in response")
+        raise ValueError(f"No valid score found in response: {response}")
+
 
 class GoldComparisonParser(ResponseParser):
     def parse(self, response: str) -> Dict[str, Any]:
-        """
-        [[true]] 또는 [[false]]와 단계 번호를 찾아 응답을 파싱합니다
-        """
-        if "[[true]]" in response:
+        if not response:  # 널 체크 추가
+            raise ValueError("Response is None")
+        if "[[true]]" in response.lower():
             return {"correct": True, "step": -1}
-        elif "[[false]]" in response:
+        elif "[[false]]" in response.lower():
             import re
             step_pattern = r"step:\s*\[(\d+)\]"
             match = re.search(step_pattern, response)
             if match:
                 return {"correct": False, "step": int(match.group(1))}
-        raise ValueError("No valid verdict found in response")
+        raise ValueError(f"No valid verdict found in response: {response}")
 
-class OpenAIClient:
-    def __init__(self, api_key: str = None):
-        self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
-    
-    def generate(self, prompt: str) -> str:
-        response = self.client.chat.completions.create(
-            model="gpt-4",  # 또는 "gpt-3.5-turbo"
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0  # 평가는 일관성이 중요하므로 temperature를 0으로 설정
-        )
-        return response.choices[0].message.content
 
-class LLMJudge:
+class MultiLLMJudge:
     def __init__(
         self,
-        llm_client: Any,
+        models_config: List[Dict[str, Any]],
         max_retries: int = 3,
         retry_delay: float = 1.0,
+        aggregation_strategy: str = "majority",
         logger: Optional[logging.Logger] = None
     ):
-        self.llm_client = llm_client
+        """
+        Initialize MultiLLMJudge with multiple model configurations
+        
+        Args:
+            models_config: List of model configurations for MultiModel
+            max_retries: Maximum number of retries for failed requests
+            retry_delay: Delay between retries in seconds
+            aggregation_strategy: Strategy to aggregate multiple judge results
+                                Options: 'majority', 'average', 'first'
+            logger: Optional logger instance
+        """
+        self.multi_model = MultiModel(items_config=models_config)
         self.max_retries = max_retries
         self.retry_delay = retry_delay
+        self.aggregation_strategy = aggregation_strategy
         self.logger = logger or logging.getLogger(__name__)
         
         # Register parsers for different judge types
@@ -100,91 +103,146 @@ class LLMJudge:
         }
         
         # Template prompts for different judge types
-        self.prompt_templates = {
-            JudgeType.RUBRIC_AND_RESPONSE: """
-Please evaluate the following response according to the provided rubric.
-Rate on a scale of 0-10 and provide your verdict in this format: [[score: X]]
-
-Rubric:
-{rubric}
-
-Response to evaluate:
-{response}
-""",
-            JudgeType.RUBRIC_RESPONSE_AND_GOLD: """
-Please evaluate the following response against the gold standard answer.
-Compare step by step and provide your verdict as [[true]] if correct or [[false]] step: [X] if incorrect.
-
-Question:
-{rubric}
-
-Gold Answer:
-{gold_response}
-
-Model Response:
-{response}
-""",
-            JudgeType.RESPONSE_COMPARISON: """
-Please compare the following two responses and choose the better one.
-Provide your verdict as [[A]] for first response, [[B]] for second response, or [[C]] for tie.
-
-Response A:
-{response_a}
-
-Response B:
-{response_b}
-"""
-        }
+        self.prompt_templates = JUDGE_PROMPTS
 
     def _format_prompt(self, judge_input: JudgeInput) -> str:
-        template = self.prompt_templates[judge_input.judge_type]
-        
-        format_args = {
-            "rubric": judge_input.rubric,
-            "response": judge_input.model_response,
-            "gold_response": judge_input.gold_response,
-            "response_a": judge_input.model_response,
-            "response_b": judge_input.model_response_b
-        }
-        
-        # Remove None values
-        format_args = {k: v for k, v in format_args.items() if v is not None}
-        
-        return template.format(**format_args)
+        """Format prompt based on judge type and input"""
+        # Using formatted string templates directly based on judge type
+        if judge_input.judge_type == JudgeType.RUBRIC_AND_RESPONSE:
+            return f"""You are an expert evaluator. Your task is to evaluate the given response based on the rubric and provide a score.
 
-    def _call_llm(self, prompt: str) -> str:
-        """
-        재시도 로직을 포함하여 LLM을 호출합니다
-        특정 LLM 클라이언트에 맞게 구현해야 합니다
-        """
-        for attempt in range(self.max_retries):
-            try:
-                # This should be adapted based on your LLM client's API
-                response = self.llm_client.generate(prompt)
-                return response
-            except Exception as e:
-                self.logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
-                if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay)
-                else:
-                    raise
+IMPORTANT: You must format your response exactly like this example:
+Based on the rubric, this response deserves [[score: 7]].
+
+Rubric:
+{judge_input.rubric}
+
+Response to evaluate:
+{judge_input.model_response}
+
+Provide your evaluation with the score in the specified format:"""
+            
+        elif judge_input.judge_type == JudgeType.RESPONSE_COMPARISON:
+            return f"""You are an expert evaluator. Your task is to compare two responses and choose the better one.
+
+IMPORTANT: You must format your verdict exactly like this:
+- Use [[A]] to choose the first response
+- Use [[B]] to choose the second response
+- Use [[C]] if they are equally good
+
+Response A:
+{judge_input.model_response}
+
+Response B:
+{judge_input.model_response_b}
+
+Provide your verdict in the specified format:"""
+            
+        elif judge_input.judge_type == JudgeType.RUBRIC_RESPONSE_AND_GOLD:
+            return f"""You are an expert evaluator. Please evaluate if the following response matches the gold standard answer.
+Compare step by step and provide your verdict as [[true]] if correct or [[false]] step: [X] if incorrect.
+
+Rubric:
+{judge_input.rubric}
+
+Gold Response:
+{judge_input.gold_response}
+
+Model Response to evaluate:
+{judge_input.model_response}
+
+Provide your evaluation in the specified format:"""
+        
+        raise ValueError(f"Unsupported judge type: {judge_input.judge_type}")
+
+    def _aggregate_results(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Aggregate results from multiple models"""
+        if not results:
+            raise ValueError("No results to aggregate")
+
+        if self.aggregation_strategy == "majority":
+            # Handle different types of results based on judge type
+            if "score" in results[0]:  # Rubric scoring
+                scores = [result.get("score", 0) for result in results if "score" in result]
+                if not scores:
+                    raise ValueError("No valid scores found in results")
+                average_score = sum(scores) / len(scores)
+                return {
+                    "score": average_score,
+                    "individual_scores": scores,
+                    "num_models": len(scores)
+                }
+            elif "winner" in results[0]:  # Pairwise comparison
+                winners = [result.get("winner") for result in results if "winner" in result]
+                from collections import Counter
+                winner_counts = Counter(winners)
+                majority_winner = max(winner_counts.items(), key=lambda x: x[1])[0]
+                return {"winner": majority_winner}
+            elif "correct" in results[0]:  # Gold comparison
+                corrects = [result.get("correct", False) for result in results if "correct" in result]
+                majority_correct = sum(corrects) > len(corrects) / 2
+                return {"correct": majority_correct}
+        
+        elif self.aggregation_strategy == "first":
+            return results[0]
+        
+        elif self.aggregation_strategy == "all":
+            return {"results": results}
+        
+        raise ValueError(f"Unsupported aggregation strategy: {self.aggregation_strategy}")
 
     def judge(self, judge_input: JudgeInput) -> Dict[str, Any]:
-        """
-        LLM으로부터 판단을 얻기 위한 주요 메서드
-        """
+        """Get judgment from multiple LLMs and aggregate results"""
         prompt = self._format_prompt(judge_input)
         parser = self.parsers[judge_input.judge_type]
         
+        # Prepare batch input for MultiModel
+        batch_input = [{
+            "input": prompt,
+            "judge_type": judge_input.judge_type.value
+        }]
+        
+        all_results = []
         for attempt in range(self.max_retries):
             try:
-                response = self._call_llm(prompt)
-                result = parser.parse(response)
-                return result
-            except ValueError as e:
-                self.logger.warning(f"Parsing attempt {attempt + 1} failed: {str(e)}")
+                # Generate responses from all models
+                responses = self.multi_model.generate_batch(batch_input)
+                
+                # Log raw responses for debugging
+                self.logger.debug(f"Raw responses from models: {responses}")
+                
+                for response in responses:
+                    self.logger.debug(f"Processing response: {response}")
+                    
+                    # Handle response with direct prediction
+                    if "prediction" in response:
+                        try:
+                            result = parser.parse(response["prediction"])
+                            result["model_name"] = response.get("model_name", "unknown")
+                            all_results.append(result)
+                        except ValueError as e:
+                            self.logger.warning(f"Failed to parse direct prediction: {str(e)}")
+                    
+                    # Handle response with multi_outputs
+                    if "multi_outputs" in response:
+                        for model_output in response["multi_outputs"]:
+                            try:
+                                result = parser.parse(model_output["prediction"])
+                                result["model_name"] = model_output["model_name"]
+                                all_results.append(result)
+                            except ValueError as e:
+                                self.logger.warning(f"Failed to parse response from {model_output['model_name']}: {str(e)}")
+                
+                if all_results:
+                    return self._aggregate_results(all_results)
+                
+                self.logger.warning("No valid results were parsed from model responses")
+                
+            except Exception as e:
+                self.logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
                 if attempt < self.max_retries - 1:
-                    time.sleep(self.retry_delay)
+                    time.sleep(self.retry_delay * (attempt + 1))
                 else:
-                    raise ValueError(f"Failed to parse LLM response after {self.max_retries} attempts")
-
+                    raise ValueError(f"Failed to get valid judgments after {self.max_retries} attempts")
+        
+        raise ValueError("No valid results obtained from any model")

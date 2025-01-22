@@ -1,61 +1,101 @@
-from llm_judge import LLMJudge, OpenAIClient, JudgeInput, JudgeType
+import torch
+from .llm_judge import MultiLLMJudge, JudgeInput, JudgeType  # 절대 경로 대신 상대 경로 사용
 import dotenv
 import os
+import sys
+import logging
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-# .env 파일에서 환경 변수 로드
+# Load environment variables from .env file
 dotenv.load_dotenv()
-api_key = os.getenv('OPENAI_API_KEY')
-if not api_key:
-    raise ValueError("OPENAI_API_KEY가 환경 변수에 설정되어 있지 않습니다.")
 
-# OpenAI 클라이언트 및 judge 초기화
-llm_client = OpenAIClient(api_key=api_key)
-judge = LLMJudge(llm_client)
+def test_multi_judge():
+    # OpenAI API 키가 제대로 설정되어 있는지 확인
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY not found in environment variables")
+        
+    # Configure multiple models with type specification
+    models_config = [
+        {
+            "name": "openai",
+            "type": "model",  # type 필드 추가
+            "api_key": api_key,
+            "model_name": "gpt-4o"
+        },
+        {
+            "name": "openai",
+            "type": "model",  # type 필드 추가
+            "api_key": api_key,
+            "model_name": "gpt-3.5-turbo"
+        }
+    ]
 
-def test_rubric_evaluation():
-    """루브릭 기반 단일 응답 평가 테스트"""
-    test_input = JudgeInput(
-        judge_type=JudgeType.RUBRIC_AND_RESPONSE,
-        rubric="""평가 기준:
-1. 명확성 (5점): 설명이 이해하기 쉽고 명확한가?
-2. 정확성 (5점): 제공된 정보가 기술적으로 정확한가?""",
-        model_response="""파이썬은 가독성이 높고 배우기 쉬운 프로그래밍 언어입니다."""
+    # Initialize MultiLLMJudge with logging
+    logger = logging.getLogger("test_judge")
+    logger.setLevel(logging.DEBUG)  # 디버그 레벨로 설정
+    
+    # 콘솔에 로그 출력을 위한 핸들러 추가
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+
+    judge = MultiLLMJudge(
+        models_config=models_config,
+        aggregation_strategy="first",  # "majority", "first", "all" 중 선택
+        logger=logger
     )
-    result = judge.judge(test_input)
-    print("\n=== 루브릭 기반 평가 결과 ===")
-    print(result)
 
-def test_response_comparison():
-    """두 응답 비교 평가 테스트"""
-    test_input = JudgeInput(
-        judge_type=JudgeType.RESPONSE_COMPARISON,
-        model_response="""파이썬은 프로그래밍 언어입니다.""",
-        model_response_b="""파이썬은 가독성이 높고 배우기 쉬운 고수준 프로그래밍 언어로,
-동적 타이핑을 지원하며 객체 지향 프로그래밍이 가능합니다."""
-    )
-    result = judge.judge(test_input)
-    print("\n=== 응답 비교 평가 결과 ===")
-    print(result)
+    def test_rubric_evaluation():
+        """Test rubric-based single response evaluation"""
+        test_input = JudgeInput(
+            judge_type=JudgeType.RUBRIC_AND_RESPONSE,
+            rubric="""Evaluation criteria:
+1. Clarity (5 points): Is the explanation easy to understand and clear?
+2. Accuracy (5 points): Is the provided information technically accurate?""",
+            model_response="""Python is a high-level programming language with clear syntax."""
+        )
+        try:
+            result = judge.judge(test_input)
+            print("\n=== Rubric Evaluation Results (Multiple Models) ===")
+            print(result)
+        except Exception as e:
+            print(f"Error during rubric evaluation: {str(e)}")
+            raise
 
-def test_gold_comparison():
-    """정답과 비교 평가 테스트"""
-    test_input = JudgeInput(
-        judge_type=JudgeType.RUBRIC_RESPONSE_AND_GOLD,
-        rubric="파이썬의 주요 특징을 설명하시오.",
-        gold_response="""파이썬의 주요 특징:
-1. 읽기 쉽고 명확한 문법
-2. 동적 타이핑 지원
-3. 객체 지향 프로그래밍 지원
-4. 풍부한 표준 라이브러리""",
-        model_response="""파이썬은 읽기 쉽고 명확한 문법을 가진 언어입니다.
-동적 타이핑을 지원하며 객체 지향 프로그래밍이 가능합니다."""
-    )
-    result = judge.judge(test_input)
-    print("\n=== 정답 비교 평가 결과 ===")
-    print(result)
+    def test_response_comparison():
+        """Test comparison between two responses"""
+        test_input = JudgeInput(
+            judge_type=JudgeType.RESPONSE_COMPARISON,
+            model_response="""Python is a programming language.""",
+            model_response_b="""Python is a high-level programming language with clear syntax,
+            dynamic typing support, and object-oriented programming capabilities."""
+        )
+        result = judge.judge(test_input)
+        print("\n=== Response Comparison Results (Multiple Models) ===")
+        print(result)
 
-if __name__ == "__main__":
-    # 세 가지 평가 방식 모두 테스트
+    def test_gold_comparison():
+        """Test comparison with gold standard response"""
+        test_input = JudgeInput(
+            judge_type=JudgeType.RUBRIC_RESPONSE_AND_GOLD,
+            rubric="Explain the main features of Python.",
+            gold_response="""Python's main features:
+1. Easy to read and clear syntax
+2. Dynamic typing support
+3. Object-oriented programming support
+4. Rich standard library""",
+            model_response="""Python has a clear syntax and supports dynamic typing.
+            It also enables object-oriented programming."""
+        )
+        result = judge.judge(test_input)
+        print("\n=== Gold Standard Comparison Results (Multiple Models) ===")
+        print(result)
+
+    # Run all tests
     test_rubric_evaluation()
     test_response_comparison()
     test_gold_comparison()
+
+if __name__ == "__main__":
+    test_multi_judge()

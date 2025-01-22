@@ -90,12 +90,24 @@ class MultiModel:
         모든 'BaseModel' 타입의 서브 아이템에 대해서만 generate_batch를 호출.
         Judge/Reward 타입인 경우 무시(혹은 에러).
         """
+        outputs = []
         for sub_item in self.sub_items:
             if isinstance(sub_item, BaseModel):
-                sub_item.generate_batch(inputs, return_logits=return_logits)
-            else:
-                # Judge나 Reward는 실제 텍스트 생성을 하지 않으므로 패스
-                pass
+                # 각 모델의 결과를 저장
+                model_outputs = sub_item.generate_batch(inputs, return_logits=return_logits)
+                for output in model_outputs:
+                    if "prediction" in output:
+                        outputs.append({
+                            "model_name": sub_item.__class__.__name__,
+                            "prediction": output["prediction"]
+                        })
+        
+        # 모든 모델의 결과를 multi_outputs로 묶어서 반환
+        if outputs:
+            return [{
+                **inputs[0],  # 원본 입력 유지
+                "multi_outputs": outputs
+            }]
         return inputs
 
     def judge_batch(self, inputs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

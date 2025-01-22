@@ -107,6 +107,9 @@ class OpenAIModel(BaseModel):
                     if return_logits and hasattr(response.choices[0], "logprobs"):
                         result["logprobs"] = response.choices[0].logprobs
 
+                    # 응답 로깅 추가
+                    # print(f"OpenAI response: {response}")
+
                     break
 
                 except Exception as e:
@@ -118,7 +121,7 @@ class OpenAIModel(BaseModel):
                         time.sleep(1 * (attempt + 1))
 
             outputs.append(
-                item | (result or {"error": "Failed to generate", "prediiction": None})
+                item | (result or {"error": "Failed to generate", "prediction": ""})
             )
 
         return outputs
