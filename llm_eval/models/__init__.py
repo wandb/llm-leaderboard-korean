@@ -15,7 +15,7 @@ def register_model(name: str):
             ...
     """
 
-    def decorator(cls: Type[ModelType]):
+    def decorator(cls: Type[BaseModel]):
         if name in MODEL_REGISTRY:
             raise ValueError(f"Model '{name}' already registered.")
         MODEL_REGISTRY[name] = cls

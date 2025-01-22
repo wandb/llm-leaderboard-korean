@@ -1,25 +1,27 @@
 import logging
 from typing import List, Dict, Any, Optional, Callable, Tuple
+
 import torch
 import torch.nn.functional as F
-from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationOutput
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from .base import BaseModel
 from . import register_model
 from llm_eval.utils.logging import get_logger
 
 logger = get_logger(name="huggingface", level=logging.INFO)
 
+
 @register_model("huggingface")
 class HuggingFaceModel(BaseModel):
     """
-    HuggingFace Transformers 기반 모델 백엔드. 현재 batch 처리는 미지원
+    HuggingFace Transformers 기반 모델 백엔드 (단일 샘플 처리).
     
     특징:
       - return_logits=True 시, generate(..., return_dict_in_generate=True, output_scores=True)로
-        토큰별 logits -> log_prob를 간단히 계산 후, item["logits"]에 저장
+        토큰별 logits -> log_prob를 계산 후, item["logits"]에 저장
         (ex: "logits": {"sum_log_prob": float, "token_log_probs": [...], "tokens": [...]} )
-      - cot_parser callable을 통해 chain_of_thought와 최종 answer를 분리 가능.
-        (예: regex, "Final Answer:" 구분자 등)
+      - cot_parser를 통해 chain_of_thought와 최종 answer를 분리 (예: "Final Answer:" 구분 등).
     """
 
     def __init__(
@@ -76,8 +78,8 @@ class HuggingFaceModel(BaseModel):
         
         Args:
             inputs: [{"input": str, "reference": str, ...}, ...]
-            return_logits (bool): True면 logits(or log_probs) 계산하여 item["logits"]에 저장
-            cot (bool): True면 self.cot_trigger를 prompt 끝에 추가 + (cot_parser가 있으면) 분리 파싱
+            return_logits (bool): True면 logits(or log_probs) 계산 후 item["logits"]에 저장
+            cot (bool): True면 self.cot_trigger를 prompt 끝에 추가 + (cot_parser 있으면) 분리 파싱
 
         Returns:
             동일 리스트(또는 복사본)에
@@ -96,14 +98,12 @@ class HuggingFaceModel(BaseModel):
         out_list = []
         for item in inputs:
             prompt = item["input"]
+
             if cot and self.cot_trigger:
                 prompt = f"{prompt}\n{self.cot_trigger}\n"
 
             # Tokenize
-            encoded = self.tokenizer(
-                prompt,
-                return_tensors="pt",
-            )
+            encoded = self.tokenizer(prompt, return_tensors="pt")
             if self.device != "cpu":
                 encoded = {k: v.to(self.device) for k, v in encoded.items()}
 
@@ -114,8 +114,8 @@ class HuggingFaceModel(BaseModel):
                 "do_sample": self.do_sample,
             }
 
+            # If we want to compute logits, we enable extra generate outputs
             if return_logits:
-                # output_scores=True + return_dict_in_generate=True로 logits 계산
                 gen_kwargs.update({
                     "return_dict_in_generate": True,
                     "output_scores": True,
@@ -123,58 +123,49 @@ class HuggingFaceModel(BaseModel):
 
             # Generate
             with torch.no_grad():
-                outputs = self.model.generate(
-                    **encoded,
-                    **gen_kwargs,
-                )
+                outputs = self.model.generate(**encoded, **gen_kwargs)
 
-            # outputs가 GenerationOutput 또는 텐서형태로 반환됨
-            if return_logits and isinstance(outputs, GenerationOutput):
-                # HF 4.26+ 에서: outputs.sequences, outputs.scores 등
-                #   sequences: (batch_size, total_sequence_len)
-                #   scores: list of length=#new_tokens, each shape: (batch_size, vocab_size)
+            # Decide how to extract sequences / scores:
+            if return_logits and hasattr(outputs, "sequences"):
+                # 'outputs' has .sequences, .scores, etc.
                 sequences = outputs.sequences
-                scores = outputs.scores  # List[Tensor], length = #generated_tokens
+                scores = outputs.scores
             else:
-                # 이전 버전 호환
-                if isinstance(outputs, GenerationOutput):
+                # Older or simpler format: 'outputs' is just a tensor or only .sequences
+                if hasattr(outputs, "sequences"):
                     sequences = outputs.sequences
-                    scores = None
                 else:
-                    # 구버전 호환: returns just a Tensor
                     sequences = outputs
-                    scores = None
+                scores = None
 
-            # input 길이
+            # input length
             input_len = encoded["input_ids"].shape[1]
-            gen_ids = sequences[0][input_len:]  # 생성 부분
+            # We'll take the first item (batch_size=1 assumption)
+            gen_ids = sequences[0][input_len:]  # slicing out the newly generated part
             generated_text = self.tokenizer.decode(gen_ids, skip_special_tokens=True)
 
-            # CoT 파싱
+            # CoT parsing
             final_answer = generated_text
             chain_of_thought = None
-
             if cot and self.cot_parser is not None:
-                # 사용자가 정의한 파싱 함수: text -> (chain_of_thought, final_answer)
+                # 파싱 함수: text -> (chain_of_thought, final_answer)
                 chain_of_thought, final_answer = self.cot_parser(generated_text)
 
             item["prediction"] = final_answer
-            if chain_of_thought is not None:
+            if chain_of_thought:
                 item["chain_of_thought"] = chain_of_thought
 
-            # logits 계산
+            # logits calculation
             if return_logits and scores is not None:
-                # scores: length=#generated_tokens, each shape=(batch_size, vocab_size)
-                # 여기서는 batch_size=1 만 일단 고려 (아직 batch 처리 미지원원)
                 log_probs_per_token = []
                 sum_log_prob = 0.0
-                token_ids = gen_ids.tolist()  # 생성된 token id list
+                token_ids = gen_ids.tolist()  # newly generated token IDs
 
                 for i, step_scores in enumerate(scores):
                     # step_scores shape: (1, vocab_size)
-                    token_id = token_ids[i]
                     # log softmax
-                    step_log_probs = F.log_softmax(step_scores[0], dim=-1)  # (vocab_size,)
+                    step_log_probs = F.log_softmax(step_scores[0], dim=-1)
+                    token_id = token_ids[i]
                     token_log_prob = step_log_probs[token_id].item()
                     sum_log_prob += token_log_prob
                     log_probs_per_token.append(token_log_prob)

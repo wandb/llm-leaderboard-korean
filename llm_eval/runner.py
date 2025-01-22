@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Union
 
-from llm_eval.datasets import load_dataset, BaseDataset
+from llm_eval.datasets import load_datasets, BaseDataset
 from llm_eval.models import load_model, BaseModel
 from llm_eval.scaling_methods import load_scaling_method, BaseScalingMethod
 from llm_eval.evaluation import get_evaluator, BaseEvaluator
@@ -78,7 +78,7 @@ class PipelineRunner:
         """
         # 1) Dataset
         logger.info(f"[Pipeline] Loading dataset: {self.dataset_name}, subset={self.subset}, split={self.split}")
-        self.dataset = load_dataset(
+        self.dataset = load_datasets(
             name=self.dataset_name,
             subset=self.subset,
             split=self.split,
