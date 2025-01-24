@@ -89,18 +89,20 @@ class OpenAIModel(BaseModel):
                         response = self._client.completions.create(**payload)
                         result = {
                             "prediction": response.choices[0].text,
-                            "model_name": "openai"
                         }
                         if return_logits:
-                            result.update({
-                                "logprobs": response.choices[0].logprobs.token_logprobs,
-                                "tokens": response.choices[0].logprobs.tokens,
-                            })
+                            result.update(
+                                {
+                                    "logprobs": response.choices[
+                                        0
+                                    ].logprobs.token_logprobs,
+                                    "tokens": response.choices[0].logprobs.tokens,
+                                }
+                            )
                     else:
                         response = self._client.chat.completions.create(**payload)
                         result = {
                             "prediction": response.choices[0].message.content,
-                            "model_name": "openai"
                         }
                     if return_logits and hasattr(response.choices[0], "logprobs"):
                         result["logprobs"] = response.choices[0].logprobs
@@ -111,12 +113,12 @@ class OpenAIModel(BaseModel):
                     if attempt == max_retries - 1:
                         if raise_error:
                             raise
-                        result = {"error": str(e), "prediction": None, "model_name": "openai"}
+                        result = {"error": str(e), "prediction": None}
                     else:
                         time.sleep(1 * (attempt + 1))
 
             outputs.append(
-                item | (result or {"error": "Failed to generate", "prediction": "", "model_name": "openai"})
+                item | (result or {"error": "Failed to generate", "prediiction": None})
             )
 
         return outputs
