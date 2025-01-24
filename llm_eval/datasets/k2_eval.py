@@ -103,7 +103,7 @@ class K2_EvalDataset(BaseDataset):
 
             # input에 선택지 표시
             # 예) "질문\n선택지 : optionA, optionB, optionC, optionD"
-            input_text = question.strip() + "\n선택지 : " + ", ".join(choices)
+            input_text = question.strip() + "\n선택지 : " + ", ".join(choices)+"\n답:"
 
             processed_list.append({
                 "input": input_text,

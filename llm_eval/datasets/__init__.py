@@ -36,4 +36,5 @@ def load_datasets(name: str, split: str = "test", **kwargs) -> BaseDataset:
 # 예:
 from .haerae import HaeraeDataset
 from .kmmlu import KMMLUDataset
+from .click import ClickDataset
 # ...
