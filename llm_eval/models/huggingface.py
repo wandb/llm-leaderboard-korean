@@ -90,6 +90,7 @@ class HuggingFaceModel(BaseModel):
                   "prediction": <생성된 최종 답>,
                   "chain_of_thought": <cot_parser로 분리된 Reasoning> (옵션),
                   "logits": { "sum_log_prob": float, "token_log_probs": [...], "tokens": [...] } (옵션),
+                  "model_name": "huggingface",
                   ...
                 },
                 ...
@@ -152,6 +153,7 @@ class HuggingFaceModel(BaseModel):
                 chain_of_thought, final_answer = self.cot_parser(generated_text)
 
             item["prediction"] = final_answer
+            item["model_name"] = "huggingface"  # 모델 이름 추가
             if chain_of_thought:
                 item["chain_of_thought"] = chain_of_thought
 
