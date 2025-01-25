@@ -10,6 +10,13 @@ from ..utils.prompt_template import JUDGE_PROMPTS
 
 # LLM 응답을 평가하기 위한 세 가지 평가 유형을 정의
 class JudgeType(Enum):
+    """LLM 응답 평가 유형.
+    
+    Attributes:
+        RUBRIC_AND_RESPONSE: 루브릭 기준 기반 평가
+        RUBRIC_RESPONSE_AND_GOLD: 루브릭, 응답, 정답 기반 평가
+        RESPONSE_COMPARISON: 두 응답 간 비교 평가
+    """
     RUBRIC_AND_RESPONSE = "rubric_and_response"          # 루브릭 기반 응답 평가
     RUBRIC_RESPONSE_AND_GOLD = "rubric_response_and_gold"  # 루브릭, 응답, 정답 기반 평가
     RESPONSE_COMPARISON = "response_comparison"           # 두 응답 간 비교 평가
@@ -18,6 +25,15 @@ class JudgeType(Enum):
 # 평가에 필요한 입력 데이터를 정의하는 데이터 클래스
 @dataclass
 class JudgeInput:
+    """평가에 필요한 입력 데이터를 정의하는 데이터 클래스.
+    
+    Attributes:
+        judge_type: 수행할 평가 유형
+        model_response: 평가할 모델의 응답
+        rubric: 평가 기준 (선택사항)
+        gold_response: 비교를 위한 정답 (선택사항)
+        model_response_b: 비교를 위한 두 번째 모델 응답 (선택사항)
+    """
     judge_type: JudgeType
     model_response: str
     rubric: Optional[str] = None          # 평가 기준
@@ -26,15 +42,41 @@ class JudgeInput:
 
 
 class ResponseParser:
+    """응답 파싱을 위한 기본 클래스."""
+    
     def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
-        """Base parser interface"""
+        """LLM 응답을 파싱합니다.
+        
+        Args:
+            response: LLM으로부터의 원본 응답 문자열
+            model_name: 모델 이름 (선택사항)
+
+        Returns:
+            파싱된 결과를 담은 딕셔너리
+
+        Raises:
+            NotImplementedError: 하위 클래스에서 구현해야 함
+        """
         raise NotImplementedError
 
 
 # 루브릭 기반 점수 평가를 위한 파서
 class RubricScoreParser(ResponseParser):
+    """루브릭 기반 점수 평가를 위한 파서."""
+    
     def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
-        """[[score: X]] 형식으로 된 점수를 추출"""
+        """[[score: X]] 형식의 점수를 추출합니다.
+        
+        Args:
+            response: 점수가 포함된 원본 응답 문자열
+            model_name: 모델 이름 (선택사항)
+
+        Returns:
+            점수와 모델 이름이 포함된 딕셔너리
+
+        Raises:
+            ValueError: 응답이 None이거나 유효한 점수를 찾을 수 없는 경우
+        """
         if not response:
             raise ValueError("Response is None")
         import re
@@ -96,6 +138,20 @@ class GoldComparisonParser(ResponseParser):
 
 # 여러 LLM을 사용하여 평가를 수행하는 메인 클래스
 class MultiLLMJudge:
+    """여러 LLM을 사용하여 평가를 수행하는 메인 클래스.
+    
+    Args:
+        models_config: 모델 구성 목록
+        max_retries: 최대 재시도 횟수
+        retry_delay: 재시도 간 대기 시간(초)
+        aggregation_strategy: 결과 집계 전략 (majority/first/all)
+        logger: 로거 인스턴스 (선택사항)
+
+    Attributes:
+        multi_model: 다중 모델 처리를 위한 MultiModel 인스턴스
+        parsers: 평가 유형별 파서 매핑 딕셔너리
+        prompt_templates: 평가 유형별 프롬프트 템플릿
+    """
     def __init__(
         self,
         models_config: List[Dict[str, Any]],
@@ -119,7 +175,17 @@ class MultiLLMJudge:
         self.prompt_templates = JUDGE_PROMPTS
 
     def _format_prompt(self, judge_input: JudgeInput) -> str:
-        """주어진 judge_input에 따라 적절한 프롬프트 템플릿을 선택하고 포맷팅"""
+        """평가 입력에 따라 프롬프트 템플릿을 포맷팅합니다.
+        
+        Args:
+            judge_input: 평가를 위한 입력 데이터
+
+        Returns:
+            포맷팅된 프롬프트 문자열
+
+        Raises:
+            ValueError: 지원하지 않는 평가 유형인 경우
+        """
         if judge_input.judge_type == JudgeType.RUBRIC_AND_RESPONSE:
             return self.prompt_templates["RUBRIC_AND_RESPONSE"].format(
                 rubric=judge_input.rubric,
@@ -142,12 +208,16 @@ class MultiLLMJudge:
         raise ValueError(f"Unsupported judge type: {judge_input.judge_type}")
 
     def _aggregate_results(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """여러 모델의 평가 결과를 집계하는 메서드
+        """여러 모델의 평가 결과를 집계합니다.
         
-        집계 전략:
-        - majority: 다수결 또는 평균값
-        - first: 첫 번째 결과만 사용
-        - all: 모든 결과를 반환
+        Args:
+            results: 개별 평가 결과 목록
+
+        Returns:
+            전략에 따라 집계된 결과
+
+        Raises:
+            ValueError: 집계할 결과가 없거나 지원하지 않는 전략인 경우
         """
         if not results:
             raise ValueError("No results to aggregate")
@@ -193,11 +263,22 @@ class MultiLLMJudge:
         raise ValueError(f"Unsupported aggregation strategy: {self.aggregation_strategy}")
 
     def judge(self, judge_input: JudgeInput) -> Dict[str, Any]:
-        """실제 평가를 수행하는 메인 메서드
-        1. 프롬프트 생성
+        """여러 LLM을 사용하여 평가를 수행합니다.
+        
+        이 메서드는 다음과 같은 전체 평가 프로세스를 처리합니다:
+        1. 적절한 프롬프트 생성
         2. 여러 모델에 평가 요청
         3. 응답 파싱
         4. 결과 집계
+
+        Args:
+            judge_input: 평가를 위한 입력 데이터
+
+        Returns:
+            집계된 평가 결과
+
+        Raises:
+            ValueError: 최대 재시도 후에도 유효한 결과를 얻지 못한 경우
         """
         prompt = self._format_prompt(judge_input)
         parser = self.parsers[judge_input.judge_type]
