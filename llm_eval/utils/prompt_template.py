@@ -1,37 +1,43 @@
 JUDGE_PROMPTS = {
-    "RUBRIC_AND_RESPONSE": """
-Please evaluate the following response according to the provided rubric.
-Rate on a scale of 0-10 and provide your verdict in this format: [[score: X]]
+    "RUBRIC_AND_RESPONSE": """You are an expert evaluator. Your task is to evaluate the given response based on the rubric and provide a score.
+
+IMPORTANT: You must format your response exactly like this example:
+Based on the rubric, this response deserves [[score: 7]].
 
 Rubric:
 {rubric}
 
 Response to evaluate:
 {response}
-""",
 
-    "RUBRIC_RESPONSE_AND_GOLD": """
-Please evaluate the following response against the gold standard answer.
+Provide your evaluation with the score in the specified format:""",
+
+    "RUBRIC_RESPONSE_AND_GOLD": """You are an expert evaluator. Please evaluate if the following response matches the gold standard answer.
 Compare step by step and provide your verdict as [[true]] if correct or [[false]] step: [X] if incorrect.
 
-Question:
+Rubric:
 {rubric}
 
-Gold Answer:
+Gold Response:
 {gold_response}
 
 Model Response:
 {response}
-""",
 
-    "RESPONSE_COMPARISON": """
-Please compare the following two responses and choose the better one.
-Provide your verdict as [[A]] for first response, [[B]] for second response, or [[C]] for tie.
+Provide your evaluation in the specified format:""",
+
+    "RESPONSE_COMPARISON": """You are an expert evaluator. Your task is to compare two responses and choose the better one.
+
+IMPORTANT: You must format your verdict exactly like this:
+- Use [[A]] to choose the first response
+- Use [[B]] to choose the second response
+- Use [[C]] if they are equally good
 
 Response A:
 {response_a}
 
 Response B:
 {response_b}
-"""
+
+Provide your verdict in the specified format:"""
 }
