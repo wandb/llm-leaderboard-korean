@@ -8,19 +8,21 @@ from .base import BaseEvaluator
 from ..utils.prompt_template import JUDGE_PROMPTS
 
 
+# LLM 응답을 평가하기 위한 세 가지 평가 유형을 정의
 class JudgeType(Enum):
-    RUBRIC_AND_RESPONSE = "rubric_and_response"
-    RUBRIC_RESPONSE_AND_GOLD = "rubric_response_and_gold"
-    RESPONSE_COMPARISON = "response_comparison"
+    RUBRIC_AND_RESPONSE = "rubric_and_response"          # 루브릭 기반 응답 평가
+    RUBRIC_RESPONSE_AND_GOLD = "rubric_response_and_gold"  # 루브릭, 응답, 정답 기반 평가
+    RESPONSE_COMPARISON = "response_comparison"           # 두 응답 간 비교 평가
 
 
+# 평가에 필요한 입력 데이터를 정의하는 데이터 클래스
 @dataclass
 class JudgeInput:
     judge_type: JudgeType
     model_response: str
-    rubric: Optional[str] = None
-    gold_response: Optional[str] = None
-    model_response_b: Optional[str] = None
+    rubric: Optional[str] = None          # 평가 기준
+    gold_response: Optional[str] = None    # 정답
+    model_response_b: Optional[str] = None # 비교할 다른 모델의 응답
 
 
 class ResponseParser:
@@ -29,8 +31,10 @@ class ResponseParser:
         raise NotImplementedError
 
 
+# 루브릭 기반 점수 평가를 위한 파서
 class RubricScoreParser(ResponseParser):
     def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
+        """[[score: X]] 형식으로 된 점수를 추출"""
         if not response:
             raise ValueError("Response is None")
         import re
@@ -45,7 +49,9 @@ class RubricScoreParser(ResponseParser):
         }
 
 
+# 두 응답을 비교하여 승자를 결정하는 파서
 class PairwiseComparisonParser(ResponseParser):
+    """[[A]], [[B]], [[C]](tie) 형식으로 된 승자 판정을 추출"""
     def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
         if not response:
             raise ValueError("Response is None")
@@ -63,7 +69,9 @@ class PairwiseComparisonParser(ResponseParser):
         return result
 
 
+# 정답과 비교하여 정확성을 평가하는 파서
 class GoldComparisonParser(ResponseParser):
+    """[[true]] 또는 [[false]] 형식으로 된 정확성 판정을 추출"""
     def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
         if not response:
             raise ValueError("Response is None")
@@ -86,13 +94,14 @@ class GoldComparisonParser(ResponseParser):
         raise ValueError(f"No valid verdict found in response: {response}")
 
 
+# 여러 LLM을 사용하여 평가를 수행하는 메인 클래스
 class MultiLLMJudge:
     def __init__(
         self,
         models_config: List[Dict[str, Any]],
-        max_retries: int = 3,
-        retry_delay: float = 1.0,
-        aggregation_strategy: str = "majority",
+        max_retries: int = 3,             # 재시도 최대 횟수
+        retry_delay: float = 1.0,         # 재시도 간 대기 시간
+        aggregation_strategy: str = "majority",  # 결과 집계 전략 (majority/first/all)
         logger: Optional[logging.Logger] = None
     ):
         self.multi_model = MultiModel(items_config=models_config)
@@ -110,54 +119,36 @@ class MultiLLMJudge:
         self.prompt_templates = JUDGE_PROMPTS
 
     def _format_prompt(self, judge_input: JudgeInput) -> str:
+        """주어진 judge_input에 따라 적절한 프롬프트 템플릿을 선택하고 포맷팅"""
         if judge_input.judge_type == JudgeType.RUBRIC_AND_RESPONSE:
-            return f"""You are an expert evaluator. Your task is to evaluate the given response based on the rubric and provide a score.
-
-IMPORTANT: You must format your response exactly like this example:
-Based on the rubric, this response deserves [[score: 7]].
-
-Rubric:
-{judge_input.rubric}
-
-Response to evaluate:
-{judge_input.model_response}
-
-Provide your evaluation with the score in the specified format:"""
-            
+            return self.prompt_templates["RUBRIC_AND_RESPONSE"].format(
+                rubric=judge_input.rubric,
+                response=judge_input.model_response
+            )
+        
         elif judge_input.judge_type == JudgeType.RESPONSE_COMPARISON:
-            return f"""You are an expert evaluator. Your task is to compare two responses and choose the better one.
-
-IMPORTANT: You must format your verdict exactly like this:
-- Use [[A]] to choose the first response
-- Use [[B]] to choose the second response
-- Use [[C]] if they are equally good
-
-Response A:
-{judge_input.model_response}
-
-Response B:
-{judge_input.model_response_b}
-
-Provide your verdict in the specified format:"""
-            
+            return self.prompt_templates["RESPONSE_COMPARISON"].format(
+                response_a=judge_input.model_response,
+                response_b=judge_input.model_response_b
+            )
+        
         elif judge_input.judge_type == JudgeType.RUBRIC_RESPONSE_AND_GOLD:
-            return f"""You are an expert evaluator. Please evaluate if the following response matches the gold standard answer.
-Compare step by step and provide your verdict as [[true]] if correct or [[false]] step: [X] if incorrect.
-
-Rubric:
-{judge_input.rubric}
-
-Gold Response:
-{judge_input.gold_response}
-
-Model Response to evaluate:
-{judge_input.model_response}
-
-Provide your evaluation in the specified format:"""
+            return self.prompt_templates["RUBRIC_RESPONSE_AND_GOLD"].format(
+                rubric=judge_input.rubric,
+                gold_response=judge_input.gold_response,
+                response=judge_input.model_response
+            )
         
         raise ValueError(f"Unsupported judge type: {judge_input.judge_type}")
 
     def _aggregate_results(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """여러 모델의 평가 결과를 집계하는 메서드
+        
+        집계 전략:
+        - majority: 다수결 또는 평균값
+        - first: 첫 번째 결과만 사용
+        - all: 모든 결과를 반환
+        """
         if not results:
             raise ValueError("No results to aggregate")
 
@@ -202,6 +193,12 @@ Provide your evaluation in the specified format:"""
         raise ValueError(f"Unsupported aggregation strategy: {self.aggregation_strategy}")
 
     def judge(self, judge_input: JudgeInput) -> Dict[str, Any]:
+        """실제 평가를 수행하는 메인 메서드
+        1. 프롬프트 생성
+        2. 여러 모델에 평가 요청
+        3. 응답 파싱
+        4. 결과 집계
+        """
         prompt = self._format_prompt(judge_input)
         parser = self.parsers[judge_input.judge_type]
         
