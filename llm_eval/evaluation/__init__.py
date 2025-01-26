@@ -28,10 +28,11 @@ def get_evaluator(name: str) -> BaseEvaluator:
         raise ValueError(f"Evaluator '{name}' not found in registry. Check available keys: {list(EVALUATION_REGISTRY.keys())}")
     evaluator_cls = EVALUATION_REGISTRY[name]
     return evaluator_cls()  # init 파라미터가 없다면 이렇게
-
-from .string_match import StringMatchEvaluator
  
 # 4) 실제 evaluator 파일들 import & 등록
 # logit_based.py, exact_match.py, 등등 안에 구현된 클래스들을 import
 #  -> import * 해서 해당 파일 안에서 @register_evaluator 붙인 클래스를 등록
 #  -> 혹은 여기서 직접 import 후 등록해도 됨
+
+from .string_match import StringMatchEvaluator
+from .llm_judge import LLMJudgeEvaluator
