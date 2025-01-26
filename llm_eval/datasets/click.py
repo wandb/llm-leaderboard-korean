@@ -52,7 +52,7 @@ class ClickDataset(BaseDataset):
         """
         processed_list = []
         for item in hf_dataset:
-            input_text = f"{item['paragraph']}\n질문: {item['question']}\n선택지: {', '.join(item['choices'])} \n답:"
+            input_text = f"{item['paragraph']}\n질문: {item['question']}\n선택지: {', '.join(item['choices'])}"
             processed_list.append({
                 "input": input_text,
                 "reference": item['answer'],
