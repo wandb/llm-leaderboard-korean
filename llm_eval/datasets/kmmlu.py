@@ -81,7 +81,7 @@ class KMMLUDataset(BaseDataset):
 
         for item in hf_dataset:
             # 원본 데이터에서 query, answer 필드 추출 (없으면 빈 문자열)
-            query = item.get('question','') + f"\n(A) {item.get('A','')}\n(B) {item.get('B','')}\n(C) {item.get('C','')}\n(D) {item.get('D','')} \n답:"
+            query = item.get('question','') + f"\n(A) {item.get('A','')}\n(B) {item.get('B','')}\n(C) {item.get('C','')}\n(D) {item.get('D','')}"
             answer = options[item.get("answer", "")-1]
             processed_list.append({
                 "input": query.strip(),
