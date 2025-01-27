@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Union
 
 class BaseModel:
     """
@@ -24,6 +24,7 @@ class BaseModel:
         inputs: List[Dict[str, Any]],
         return_logits: bool = False,
         cot: bool = False,
+        batch_size: Optional[Union[int, str]] = "auto"
     ) -> List[Dict[str, Any]]:
         """
         LLM으로부터 텍스트(답안)를 생성하는 메서드.
