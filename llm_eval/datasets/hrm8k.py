@@ -83,7 +83,7 @@ class HRM8KDataset(BaseDataset):
 
         for item in hf_dataset:
             # 원본 데이터에서 query, answer 필드 추출 (없으면 빈 문자열)
-            query = item.get("question", "")
+            query = "put your final answer within \\boxed{}." + item.get("question", "")
             answer = item.get("answer", "")
             processed_list.append({
                 "input": query.strip(),
