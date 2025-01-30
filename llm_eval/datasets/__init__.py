@@ -37,4 +37,7 @@ def load_datasets(name: str, split: str = "test", **kwargs) -> BaseDataset:
 from .haerae import HaeraeDataset
 from .kmmlu import KMMLUDataset
 from .click import ClickDataset
+from .hrm8k import HRM8KDataset
+from .k2_eval import K2_EvalDataset
+from dataset_loader import GenericFileDataset
 # ...

@@ -9,14 +9,14 @@ from llm_eval.utils.prompt_template import extract_final_answer
 @register_evaluator("string_match")
 class StringMatchEvaluator(BaseEvaluator):
     """
-    문자열 기반 평가(Evaluation)로, 예측값(prediction)과 참조값(reference)의
-    정확 일치 여부(accuracy)를 계산한다.
+    Evaluation based on string matching, calculating accuracy by checking
+    whether the predicted value (prediction) exactly matches the reference value (reference).
 
-    * Chain-of-thought(CoT)을 무시하고 '정답:' 뒤에 오는 텍스트만 추출하고 싶다면
-      'extract_final_answer=True'를 인자로 넘긴다.
+    * If you want to ignore Chain-of-Thought (CoT) and extract only the text after 'Answer:',
+      pass 'extract_final_answer=True' as an argument.
 
-    * 추가적으로, ignore_case / ignore_punctuation / ignore_numbers 등을 설정해
-      텍스트를 정규화(노이즈 제거) 후 비교할 수도 있다.
+    * Additionally, you can configure ignore_case / ignore_punctuation / ignore_numbers
+      to normalize the text (remove noise) before comparison.
     """
 
     name = "string_match"
@@ -27,23 +27,23 @@ class StringMatchEvaluator(BaseEvaluator):
         ignore_punctuation: bool = False,
         ignore_numbers: bool = False,
         regexes_to_ignore: Optional[List[str]] = None,
-        extract_final_answer: bool = True,   # CoT 중 "정답:" 뒤만 추출할지 여부
+        extract_final_answer: bool = True,   # Whether to extract only the text after "Answer:" in CoT outputs
         *args,
         **kwargs
     ):
         """
         Args:
             ignore_case (bool):
-                True면 대소문자 차이를 무시한다. (기본값: True)
+                If True, ignores case differences. (Default: True)
             ignore_punctuation (bool):
-                True면 문장부호를 모두 제거한다. (기본값: False)
+                If True, removes all punctuation. (Default: False)
             ignore_numbers (bool):
-                True면 숫자를 제거한다. (기본값: False)
+                If True, removes all numbers. (Default: False)
             regexes_to_ignore (List[str] | None):
-                제거할 문자열 패턴(정규 표현식) 목록 (기본값: None)
+                List of string patterns (regular expressions) to remove. (Default: None)
             extract_final_answer (bool):
-                True면, Chain-of-thought가 섞여 있는 모델 출력에서
-                '정답:' / 'Answer:' 등 키워드 뒤의 텍스트만 추출.
+                If True, extracts only the text after 'Answer:' from model outputs
+                that include Chain-of-Thought reasoning.
         """
         super().__init__(*args, **kwargs)
         self.ignore_case = ignore_case
@@ -54,57 +54,58 @@ class StringMatchEvaluator(BaseEvaluator):
 
     def _normalize_text(self, text: str) -> str:
         """
-        문자열 정규화 파이프라인 (순서대로 적용):
-          1) regexes_to_ignore: 추가 패턴 제거
-          2) 대소문자 무시 -> lower()
-          3) 문장부호 제거
-          4) 숫자 제거
-          5) 공백 정규화 (여러 공백 -> 단일 공백)
+        Text normalization pipeline (applied in order):
+          1) Remove patterns specified in regexes_to_ignore
+          2) Convert to lowercase if ignore_case is enabled
+          3) Remove punctuation if ignore_punctuation is enabled
+          4) Remove numbers if ignore_numbers is enabled
+          5) Normalize spaces (convert multiple spaces into a single space)
         """
-        # 1) regex 패턴 제거
+        # 1) Remove specified regex patterns
         for pattern in self.regexes_to_ignore:
             text = re.sub(pattern, "", text)
 
-        # 2) ignore_case
+        # 2) Convert to lowercase
         if self.ignore_case:
             text = text.lower()
 
-        # 3) 문장부호 제거
+        # 3) Remove punctuation
         if self.ignore_punctuation:
             repl_table = str.maketrans("", "", string.punctuation)
             text = text.translate(repl_table)
 
-        # 4) 숫자 제거
+        # 4) Remove numbers
         if self.ignore_numbers:
             repl_table = str.maketrans("", "", string.digits)
             text = text.translate(repl_table)
 
-        # 5) 공백 정규화
+        # 5) Normalize spaces
         text = " ".join(text.strip().split())
         return text
 
     def parse_prediction(self, raw_output: Any) -> str:
         """
-        모델 또는 참조값이 체인 오브 쏘트(CoT) 형태로 주어졌을 수 있으므로,
-        extract_final_answer 옵션에 따라 '정답:' 뒤의 부분만 추출할 수 있다.
+        Since model outputs or reference values may include Chain-of-Thought (CoT),
+        this method extracts only the text after 'Answer:' if extract_final_answer is enabled.
 
-        그 뒤, _normalize_text()로 전처리.
+        After that, _normalize_text() is applied for preprocessing.
         """
         if raw_output is None:
             raw_output = ""
         elif not isinstance(raw_output, str):
             raw_output = str(raw_output)
 
-        # 1) CoT를 무시하고 최종 정답만 파싱
+        # 1) Extract final answer if enabled
         if self.extract_final_answer:
             raw_output = extract_final_answer(raw_output)
 
-        # 2) 정규화
+        # 2) Normalize text
         return self._normalize_text(raw_output)
 
     def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
         """
-        최종적으로 normalize된 prediction과 reference가 같은지 여부로 정확도(accuracy) 계산.
+        Computes accuracy based on whether the normalized prediction
+        and reference values are exactly the same.
         """
         total = len(samples)
         correct = 0

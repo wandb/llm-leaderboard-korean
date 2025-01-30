@@ -36,3 +36,4 @@ def get_evaluator(name: str) -> BaseEvaluator:
 
 from .string_match import StringMatchEvaluator
 from .llm_judge import LLMJudgeEvaluator
+from .math_eval import MathMatchEvaluator
