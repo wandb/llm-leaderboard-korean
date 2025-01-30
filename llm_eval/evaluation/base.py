@@ -1,22 +1,19 @@
-# llm_eval/evaluation/base.py
 from typing import List, Dict, Any, Union
 from llm_eval.models.base import BaseModel
-from llm_eval.models.multi import MultiModel 
-from llm_eval.utils.metrics import * # 기타 메트릭들을 import
+from llm_eval.models.multi import MultiModel # for llm as a judge
 
 class BaseEvaluator:
     """
-    (개발 용이를 위해 개발 단계에서는 한국어로 작성, 이후 영어로 대체)
-    모든 Evaluator Class가 상속해야 할 BaseClass.
+    Base class that all Evaluator classes must inherit from.
 
-    주요 컨셉:
-    - prepare_prompt: (선택) 입력 prompt를 수정하거나 CoT를 삽입하는 등의 로직을 수행.
-    - parse_prediction: (선택) 모델의 raw output을 파싱(후처리)해 정답 비교가 용이하도록 가공.
-    - evaluate_predictions: 실제 점수를 계산하는 메트릭 계산 로직.
-    - evaluate: (상위 로직) 데이터를 순회하며 prompt 준비 -> 모델 호출 -> 예측 파싱 -> 점수 계산의 전체 플로우.
-    
-    필요시 requires_logits, requires_chain_of_thought 등 속성을 둬서 
-    모델을 호출할 때 logits, CoT를 요청하는 등의 분기 처리가 가능.
+    Key concepts:
+    - prepare_prompt: (Optional) Modifies the input prompt, inserts CoT, or performs other logic.
+    - parse_prediction: (Optional) Parses the raw model output for easier comparison with the reference.
+    - evaluate_predictions: Implements the metric calculation logic for evaluating predictions.
+    - evaluate: (High-level logic) Iterates over data and follows the full flow of prompt preparation -> model call -> prediction parsing -> score calculation.
+
+    If necessary, attributes like requires_logits and requires_chain_of_thought can be added
+    to handle conditions where logits or CoT need to be requested from the model.
     """
 
     name: str = "base"
@@ -25,18 +22,23 @@ class BaseEvaluator:
 
     def prepare_prompt(self, input_text: str) -> str:
         """
-        (옵션) 'input' 텍스트를 받아, CoT 지시문이나 추가 시스템 메세지 등을 붙여
-        모델에게 전달할 최종 프롬프트를 생성.
-        기본 구현은 아무것도 하지 않고 그대로 반환.
+        (Optional) Takes the input text and generates the final prompt to be fed into the model
+        by attaching CoT instructions or additional system messages.
+
+        The default implementation returns the input text unchanged.
         """
         return input_text
 
     def parse_prediction(self, raw_output: str) -> Any:
         """
-        (옵션) 모델의 raw output(문자열 등)을 받아 정답 비교가 용이하도록 전처리/파싱.
-        예: JSON 포맷으로 응답이 온다면 파싱, 
-            '답변: ...' 형태면 '...'만 추출 등.
-        기본 구현은 raw_output을 그대로 반환.
+        (Optional) Takes the raw output from the model (e.g., a string) and preprocesses/parses it
+        to make comparison with the reference easier.
+
+        Examples:
+            - If the response is in JSON format, parse it.
+            - If the response is in the format 'Answer: ...', extract only '...'.
+
+        The default implementation returns the raw output unchanged.
         """
         return raw_output
 
@@ -45,25 +47,24 @@ class BaseEvaluator:
         samples: List[Dict[str, Any]]
     ) -> Dict[str, float]:
         """
-        (필수 구현) 
-        이미 'prediction' 필드를 갖고 있는 샘플들(=모델 출력이 반영된 상태)에 대해
-        실제 메트릭을 계산하고 결과(점수)를 반환.
-        
+        (Must be implemented)
+        Computes the actual metrics on samples that already contain 'prediction' fields
+        (i.e., after model inference).
+
         Args:
-            samples: 각 원소가 
+            samples: A list where each element has the format:
                 {
                     "input": str,
                     "reference": str, 
-                    "prompt": str,               # prepare_prompt 후 실제 모델에 들어간 프롬프트
-                    "prediction": Any,           # parse_prediction 후 결과
-                    "logits" (optional): Any,    # requires_logits=True인 경우, 모델이 반환한 logits 정보
+                    "prompt": str,               # The actual prompt sent to the model after prepare_prompt
+                    "prediction": Any,           # The result after parse_prediction
+                    "logits" (optional): Any,    # If requires_logits=True, stores logits returned by the model
                     ...
                 } 
-                형태를 갖는 리스트.
 
         Returns:
             Dict[str, float]: {"metric_name": metric_value, ...} 
-            예: {"accuracy": 0.85, "f1": 0.76}
+            Example: {"accuracy": 0.85, "f1": 0.76}
         """
         raise NotImplementedError("Subclasses must implement evaluate_predictions().")
 
@@ -75,10 +76,11 @@ class BaseEvaluator:
     ) -> Dict[str, Any]:
         """
         Args:
-            data: [{"input":..., "reference":..., "prediction":...}, ...] 형태.
-                  - 이미 'prediction'이 최종 확정됨 (Runner, ScalingMethod 등에서 처리).
-            model: MultiModel이면 judge_batch를 호출하여 judge_score 등 추가 가능.
-                   BaseModel이거나 None이면 그냥 지나감.
+            data: A list of dictionaries in the format [{"input":..., "reference":..., "prediction":...}, ...].
+                  - The 'prediction' field is already finalized (processed by Runner, ScalingMethod, etc.).
+            model: If it is a MultiModel, judge_batch is called to add fields like judge_score.
+                   If it is a BaseModel or None, this step is skipped.
+
         Returns:
             {
               "metrics": {...},
@@ -91,10 +93,10 @@ class BaseEvaluator:
             raw_pred = sample.get("prediction", "")
             sample["prediction"] = self.parse_prediction(raw_pred)
 
-        # 2) (옵션) MultiModel + Judge가 있으면 judge_batch 호출
+        # 2) (Optional) If MultiModel + Judge exists, call judge_batch
         if isinstance(model, MultiModel):
-            # multi_model이 있다면, 내부 sub_items 중 Judge 모델이 있는 경우
-            # judge_batch()를 호출 → 각 sample에 {"judge_score": float, ...} 등이 기록될 수 있음.
+            # If multi_model is present and has a Judge model as a sub-item,
+            # judge_batch() is called → each sample may be updated with {"judge_score": float, ...}.
             data = model.judge_batch(data)
 
         # 3) compute_metrics

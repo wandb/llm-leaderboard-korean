@@ -6,3 +6,4 @@ openai>=1.0.0
 datasets>=3.2.0
 litellm>=1.59.0
 math-verify
+pandas
