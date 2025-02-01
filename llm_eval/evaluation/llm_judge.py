@@ -105,43 +105,37 @@ class GoldComparisonParser(ResponseParser):
     def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
         if not response:
             raise ValueError("Response is None")
-        if "[[true]]" in response.lower():
+        # lower() for case-insensitivity
+        resp_lower = response.lower()
+        if "[[true]]" in resp_lower:
             return {"correct": True, "step": -1, "model_name": model_name or "unknown"}
-        elif "[[false]]" in response.lower():
+        elif "[[false]]" in resp_lower:
             step_pattern = r"step:\s*\[(\d+)\]"
-            match = re.search(step_pattern, response)
+            match = re.search(step_pattern, response, flags=re.IGNORECASE)
             if match:
                 return {
                     "correct": False,
                     "step": int(match.group(1)),
                     "model_name": model_name or "unknown"
                 }
+            return {"correct": False, "step": None, "model_name": model_name or "unknown"}
         raise ValueError(f"No valid verdict found in response: {response}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2) MultiLLMJudge (original code) - uses multiple LLMs internally for evaluation
+# 2) MultiLLMJudge - updated to use the new "multi.py" structure
 # ─────────────────────────────────────────────────────────────────────────────
 
 class MultiLLMJudge:
     """
-    Class responsible for performing evaluations using multiple LLMs.
+    Class responsible for performing evaluations using a single "judge model" via MultiModel.
 
-    It uses MultiModel to handle multiple sub-models, 
-    and then uses various parser classes to interpret the results.
-
-    Args:
-        models_config: A list of configurations describing the sub-models (LLMs) to load.
-        max_retries: Maximum number of retries for possible API issues or timeouts.
-        retry_delay: Seconds to wait between retries.
-        aggregation_strategy: Strategy for how to aggregate multiple results, e.g., "majority".
-        logger: Optional logger instance.
-
-    Attributes:
-        multi_model: A MultiModel instance to handle parallel or sequential calls to sub-models.
-        parsers: A dictionary mapping JudgeType to the appropriate ResponseParser.
-        prompt_templates: A dictionary containing prompt templates indexed by JudgeType.
+    - We assume models_config is a list with exactly ONE dict 
+      describing the Judge LLM (since the new MultiModel can store only one judge_model).
+    - We use self.multi_model.judge_batch(...) to get the LLM's outputs, 
+      then parse them with the appropriate parser.
     """
+
     def __init__(
         self,
         models_config: List[Dict[str, Any]],
@@ -150,23 +144,43 @@ class MultiLLMJudge:
         aggregation_strategy: str = "majority",
         logger: Optional[logging.Logger] = None
     ):
-        self.multi_model = MultiModel(items_config=models_config)
+        """
+        Args:
+            models_config: a list with exactly ONE item, describing the judge LLM.
+               e.g., [{"name": "huggingface_judge", "params": {...}}]
+            max_retries, retry_delay, aggregation_strategy: not used in this minimal example,
+               but kept for potential expansions (like retrying on API failures).
+            logger: optional logger
+        """
+        if not models_config or len(models_config) > 1:
+            raise ValueError(
+                f"MultiLLMJudge currently supports exactly 1 judge model config, got {len(models_config)}."
+            )
+        self.logger = logger or logging.getLogger(__name__)
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.aggregation_strategy = aggregation_strategy
-        self.logger = logger or logging.getLogger(__name__)
-        
+
+        # Prepare the "judge_model" param for MultiModel
+        judge_config = models_config[0]
+        # We create a multi_model that only has "judge_model"
+        self.multi_model = MultiModel(
+            judge_model=judge_config
+        )
+
+        # Mappings from JudgeType -> Parser
         self.parsers = {
             JudgeType.RUBRIC_AND_RESPONSE: RubricScoreParser(),
             JudgeType.RUBRIC_RESPONSE_AND_GOLD: GoldComparisonParser(),
             JudgeType.RESPONSE_COMPARISON: PairwiseComparisonParser()
         }
-        self.prompt_templates = JUDGE_PROMPTS  # e.g., {JudgeType.RUBRIC_AND_RESPONSE: "Rubric: {rubric}\n...", ...}
+        # The prompt templates used for generating a judge prompt
+        self.prompt_templates = JUDGE_PROMPTS  # e.g. {JudgeType.RUBRIC_AND_RESPONSE: "Rubric: {rubric}\n...", ...}
 
     def judge(self, judge_inputs: List[JudgeInput]) -> List[Dict[str, Any]]:
         """
         Executes LLM-based evaluations for each JudgeInput by constructing appropriate prompts,
-        querying the sub-model(s), and parsing the results.
+        calling multi_model.judge_batch(...), and parsing the results.
 
         Args:
             judge_inputs: List of JudgeInput, each containing the type of evaluation and necessary data.
@@ -177,11 +191,12 @@ class MultiLLMJudge:
                 - "parsed": The parser's output (e.g., score, correctness)
                 - "judge_type": The type of evaluation (string)
         """
-        results = []
-        prompts = []
-        types = []
+        if not judge_inputs:
+            return []
 
-        # Build prompts for each JudgeInput
+        # Build prompts
+        prompts = []
+        judge_types = []
         for j_input in judge_inputs:
             template = self.prompt_templates.get(j_input.judge_type, "")
             filled_prompt = template.format(
@@ -190,19 +205,20 @@ class MultiLLMJudge:
                 gold=j_input.gold_response or "",
                 response_b=j_input.model_response_b or ""
             )
+            # Our MultiModel judge_batch expects a "input" field per sample
             prompts.append({"input": filled_prompt})
-            types.append(j_input.judge_type)
+            judge_types.append(j_input.judge_type)
 
-        # Use multi_model to generate responses in one batch (if desired)
-        outputs = self.multi_model.generate_batch(
-            prompts,
-            return_logits=False
-        )
+        # Call judge_batch to get raw outputs
+        # BaseJudge.judge_batch typically sets item["prediction"] to the model's raw output
+        judged_outputs = self.multi_model.judge_batch(prompts)
 
         # Parse each output according to its JudgeType
-        for out, j_type in zip(outputs, types):
+        results = []
+        for out, j_type in zip(judged_outputs, judge_types):
             raw_output = out.get("prediction", "")
             parser = self.parsers[j_type]
+
             try:
                 parsed_res = parser.parse(raw_output, model_name="JudgeLLM")
             except ValueError as e:
@@ -220,6 +236,7 @@ class MultiLLMJudge:
 # ─────────────────────────────────────────────────────────────────────────────
 # 3) LLMJudgeEvaluator: BaseEvaluator → integrates with the standard pipeline
 # ─────────────────────────────────────────────────────────────────────────────
+
 @register_evaluator("llm_judge")
 class LLMJudgeEvaluator(BaseEvaluator):
     """
@@ -240,17 +257,17 @@ class LLMJudgeEvaluator(BaseEvaluator):
         default_judge_type: Union[str, JudgeType] = "rubric_and_response",
         max_retries: int = 3,
         retry_delay: float = 1.0,
-        aggregation_strategy: str = "majority",
         logger: Optional[logging.Logger] = None,
         **kwargs
     ):
         """
         Args:
-            judge_models_config: Config list for the judge model(s), passed to MultiLLMJudge.
+            judge_models_config: Config list for the judge model(s), 
+                e.g. [{"name": "huggingface_judge", "params": {...}}].
+                Exactly one config is currently supported.
             default_judge_type: If a sample does not specify a judge_type, use this one.
             max_retries: Retries for LLM calls.
             retry_delay: Delay (in seconds) between retries.
-            aggregation_strategy: How to handle multiple judge responses (if any).
             logger: Optional logger instance.
             kwargs: Additional parameters if needed.
         """
@@ -261,11 +278,11 @@ class LLMJudgeEvaluator(BaseEvaluator):
             if isinstance(default_judge_type, str)
             else default_judge_type
         )
+        # Create a MultiLLMJudge, which internally uses MultiModel(judge_model=...) 
         self.judge_engine = MultiLLMJudge(
             models_config=judge_models_config,
             max_retries=max_retries,
             retry_delay=retry_delay,
-            aggregation_strategy=aggregation_strategy,
             logger=self.logger
         )
 
@@ -280,6 +297,10 @@ class LLMJudgeEvaluator(BaseEvaluator):
             A dict with metric names and values, e.g.:
                 {"average_score": 4.2, "correct_rate": 0.78}
         """
+        if not samples:
+            return {}
+
+        # Build JudgeInput objects
         judge_inputs = []
         for s in samples:
             # If a sample doesn't specify judge_type, use default
@@ -295,6 +316,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
             )
             judge_inputs.append(j_input)
 
+        # LLM-based judge call
         judge_outputs = self.judge_engine.judge(judge_inputs)
         # judge_outputs: [{"raw_output": "...", "parsed": {...}, "judge_type": "..."}]
 
@@ -321,7 +343,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
 
             if "winner" in parsed:
                 sample["judge_winner"] = parsed["winner"]
-                # e.g. "A", "B", or "tie". It's up to you to interpret that.
+                # e.g. "A", "B", or "tie". It's up to your logic to interpret that.
 
         metrics = {}
         if score_count > 0:
