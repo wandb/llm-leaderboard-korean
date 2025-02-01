@@ -42,4 +42,5 @@ def load_model(name: str, **kwargs) -> BaseModel:
 # from .huggingface_backend import HFModel
 from .openai_backend import OpenAIModel
 from .multi import MultiModel
-from .huggingface import HuggingFaceModel
+from .huggingface_backend import HuggingFaceModel
+# from litellm_backend import *
