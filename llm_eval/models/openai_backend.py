@@ -13,6 +13,42 @@ logger.setLevel(logging.INFO)
 
 @register_model("openai")
 class OpenAIModel(BaseModel):
+    """
+    OpenAI API 기반의 Vision Language Model 구현체로, 텍스트와 이미지가 포함된 입력을 처리합니다.
+
+    예시로, 다음과 같은 샘플을 처리할 수 있습니다:
+        {
+            "input": {
+                "content": [
+                    {"type": "text", "text": "이 이미지에서 무엇을 볼 수 있나요?"},
+                    {"type": "image_url", "image_url": "https://example.com/image.jpg"}
+                ]
+            }
+        }
+
+    또는 base64 인코딩된 이미지:
+        {
+            "input": {
+                "content": [
+                    {"type": "text", "text": "이 이미지를 설명해주세요"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/jpeg;base64,...", "detail": "high"}
+                    }
+                ]
+            }
+        }
+
+    Args:
+        api_key (str): OpenAI API 키
+        api_base (str): API 기본 URL (기본값: OpenAI 엔드포인트)
+        model_name (str): 모델 식별자 (예: gpt-4-vision-preview)
+        system_message (str|None): chat completion용 시스템 메시지
+        use_chat_api (bool|None): API 타입 선택 (True: chat, False: completion, None: 자동)
+        limit_mm_per_prompt (Dict[str, int]|None): 프롬프트당 멀티미디어 제한
+        **kwargs: 추가 API 매개변수 (temperature, max_tokens 등)
+    """
+
     def __init__(
         self,
         api_key: str,
