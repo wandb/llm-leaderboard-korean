@@ -107,7 +107,7 @@ class KUDGEDataset(BaseDataset):
         # 서브셋별 변환 규칙 정의
         conversion_rules = {
             'Pairwise': {
-                'input_fields': ['judge_query'],  # instruction 제거
+                'input_fields': ['judge_query'],  
                 'prediction_field': 'chosen_response',
                 'reference_field': 'winner',
                 'additional_fields': {
@@ -118,7 +118,7 @@ class KUDGEDataset(BaseDataset):
                 }
             },
             'Pairwise-False': {
-                'input_fields': ['judge_query'],  # instruction 제거
+                'input_fields': ['judge_query'],  
                 'prediction_field': 'response_with_false_info',
                 'reference_field': 'winner',
                 'additional_fields': {
@@ -127,21 +127,19 @@ class KUDGEDataset(BaseDataset):
                 }
             },
             'Pointwise': {
-                'input_fields': ['judge_query'],  # instruction 제거
+                'input_fields': ['judge_query'],  
                 'prediction_field': 'response',
                 'reference_field': 'final_score',
                 'additional_fields': {
                     'judge_type': 'rubric_and_response',
-                    'rubric': 'judge_query'
                 }
             },
             'Pointwise-False': {
-                'input_fields': ['judge_query'],  # instruction 제거
+                'input_fields': ['judge_query'],  
                 'prediction_field': 'response',
                 'reference_field': 'original_human_score',
                 'additional_fields': {
                     'judge_type': 'rubric_and_response',
-                    'rubric': 'judge_query'
                 }
             },
         }
@@ -155,23 +153,10 @@ class KUDGEDataset(BaseDataset):
             result = {
                 "input": "\n".join(str(item.get(field, '')) for field in rule['input_fields']),
                 "prediction": str(item.get(rule['prediction_field'], '')),
+                "reference": str(item.get(rule['reference_field'], '')),
                 "_subset_name": subset_name
             }
-            
-            # reference 처리
-            if 'reference_fields' in rule:  # 여러 평가 점수 평균
-                scores = [float(item.get(field, 0)) for field in rule['reference_fields']]
-                result["reference"] = str(sum(scores) / len(scores))
-            else:  # 단일 reference 값
-                ref_value = str(item.get(rule['reference_field'], ''))
-                # Pairwise의 경우 모델명 포함
-                if subset_name == 'Pairwise':
-                    model_a = str(item.get('chosen_model', ''))
-                    model_b = str(item.get('rejected_model', ''))
-                    result["reference"] = f"{ref_value} (A: {model_a}, B: {model_b})"
-                else:
-                    result["reference"] = ref_value
-            
+                
             # 추가 필드 처리
             if 'additional_fields' in rule:
                 for key, field in rule['additional_fields'].items():
