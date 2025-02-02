@@ -1,0 +1,16 @@
+wandb:
+  run_name: "upstage/solar-mini-250123" # use run_name defined above
+
+# if you don't use api, please set "api" as "false"
+# if you use api, please select from "openai", "anthoropic", "google", "cohere", "vllm"
+api: upstage
+batch_size: 32 # vllmは256, apiは32を推奨
+# inference_interval: 1 # seconds
+
+model:
+  pretrained_model_name_or_path: "solar-mini" #if you use openai api, put the name of model
+  size_category: "10B≤ <30B"
+  base_url: "https://api.upstage.ai/v1/solar"
+  size: 10700000000
+  release_date: "1/23/2025"
+
