@@ -43,4 +43,6 @@ def load_model(name: str, **kwargs) -> BaseModel:
 from .openai_backend import OpenAIModel
 from .multi import MultiModel
 from .huggingface_backend import HuggingFaceModel
+from .huggingface_judge import HuggingFaceJudge
+from .huggingface_reward import HuggingFaceReward
 # from litellm_backend import *
