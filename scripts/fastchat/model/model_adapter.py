@@ -67,6 +67,8 @@ OPENAI_MODEL_LIST = (
     "gpt-4o",
     "gpt-4o-2024-05-13",
     "base-gpt4o-with-human-annotation",
+    "o1-preview",
+    "o1-mini",
 )
 
 

@@ -475,13 +475,26 @@ def chat_completion_openai(model, conv, temperature, max_tokens):
     for _ in range(API_MAX_RETRY):
         try:
             messages = conv.to_openai_api_messages()
-            response = openai.chat.completions.create(
-                model=model,
-                messages=messages,
-                n=1,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+            if model in ["o1-preview", "o1-mini"]:
+                processed_messages = []
+                for message in messages:
+                    if message["role"] == "system":
+                        # system メッセージを user メッセージに変換
+                        processed_messages.append({"role": "user", "content": f"System instruction: {message['content']}"})
+                    else:
+                        processed_messages.append(message)
+                messages = processed_messages
+            # APIリクエストのパラメータを準備
+            api_params = {
+                "model": model,
+                "messages": messages,
+                "n": 1,
+            }
+            # モデルに応じて適切なトークン制限パラメータを使用
+            if model not in ["o1-preview", "o1-mini"]:
+                api_params["max_tokens"] = max_tokens
+                api_params["temperature"] = temperature
+            response = openai.chat.completions.create(**api_params)
             output = response.choices[0].message.content
             break
         except openai.OpenAIError as e:
