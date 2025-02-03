@@ -1,6 +1,7 @@
 """
 Common data structures and utilities.
 """
+from utils import WandbConfigSingleton
 
 import ast
 import dataclasses
@@ -22,7 +23,6 @@ from fastchat.model.model_adapter import (
     OPENAI_MODEL_LIST,
 )
 
-from config_singleton import WandbConfigSingleton
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 

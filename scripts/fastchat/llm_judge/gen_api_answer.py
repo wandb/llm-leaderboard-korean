@@ -3,6 +3,8 @@
 Usage:
 python3 gen_api_answer.py --model gpt-3.5-turbo
 """
+from utils import WandbConfigSingleton
+
 import argparse
 import json
 import os
@@ -14,7 +16,6 @@ import openai
 import shortuuid
 import tqdm
 import wandb
-from config_singleton import WandbConfigSingleton
 
 from fastchat.llm_judge.common import (
     load_questions,

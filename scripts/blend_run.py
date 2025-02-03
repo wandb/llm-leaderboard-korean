@@ -4,7 +4,7 @@ from wandb.sdk.wandb_run import Run
 from omegaconf import OmegaConf
 from evaluator.aggregate import evaluate
 from utils import read_wandb_table
-from config_singleton import WandbConfigSingleton
+from utils import WandbConfigSingleton
 import wandb
 import yaml
 
