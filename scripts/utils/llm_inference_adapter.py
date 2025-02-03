@@ -3,6 +3,8 @@ from dataclasses import dataclass
 import json
 from .config_singleton import WandbConfigSingleton
 from langchain_openai import ChatOpenAI, AzureChatOpenAI
+from langchain_upstage import ChatUpstage
+
 from langchain_mistralai.chat_models import ChatMistralAI
 from langchain_google_genai import (
     ChatGoogleGenerativeAI,
@@ -137,10 +139,9 @@ def get_llm_inference_engine():
     
     elif api_type == "upstage":
         # use LangChain upstage integration
-        llm = ChatOpenAI(
+        llm = ChatUpstage(
             api_key=os.environ["UPSTAGE_API_KEY"],
             model=cfg.model.pretrained_model_name_or_path,
-            base_url="https://api.upstage.ai/v1/solar",
             **cfg.generator,
         )
 
