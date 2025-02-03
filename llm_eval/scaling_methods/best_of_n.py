@@ -10,7 +10,13 @@ class BestOfN(BaseScalingMethod):
     * "우수" 판단은 score_fn으로 할 수도 있고, default로 첫 번째만 택할 수도 있음.
     """
 
-    def __init__(self, model: BaseModel = None, n: int = 5, score_fn=None, **kwargs):
+    def __init__(
+        self, 
+        model: BaseModel = None, 
+        n: int = 5, 
+        score_fn: Optional[Callable[[str, Dict[str, Any]], float]] = None, 
+        **kwargs
+    ):
         super().__init__(model=model, **kwargs)
         self.n = n
         self.score_fn = score_fn
@@ -26,23 +32,30 @@ class BestOfN(BaseScalingMethod):
 
         for sample in data:
             prompt = sample["input"]
-            # N번 후보 생성 (batch 호출로 최적화 가능)
             candidates = []
-            for _ in range(self.n):
-                # generate_batch는 리스트를 반환하므로 [0]만 취함
-                outputs = self.model.generate_batch([sample])  
-                # 예: [{"input":..., "reference":..., "prediction":"..."}]
-                candidate_text = outputs[0]["prediction"]
-                candidates.append(candidate_text)
+            logit_values = []
 
-            # 점수 계산하여 베스트 후보 선택
+            for _ in range(self.n):
+                outputs = self.model.generate_batch([sample], return_logits=True)  
+                candidate_text = outputs[0]["prediction"]
+                logit_value = outputs[0].get("logit", None) 
+                candidates.append(candidate_text)
+                logit_values.append(logit_value)
+
             if self.score_fn is not None:
+                # 사용자가 제공한 score_fn 기반으로 최고 점수 후보 선택
                 scores = [self.score_fn(candidate, sample) for candidate in candidates]
                 best_idx = max(range(len(scores)), key=lambda i: scores[i])
+
             else:
-                # default: 첫 번째 후보
-                best_idx = 0
-            
+                
+                best_idx = self._select_highest_confidence(logit_values)
+
             sample["prediction"] = candidates[best_idx]
 
         return data
+
+    def _select_highest_confidence(self, logit_values: List[Optional[float]]):
+       
+
+        return max(range(len(logit_values)), key=lambda i: logit_values[i])
