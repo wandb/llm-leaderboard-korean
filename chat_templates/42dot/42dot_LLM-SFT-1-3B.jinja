@@ -1,9 +1,0 @@
-{% for message in messages %}
-    {% if message['role'] == 'user' %}
-        {{ bos_token + '[INST] ' + message['content'] + ' [/INST]' }}
-    {% elif message['role'] == 'system' %}
-        {{ '<<SYS>>\\n' + message['content'] + '\\n<</SYS>>\\n\\n' }}
-    {% elif message['role'] == 'assistant' %}
-        {{ ' '  + message['content'] + ' ' + eos_token }}
-    {% endif %}
-{% endfor %}

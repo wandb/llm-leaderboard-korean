@@ -4,6 +4,10 @@ Conversation prompt templates.
 We kindly request that you import fastchat instead of copying this file if you wish to use it.
 If you have any changes in mind, please contribute back so the community can benefit collectively and continue to maintain these valuable templates.
 """
+# import sys
+# import os
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from utils import WandbConfigSingleton
 
 import base64
 import dataclasses
@@ -11,7 +15,6 @@ from enum import auto, IntEnum
 from io import BytesIO
 from typing import List, Any, Dict, Union, Tuple
 import wandb
-from config_singleton import WandbConfigSingleton
 
 class SeparatorStyle(IntEnum):
     """Separator styles."""

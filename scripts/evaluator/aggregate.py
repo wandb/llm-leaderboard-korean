@@ -1,10 +1,10 @@
+from utils import read_wandb_table, WandbConfigSingleton
+
 from pathlib import Path
 import os
 import wandb
 import pandas as pd
 import numpy as np
-from utils import read_wandb_table
-from config_singleton import WandbConfigSingleton
 
 def radar_contents(leaderboard_dict, categories: list[str]) -> list[list[str, float]]:
     ret = []
