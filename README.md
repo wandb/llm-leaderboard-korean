@@ -81,35 +81,43 @@ Below is a minimal example of how to use the `Evaluator` interface to load a dat
 ```python
 from llm_eval.evaluator import Evaluator
 
-# Initialize an Evaluator with default parameters (optional).
+# 1) Initialize an Evaluator with default parameters (optional).
 evaluator = Evaluator(
-    default_model_backend="huggingface",     # e.g., "vllm", "openai", etc.
-    default_scaling_method=None,             # e.g., "self-consistency", "best_of_n"
+    default_model_backend="huggingface",     # e.g., "vllm", "openai", ...
+    default_judge_backend=None,              # e.g., "huggingface_judge"
+    default_reward_backend=None,             # e.g., "huggingface_reward"
+    default_scaling_method=None,             # e.g., "beam_search", "best_of_n"
     default_evaluation_method="string_match",
     default_split="test"
 )
 
-# Run the evaluation pipeline
+# 2) Run the evaluation pipeline
 results = evaluator.run(
-    model="huggingface",                     # or "vllm", "openai", etc.
-    dataset="haerae_bench",                  # or "kmmlu", "qarv", ...
-    subset="csat_geo",                       # optional subset (list or string)
-    split="test",                            # "train"/"validation"/"test"
-    dataset_params={"revision":"main"},      # example HuggingFace config
-    model_params={"model_name":"gpt2"},      # example HF Transformers param
-    scaling_method=None,                     # or "beam_search"
-    scaling_params={},                       # e.g. {"beam_size":3, "num_iterations":5}
-    evaluator_params={}                      # e.g. custom evaluation settings
+    model="huggingface",                        # or "vllm", "openai", etc.
+    judge_model=None,                           # specify e.g. "huggingface_judge" if needed
+    reward_model=None,                          # specify e.g. "huggingface_reward" if needed
+    dataset="haerae_bench",                     # or "kmmlu", "qarv", ...
+    subset=["csat_geo", "csat_law"],            # optional subset(s)
+    split="test",                               # "train"/"validation"/"test"
+    dataset_params={"revision":"main"},         # example HF config
+    model_params={"model_name_or_path":"gpt2"}, # example HF Transformers param
+    judge_params={},                            # params for judge model (if judge_model is not None)
+    reward_params={},                           # params for reward model (if reward_model is not None)
+    scaling_method=None,                        # or "beam_search", "best_of_n"
+    scaling_params={"beam_size":3},             # e.g., {"beam_size":3, "num_iterations":5}
+    evaluator_params={}                         # e.g., custom evaluation settings
 )
 
 print("Metrics:", results["metrics"])
-# e.g. {"accuracy": 0.83, ...}
-print("Samples:", results["samples"][0])
+# e.g. {"accuracy": 0.85, ...}
+print("Sample #0:", results["samples"][0])
 # e.g. {"input":"...", "reference":"...", "prediction":"..."}
+
 ```
 
 - Dataset is loaded from the registry (e.g., `haerae_bench` is just one of many).
 - Model is likewise loaded via the registry (`huggingface`, `vllm`, etc.).
+- judge_model and reward_model can be provided if you want LLM-as-a-Judge or reward-model logic. If both are None, the system uses a single model backend.
 - `ScalingMethod` is optional if you want to do specialized decoding.
 - `EvaluationMethod` (e.g., `string_match`, `logit_based`, or `llm_judge`) measures performance.
 
@@ -120,20 +128,26 @@ We also provide a simple command-line interface (CLI) via `evaluator.py`:
 ```bash
 python llm_eval/evaluator.py \
   --model huggingface \
+  --judge_model huggingface_judge \
+  --reward_model huggingface_reward \
   --dataset haerae_bench \
   --subset csat_geo \
   --split test \
   --scaling_method beam_search \
   --evaluation_method string_match \
-  --model_params '{"model_name": "gpt2"}' \
+  --model_params '{"model_name_or_path": "gpt2"}' \
   --scaling_params '{"beam_size":3, "num_iterations":5}' \
   --output_file results.json
+
 ```
 
 This command will:
 
 1. Load the `haerae_bench` (subset=`csat_geo`) test split.
-2. Initialize a HuggingFace-based model (`model_name`: `gpt2`).
+2. Create a MultiModel internally with:
+Generate model: huggingface → gpt2
+Judge model: huggingface_judge (if you pass relevant judge_params)
+Reward model: huggingface_reward (if you pass relevant reward_params).  
 3. Apply Beam Search (`beam_size=3`).
 4. Evaluate final outputs via `string_match`.
 5. Save the resulting JSON file to `results.json`.
@@ -151,17 +165,18 @@ runner = PipelineRunner(
     dataset_name="haerae_bench",
     subset=["csat_geo", "csat_law"],
     split="test",
-    model_backend_name="vllm",
+    model_backend_name="huggingface",
     scaling_method_name="best_of_n",
     evaluation_method_name="string_match",
     dataset_params={},
-    model_backend_params={"endpoint": "http://localhost:8000"},
+    model_backend_params={"model_name_or_path":"gpt2"},
     scaling_params={"n": 5},
     evaluator_params={},
 )
 
 results = runner.run()
 print(results["metrics"])
+
 ```
 
 ---
