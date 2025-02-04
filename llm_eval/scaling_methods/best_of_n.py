@@ -2,107 +2,115 @@ from typing import List, Dict, Any
 from llm_eval.models.base import BaseModel
 from .base import BaseScalingMethod
 from . import register_scaling_method
+from llm_eval.utils.logging import get_logger
+import logging
+
+logger = get_logger(name="best_of_n", level=logging.INFO)
 
 @register_scaling_method("best_of_n")
 class BestOfN(BaseScalingMethod):
     """
-    N번 샘플링하여 가장 우수한 답변(또는 첫 답변)을 선택하는 방식.
-    * "우수" 판단은 score_fn으로 할 수도 있고, default로 첫 번째만 택할 수도 있음.
+    A scaling method that samples N times for each sample and selects the best answer
+    according to a reward or log-prob score.
+
+    Example for batch_size=3, n=3:
+      - We have 3 samples in a batch, and we run generate_batch 3 times (N=3).
+      - That yields 9 candidate answers (3 for each sample).
+      - We store the candidate texts in candidates_texts and their scores in candidates_scores.
+      - For sample #0, the relevant indices are (0, 3, 6); 
+        for sample #1, they are (1, 4, 7); 
+        for sample #2, they are (2, 5, 8).
+      - We select the candidate with the highest score for each sample.
     """
 
-    def __init__(self, model: BaseModel = None, n: int = 5, batch_size:int=1, **kwargs):
+    def __init__(self, model: BaseModel = None, n: int = 5, batch_size: int = 1, **kwargs):
+        """
+        Args:
+            model (BaseModel): The model backend (could be MultiModel).
+            n (int): Number of sampling iterations per sample.
+            batch_size (int): Number of samples to process in one batch.
+            kwargs: Additional parameters that may be passed from BaseScalingMethod.
+        """
         super().__init__(model=model, **kwargs)
-
         self.n = n
-        self.batch_size=batch_size
-        
-        #self.score_fn = score_fn
-
+        self.batch_size = batch_size
 
     def apply(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        data 내 각 샘플에 대해:
-          - N번 반복하여 후보 생성
-          - score_fn이 있으면 최고 점수 후보 선택, 없으면 첫 후보
-        """
-        
-        """
+        Main entry point for Best-of-N scaling.
+
         Args:
-        data (List[Dict[str, Any]]): 
-            - 샘플 리스트. 각 샘플은 딕셔너리 형태이며, 모델이 처리할 입력 데이터를 포함함.
+            data: A list of samples, each a dict with at least {"input":..., "reference":...}.
 
         Returns:
-            List[Dict[str, Any]]: 
-                - `prediction` 키에 최적의 후보가 포함된 샘플 리스트.
-                - 각 샘플은 원본 입력과 함께 가장 우수한 후보 답변을 포함.
+            A list of the same structure with "prediction" updated to the selected best candidate
+            for each sample.
         """
-        
         if self.model is None:
-            raise ValueError("BestOfN requires a 'model' instance.")
-        predictions=[]
-        for i in range(0, len(data), self.batch_size):
-            # prompt = sample["input"]
-            # N번 후보 생성 (batch 호출로 최적화 가능)
-            candidates = []
-            candidates_logits = []
+            raise ValueError("BestOfN scaling requires a 'model' instance.")
+        
+        final_outputs = []
+        total_samples = len(data)
 
-            sample_batch_list=[]
-            for k in range(self.batch_size):
-                sample_batch_list.append(data[i+k])
-                
+        # Process data in batches
+        for batch_start in range(0, total_samples, self.batch_size):
+            # 1) Prepare batch
+            batch_samples = []
+            for local_idx in range(self.batch_size):
+                idx = batch_start + local_idx
+                if idx < total_samples:
+                    batch_samples.append(data[idx])
 
+            num_batch_samples = len(batch_samples)
+            if num_batch_samples == 0:
+                continue
+
+            # 2) Accumulate candidates over N iterations
+            candidates_texts: List[str] = []
+            candidates_scores: List[float] = []
+
+            # For each iteration, generate 1 candidate per sample
             for _ in range(self.n):
-                # generate_batch는 리스트를 반환하므로 [0]만 취함
-                outputs = self.model.generate_batch(sample_batch_list,batch_size=self.batch_size)
-                # len(outputs) == batch size
-                
-                for i2 in range(len(outputs)):
-                    candidate_text = outputs[i2]["prediction"]
-                    candidates.append(candidate_text)  
+                outputs = self.model.generate_batch(
+                    batch_samples,
+                    batch_size=self.batch_size
+                )
 
-                try:
+                # Collect candidate texts
+                for out_item in outputs:
+                    candidates_texts.append(out_item.get("prediction", ""))
 
-                    result=self.model.score_batch(outputs)
+                # Check if the model can provide a reward score
+                if hasattr(self.model, "score_batch"):
+                    # Using a model that provides a `score_batch` method (e.g., MultiModel with a reward model)
+                    scored_outputs = self.model.score_batch(outputs)
+                    for s_out in scored_outputs:
+                        # Expecting s_out to have "reward" field
+                        score = float(s_out.get("reward", 0.0))
+                        candidates_scores.append(score)
+                else:
+                    # Fallback: use log-prob from "logits" if available
+                    for out_item in outputs:
+                        logit_info = out_item.get("logits", {})
+                        sum_log_prob = float(logit_info.get("sum_log_prob", 0.0))
+                        candidates_scores.append(sum_log_prob)
 
-                    for i2 in range(len(outputs)):
-                        reward_score=result[i2]["reward"]
-                        candidates_logits.append(reward_score)
+            # 3) For each sample in the batch, pick the best candidate
+            # total candidates = n * num_batch_samples
+            # The indices for sample i within [candidates_texts, candidates_scores] are:
+            # i, i + num_batch_samples, i + 2*num_batch_samples, ...
+            for local_idx, sample_item in enumerate(batch_samples):
+                best_score = float("-inf")
+                best_text = ""
 
-                # 위는 모델이 multi 일때
+                for round_idx in range(self.n):
+                    c_idx = round_idx * num_batch_samples + local_idx
+                    score = candidates_scores[c_idx]
+                    if score > best_score:
+                        best_score = score
+                        best_text = candidates_texts[c_idx]
 
-                except:
-                    
-                    for i2 in range(len(outputs)):
-                        candidate_text_logit=outputs[i2]["logits"]["sum_log_prob"]
-                        candidates_logits.append(candidate_text_logit)
+                sample_item["prediction"] = best_text
+                final_outputs.append(sample_item)
 
-                # 위는 모델이 multi 아닐때
-
-            for k2 in range(self.batch_size):
-                    
-                    sample = data[i + k2]
-                    start_idx = k2
-                    max_index = max(range(start_idx, len(candidates_logits), self.n), key=lambda k: candidates_logits[k])                        
-                    sample["prediction"] = candidates[max_index]
-                    predictions.append(sample)
-
-            """
-
-            batch size 3 이라면 총 3문제에 대한 질문이 한꺼번에 들어가는데 또한 ""best of n 의 n 이 3 이라면""
-            [첫문제 에 대한 답1, 두번째 문제에 대한 답1, 세번째 문제 대한 답1, 첫문제에 대한 답2, .... , 세번째 문제에 대한 답3] , 길이 : 9
-            이런식의 candidate 리스트가 만들어지고  
-            
-            [첫문제 에 대한 답1 score, .... , 세번째 문제에 대한 답3 score] , 길이 : 9
-            라는 candidates_logits 리스트가 만들어진다. 
-            
-            여기서 첫문제에 대한 best of n 수행시 0,3,6 번째 index 중 한 답안이 pred가 되고
-            두번째 문제는 1,4,7 번째 index 중 한 답안이 pred가 된다. 
-            
-            첫번째 문제를 예시를 들면, candidate logit의 0,3,6 인덱스 중 logit 이 가장 큰 index 를 candidate 리스트에 전달하고
-            candidate 리스트의 그 인덱스로 부터(0,3,6 번째 중 한개의 pred) 첫번째 문제에 대한 best of n pred 결과출력 
-            
-            """
-            
-    
-        return predictions   
-        # return data
+        return final_outputs
