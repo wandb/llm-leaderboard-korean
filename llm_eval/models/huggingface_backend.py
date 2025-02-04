@@ -73,7 +73,7 @@ class HuggingFaceModel(BaseModel):
     def generate_batch(
         self,
         inputs: List[Dict[str, Any]],
-        return_logits: bool = False,
+        return_logits: bool = True,
         cot: bool = False,
         batch_size: Optional[Union[int, str]] = 1 # auto
     ) -> List[Dict[str, Any]]:
