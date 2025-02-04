@@ -77,7 +77,7 @@ def get_llm_inference_engine():
 
     if api_type == "vllm":
         # vLLM server start
-        from scripts.utils.vllm_server import start_vllm_server
+        from utils import start_vllm_server
         start_vllm_server()
 
         # use LangChain VLLM integration

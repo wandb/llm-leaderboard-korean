@@ -504,7 +504,6 @@ def chat_completion_vllm(model, conv, temperature, max_tokens):
     print(client.models.list())
 
     messages = conv.to_openai_api_messages()
-    print(messages)
     response = client.chat.completions.create(
         model=model,
         messages=messages,
