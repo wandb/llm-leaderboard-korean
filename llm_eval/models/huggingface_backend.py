@@ -41,11 +41,9 @@ class HuggingFaceModel(BaseModel):
         model_name_or_path: str,
         device: str = "cpu",
         max_new_tokens: int = 128,
-        cot_trigger: Optional[str] = "Let's think step by step.",
         temperature: float = 1.0,
         top_p: float = 0.95,
         do_sample: bool = True,
-        cot_parser: Optional[Callable[[str], Tuple[str, str]]] = extract_final_answer,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -64,11 +62,9 @@ class HuggingFaceModel(BaseModel):
 
         # Inference hyperparameters
         self.max_new_tokens = max_new_tokens
-        self.cot_trigger = cot_trigger
         self.temperature = temperature
         self.top_p = top_p
         self.do_sample = do_sample
-        self.cot_parser = cot_parser
 
     def generate_batch(
         self,

@@ -1,4 +1,5 @@
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Callable, Tuple
+from llm_eval.utils.prompt_template import extract_final_answer
 
 class BaseModel:
     """
@@ -7,16 +8,22 @@ class BaseModel:
     Required method to implement:
       - generate_batch(self, inputs, return_logits=False) -> List[Dict[str, Any]]
         * inputs: [{"input": str, "reference": str, ...}, ...]
-        * return_logits: If True, logits or log_probs information may be returned additionally.
+
         * Returns: [{"input":..., "reference":..., 
                       "prediction":...,        # Final string output from the model
                       "logits": (optional)..., # if return_logits=True
                       ...}, ...]
     """
-
-    def __init__(self, **kwargs):
-        # Save configuration, endpoint, authentication token, etc.
-        pass
+    
+    def __init__(
+        self,
+        cot_trigger: Optional[str] = "Let's think step by step.",
+        cot_parser: Optional[Callable[[str], Tuple[str, str]]] = extract_final_answer,
+        **kwargs
+    ):
+        # Parameters received when calling super().__init__(...) in a subclass
+        self.cot_trigger = cot_trigger
+        self.cot_parser = cot_parser
 
     def generate_batch(
         self,
@@ -30,7 +37,7 @@ class BaseModel:
         Args:
             inputs: [{"input": str, "reference": str, ...}, ...]
             return_logits: If True, additional information such as logits or logprobs may be returned.
-            cot: If True, 1) a prompt like 'Let's think step by step' is added to the model prompt,
+
                  2) the model may include its reasoning in the "chain_of_thought" field.
         Returns:
             The same list (or a copy) with each element augmented as follows:
@@ -39,7 +46,7 @@ class BaseModel:
                 "input": ...,
                 "reference": ...,
                 "prediction": <generated answer>,
-                "logits": (optional),
+
                 "chain_of_thought": "...(intermediate reasoning)..."
                 ...
               },
@@ -50,9 +57,9 @@ class BaseModel:
     
 class BaseJudge:
     """
-    Abstract base class for Judge models (LLM-as-a-Judge).
-    It takes the 'already generated text (answer)' as input and evaluates its quality/appropriateness.
-    For example, chain-of-thought based self-consistency evaluation, star ratings (1-5 points), etc.
+    Abstract base class for the Judge model (LLM-as-a-Judge).
+    It takes generated text (answers) as input and evaluates their quality/appropriateness.
+    For example, it can be used for chain-of-thought based self-consistency evaluation, star ratings (1-5 points), etc.
     """
     def __init__(self, **kwargs):
         pass
@@ -64,16 +71,17 @@ class BaseJudge:
         """
         Args:
             inputs: [{"input": ..., "prediction": ..., "reference": ...}, ...]
-                    - Typically, the 'prediction' (generated answer) is used to evaluate quality.
-        Returns:
+            - Typically, the 'prediction' (generated answer) is used for quality evaluation.
+            Returns:
             [{"judge_score": float or int, "judge_explanation": str, ...}, ...]
-            - Each sample is augmented with evaluation score/assessment.
+            - Returns each sample with an added evaluation score/assessment.
+
         """
         raise NotImplementedError("Subclasses must implement judge_batch().")
 
 class BaseRewardModel:
     """
-    Abstract base class for Reward models (usable in DVTS, etc.).
+    Abstract class dedicated to Reward models (usable in DVTS, etc.).
     It estimates a scalar reward value from a text answer.
     """
     def __init__(self, **kwargs):

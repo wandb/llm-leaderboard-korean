@@ -1,12 +1,14 @@
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 import time
 import litellm
 
+from . import register_model
 from .base import BaseModel
 
 logger = logging.getLogger(__name__)
 
+@register_model("litellm")
 class LiteLLMBackend(BaseModel):
     """
     LiteLLM을 활용한 다양한 LLM Provider들의 백엔드 구현
@@ -46,10 +48,8 @@ class LiteLLMBackend(BaseModel):
             temperature: 생성 텍스트 무작위성 정도
             **kwargs: 추가 설정값
         """
-        super().__init__(
-            backend_type=provider,
-            model_name=model_name,
-        )
+
+        super().__init__(**kwargs)
         
         self.provider = provider.lower()
         self.model_name = model_name
@@ -91,9 +91,7 @@ class LiteLLMBackend(BaseModel):
         }
         
         # 프로바이더별 모델명 포맷 설정
-        if self.provider == "huggingface":
-            completion_kwargs["model"] = f"{self.model_name}"
-        elif self.provider == "azure":
+        if self.provider == "azure":
             completion_kwargs.update({
                 "model": self.model_name,
                 "engine": self.model_name,
@@ -150,37 +148,99 @@ class LiteLLMBackend(BaseModel):
         logger.error(error_msg)
         raise last_exception or Exception(error_msg)
 
-    def generate_batch(self, input_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def generate_batch(
+        self,
+        inputs: List[Dict[str, Any]],
+        return_logits: bool = False,
+        cot: bool = False,
+        batch_size: Optional[Union[int, str]] = 1
+    ) -> List[Dict[str, Any]]:
         """
         배치 형태의 텍스트 생성 수행
-        
+
         Args:
-            input_list: 입력 데이터 리스트. 각 항목은 'input'과 선택적 'reference' 키를 포함
-            
+            inputs (List[Dict[str, Any]]): 입력 데이터 리스트. 각 항목은 다음을 포함해야 함:
+                - input (str): 입력 텍스트/프롬프트
+                - reference (str): 참조 텍스트 (선택사항)
+            return_logits (bool, optional): 로그 확률값 반환 여부. 기본값은 False.
+                True인 경우 각 아이템에 "logits" 필드가 추가됨
+            cot (bool, optional): Chain-of-Thought 사용 여부. 기본값은 False.
+                True인 경우 입력 프롬프트에 CoT 트리거가 추가됨
+            batch_size (Optional[Union[int, str]], optional): 배치 크기. 기본값은 1.
+                - "auto": 자동으로 배치 크기 조정
+                - int: 지정된 고정 배치 크기 사용
+                - None: inputs의 길이를 배치 크기로 사용
+
         Returns:
-            List[Dict[str, Any]]: 생성 결과 리스트. 각 항목은 입력, 참조, 예측값을 포함
-        """
-        results = []
+            List[Dict[str, Any]]: 생성 결과 리스트. 각 항목은 다음을 포함:
+                - input (str): 원본 입력 텍스트
+                - reference (str): 원본 참조 텍스트
+                - prediction (str): 생성된 텍스트
+                - logits (dict, optional): return_logits=True인 경우 로그 확률 정보
+                - chain_of_thought (str, optional): cot=True인 경우 추론 과정
         
-        for idx, item in enumerate(input_list):
-            prompt = item["input"]
-            reference = item.get("reference", "")
+        Raises:
+            NotImplementedError: return_logits=True인 경우 발생
+        """
 
-            logger.info(
-                f"[LiteLLMBackend] Generating text for item {idx+1}/{len(input_list)}: {prompt[:50]}..."
-            )
+        if return_logits:
+            raise NotImplementedError("LiteLLM backend does not support logits calculation yet")
 
-            try:
-                completion_kwargs = self._prepare_completion_kwargs(prompt)
-                prediction = self._generate_with_retry(completion_kwargs)
-            except Exception as e:
-                logger.error(f"Error generating completion after retries: {str(e)}")
-                prediction = f"Error: {str(e)}"
+        results = []
+        batch_size = len(inputs) if batch_size is None else batch_size
+        
+        # Convert string batch_size to int if "auto"
+        if isinstance(batch_size, str) and batch_size.lower() == "auto":
+            batch_size = len(inputs)
+            logger.info(f"[LiteLLMBackend] Using auto batch size: {batch_size}")
+        
+        # Process in batches
+        for start_idx in range(0, len(inputs), batch_size):
+            batch_items = inputs[start_idx:start_idx + batch_size]
+            
+            for idx, item in enumerate(batch_items):
+                prompt = item["input"]
+                reference = item.get("reference", "")
+                
+                # Add CoT trigger if enabled
+                if cot and self.cot_trigger:
+                    prompt = f"{prompt}\n{self.cot_trigger}"
 
-            results.append({
-                "input": prompt,
-                "reference": reference,
-                "prediction": prediction
-            })
+                logger.info(
+                    f"[LiteLLMBackend] Generating text for item {start_idx+idx+1}/{len(inputs)}: {prompt[:50]}..."
+                )
+
+                try:
+                    completion_kwargs = self._prepare_completion_kwargs(prompt)
+                    
+                    # Generate response
+                    prediction = self._generate_with_retry(completion_kwargs)
+                    
+                    # Prepare result item
+                    result_item = {
+                        "input": item["input"],
+                        "reference": reference,
+                        "prediction": prediction
+                    }
+                    
+                    # Parse CoT if enabled and parser is available
+                    if cot and self.cot_parser:
+                        chain_of_thought, final_answer = self.cot_parser(prediction)
+                        result_item.update({
+                            "chain_of_thought": chain_of_thought,
+                            "prediction": final_answer
+                        })
+                    
+                    results.append(result_item)
+
+
+                    
+                except Exception as e:
+                    logger.error(f"Error generating completion after retries: {str(e)}")
+                    results.append({
+                        "input": prompt,
+                        "reference": reference,
+                        "prediction": f"Error: {str(e)}"
+                    })
 
         return results
