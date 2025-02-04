@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Optional, Union
 from .base import BaseEvaluator
 from . import register_evaluator
 from math_verify import parse, verify
-from math_verify.config import LatexExtractionConfig, ExprExtractionConfig
+from math_verify import LatexExtractionConfig, ExprExtractionConfig
 
 @register_evaluator("math_match")
 class MathMatchEvaluator(BaseEvaluator):

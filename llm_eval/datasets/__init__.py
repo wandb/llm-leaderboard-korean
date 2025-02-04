@@ -39,5 +39,5 @@ from .kmmlu import KMMLUDataset
 from .click import ClickDataset
 from .hrm8k import HRM8KDataset
 from .k2_eval import K2_EvalDataset
-from dataset_loader import GenericFileDataset
+from .dataset_loader import GenericFileDataset
 # ...
