@@ -1,0 +1,15 @@
+wandb:
+  run_name: "deepseek-ai/DeepSeek-V3" # use run_name defined above
+
+# if you don't use api, please set "api" as "false"
+# if you use api, please select from "openai", "anthoropic", "google", "cohere", "vllm"
+api: deepseek
+batch_size: 32 # vllmは256, apiは32を推奨
+# inference_interval: 1 # seconds
+
+model:
+  pretrained_model_name_or_path: "deepseek-chat" #if you use openai api, put the name of model
+  size_category: "30B≤"
+  base_url: "https://api.deepseek.com/v1"
+  size: 685000000000
+  release_date: "26/12/2024"
