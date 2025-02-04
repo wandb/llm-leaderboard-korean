@@ -4,6 +4,7 @@ import json
 from .config_singleton import WandbConfigSingleton
 from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from langchain_upstage import ChatUpstage
+from langchain_deepseek import ChatDeepSeek
 
 from langchain_mistralai.chat_models import ChatMistralAI
 from langchain_google_genai import (
@@ -142,6 +143,15 @@ def get_llm_inference_engine():
         llm = ChatUpstage(
             api_key=os.environ["UPSTAGE_API_KEY"],
             model=cfg.model.pretrained_model_name_or_path,
+            **cfg.generator,
+        )
+
+    elif api_type == "deepseek":
+        # use LangChain OpenAI integration
+        llm = ChatOpenAI(
+            model=cfg.model.pretrained_model_name_or_path,
+            api_key=os.environ["DEEPSEEK_API_KEY"],
+            base_url="https://api.deepseek.com/v1",
             **cfg.generator,
         )
 
