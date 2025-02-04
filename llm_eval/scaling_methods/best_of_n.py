@@ -25,6 +25,18 @@ class BestOfN(BaseScalingMethod):
           - N번 반복하여 후보 생성
           - score_fn이 있으면 최고 점수 후보 선택, 없으면 첫 후보
         """
+        
+        """
+        Args:
+        data (List[Dict[str, Any]]): 
+            - 샘플 리스트. 각 샘플은 딕셔너리 형태이며, 모델이 처리할 입력 데이터를 포함함.
+
+        Returns:
+            List[Dict[str, Any]]: 
+                - `prediction` 키에 최적의 후보가 포함된 샘플 리스트.
+                - 각 샘플은 원본 입력과 함께 가장 우수한 후보 답변을 포함.
+        """
+        
         if self.model is None:
             raise ValueError("BestOfN requires a 'model' instance.")
         predictions=[]
