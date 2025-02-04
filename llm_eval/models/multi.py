@@ -1,137 +1,146 @@
-"""
-multi.py
-현재 llm-as-a-judge, scaling_method와 같은 방법론에서는 두개의 모델을 사용하여야 하는데
-단순히 base 구조로는 한개의 모델밖에 다룰 수가 없음.
-이 모듈은 여러 개의 LLM 백엔드를 동시에 로드하고, 
-하나의 모델 객체처럼 동작하는 'MultiModel' 클래스를 정의.
-(예: vLLM, HuggingFace, OpenAI-Compatible 서버 등 다양한 백엔드 혼합)
-
-사용 예시:
-
-    multi_config = [
-        {"name": "vllm", "endpoint": "http://localhost:8000"},
-        {"name": "huggingface", "model_name": "gpt2"},
-        {"name": "openai", "api_base": "https://api.openai.com", "api_key": "...", "model_name": "text-davinci-003"}
-    ]
-
-    multi_model = load_model("multi", models_config=multi_config, aggregate_strategy="first")
-    outputs = multi_model.generate_batch(data, return_logits=False)
-    # data -> [{"input":"...", "reference":"..."}, ...]
-
-    # 결과: 
-    # 각 item에 "multi_outputs" 필드: 
-    #   [
-    #     {"model_name": "vllm", "prediction":... , "logits":...},
-    #     {"model_name": "huggingface", "prediction":... },
-    #     {"model_name": "openai", "prediction":... },
-    #   ]
-    # 그리고 최종 "prediction"은 aggregate_strategy="first"에 따라 첫 모델 결과만 사용
-"""
 from typing import List, Dict, Any, Optional, Union
+import logging
 
 from .base import BaseModel, BaseJudge, BaseRewardModel
 from . import load_model, register_model
 
+logger = logging.getLogger(__name__)
 
 @register_model("multi")
 class MultiModel:
     """
-    여러 모델(또는 Judge, Reward 모델)을 내부에 보관하고,
-    호출 방식에 따라 'generate_batch' / 'judge_batch' / 'score_batch' 등을
-    각각 순차 실행 가능하게 설계한 클래스.
+    "하나의 MultiModel 객체에 세 가지 역할을 위한 모델을 각각 최대 한 개씩 보관"하고,
+    필요 시점에 따라 메서드를 호출할 수 있는 구조.
 
-    Attributes:
-        items_config: 
-            - 서브 모델(혹은 Judge/Reward)의 설정 목록.
-            - 예: [
-                {"name": "vllm", "endpoint": "...", "type": "model"},
-                {"name": "judge_llm", "some_judge_config": "...", "type": "judge"},
-                {"name": "rm_model", "some_reward_config": "...", "type": "reward"}
-              ]
-        sub_items:
-            - 실제 인스턴스들(BaseModel, BaseJudge, BaseRewardModel).
+    - self.generate_model: BaseModel 상속 (텍스트 생성)
+    - self.judge_model: BaseJudge 상속 (LLM-as-a-Judge)
+    - self.reward_model: BaseRewardModel 상속 (보상 점수 계산)
+
+    사용 예시:
+        config = {
+          "generate_model": { "name": "huggingface", "params": { "model_name_or_path": "gpt2" } },
+          "judge_model": { "name": "my_judge_llm", "params": {...} },
+          "reward_model": None
+        }
+        multi_model = load_model("multi", **config)
+
+        # 텍스트 생성
+        generated = multi_model.generate_batch(data, return_logits=False)
+
+        # Judge 평가
+        judged = multi_model.judge_batch(generated)
+
+        # Reward 점수
+        scored = multi_model.score_batch(judged)
     """
 
     def __init__(
         self,
-        items_config: Optional[List[Dict[str, Any]]] = None,
+        generate_model: Optional[Dict[str, Any]] = None,
+        judge_model: Optional[Dict[str, Any]] = None,
+        reward_model: Optional[Dict[str, Any]] = None,
         **kwargs
     ):
         """
         Args:
-            items_config (List[Dict[str, Any]]): 
-                여러 서브 엔티티를 로드하기 위한 설정.
-                각 item은 최소 'name' 키(레지스트리 키)와 'type' 키(model/judge/reward 등)를 가져야 함.
+            generate_model: 
+                - {"name":"huggingface", "params":{...}} 형태, BaseModel 구현체 로드에 필요한 정보
+            judge_model:
+                - {"name":"some_judge_backend", "params":{...}}, BaseJudge 구현체
+            reward_model:
+                - {"name":"some_reward_backend", "params":{...}}, BaseRewardModel 구현체
+            kwargs:
+                - 나머지 인자들은 무시 or 확장 용도로
         """
-        super().__init__()
-        if items_config is None:
-            items_config = []
+        # BaseModel, BaseJudge, BaseRewardModel 인스턴스 or None
+        self.generate_model: Optional[BaseModel] = None
+        self.judge_model: Optional[BaseJudge] = None
+        self.reward_model: Optional[BaseRewardModel] = None
 
-        self.items_config: List[Dict[str, Any]] = items_config
-        self.sub_items: List[Union[BaseModel, BaseJudge, BaseRewardModel]] = []
-        
-        # 로딩
-        for idx, cfg in enumerate(self.items_config):
-            model_name = cfg.pop("name", None)
-            item_type = cfg.pop("type", None)  # "model", "judge", "reward" 등
-            if not model_name or not item_type:
-                raise ValueError(f"Config {idx} must have 'name' and 'type' fields.")
+        # generate_model 로딩
+        if generate_model is not None:
+            g_name = generate_model.get("name")
+            g_params = generate_model.get("params", {})
+            logger.info(f"[MultiModel] Loading generate model: {g_name} with {g_params}")
+            loaded = load_model(g_name, **g_params)
+            if not isinstance(loaded, BaseModel):
+                raise ValueError(f"Loaded generate_model is not a BaseModel: {type(loaded)}")
+            self.generate_model = loaded
 
-            sub_obj = load_model(model_name, **cfg)
-            # sub_obj가 BaseModel, BaseJudge, BaseRewardModel 중 하나
-            self.sub_items.append(sub_obj)
+        # judge_model 로딩
+        if judge_model is not None:
+            j_name = judge_model.get("name")
+            j_params = judge_model.get("params", {})
+            logger.info(f"[MultiModel] Loading judge model: {j_name} with {j_params}")
+            loaded = load_model(j_name, **j_params)
+            if not isinstance(loaded, BaseJudge):
+                raise ValueError(f"Loaded judge_model is not a BaseJudge: {type(loaded)}")
+            self.judge_model = loaded
+
+        # reward_model 로딩
+        if reward_model is not None:
+            r_name = reward_model.get("name")
+            r_params = reward_model.get("params", {})
+            logger.info(f"[MultiModel] Loading reward model: {r_name} with {r_params}")
+            loaded = load_model(r_name, **r_params)
+            if not isinstance(loaded, BaseRewardModel):
+                raise ValueError(f"Loaded reward_model is not a BaseRewardModel: {type(loaded)}")
+            self.reward_model = loaded
 
     def generate_batch(
         self,
         inputs: List[Dict[str, Any]],
-        return_logits: bool = False
+        return_logits: bool = False,
+        **kwargs
     ) -> List[Dict[str, Any]]:
         """
-        모든 'BaseModel' 타입의 서브 아이템에 대해서만 generate_batch를 호출.
-        Judge/Reward 타입인 경우 무시(혹은 에러).
+        1) generate_model이 있으면, 각 샘플에 대해 text generation 수행
+        2) 생성된 "prediction" 필드를 샘플에 추가
+        3) return_logits=True면, "logits" 필드도 추가
+        4) N개의 입력 -> N개의 출력 (same length)
+
+        예:
+          inputs = [{"input":"Hello", "reference":"World"}, ...]
+          return -> [{"input":"Hello", "reference":"World", "prediction":"..."}, ...]
         """
-        outputs = []
-        for sub_item in self.sub_items:
-            if isinstance(sub_item, BaseModel):
-                # 각 모델의 결과를 저장
-                model_outputs = sub_item.generate_batch(inputs, return_logits=return_logits)
-                for output in model_outputs:
-                    if "prediction" in output:
-                        outputs.append({
-                            "model_name": sub_item.__class__.__name__,
-                            "prediction": output["prediction"]
-                        })
+        if self.generate_model is None:
+            # generate_model이 없으면 그냥 inputs 그대로 반환
+            return inputs
+
+        return self.generate_model.generate_batch(
+            inputs,
+            return_logits=return_logits,
+            **kwargs
+        )
+
+    def judge_batch(
+        self,
+        inputs: List[Dict[str, Any]],
+        **kwargs
+    ) -> List[Dict[str, Any]]:
+        """
+        1) judge_model이 있으면, 각 샘플에 대해 judge_batch 로직을 수행
+        2) judge_model은 BaseJudge를 상속, 예: "judge_batch(inputs)" -> 
+           샘플별로 "judge_score", "judge_explanation" 등을 추가
+        3) N->N 매핑
+        """
+        if self.judge_model is None:
+            return inputs
         
-        # 모든 모델의 결과를 multi_outputs로 묶어서 반환
-        if outputs:
-            return [{
-                **inputs[0],  # 원본 입력 유지
-                "multi_outputs": outputs
-            }]
-        return inputs
+        # judge_model이 BaseJudge면 judge_model.judge_batch(inputs)로 호출
+        return self.judge_model.judge_batch(inputs, **kwargs)
 
-    def judge_batch(self, inputs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def score_batch(
+        self,
+        inputs: List[Dict[str, Any]],
+        **kwargs
+    ) -> List[Dict[str, Any]]:
         """
-        모든 'BaseJudge' 타입의 서브 아이템에 대해 judge_batch 호출.
+        1) reward_model이 있으면, 각 샘플에 대해 score_batch 로직
+        2) reward_model은 BaseRewardModel 상속, 샘플별 "reward" 필드 추가
+        3) N->N 매핑
         """
-        for sub_item in self.sub_items:
-            if isinstance(sub_item, BaseJudge):
-                judge_outputs = sub_item.judge_batch(inputs)
-                # judge_outputs가 inputs와 동일 객체(혹은 새 객체)인지 여부는 구현마다 다름
-                # 여기서는 sub_item이 in-place로 inputs에 "judge_score" 등 붙인다고 가정
-            else:
-                # model/reward는 pass
-                pass
-        return inputs
+        if self.reward_model is None:
+            return inputs
 
-    def score_batch(self, inputs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        모든 'BaseRewardModel' 타입의 서브 아이템에 대해 score_batch 호출.
-        """
-        for sub_item in self.sub_items:
-            if isinstance(sub_item, BaseRewardModel):
-                reward_outputs = sub_item.score_batch(inputs)
-                # 역시 reward_outputs가 inputs와 동일 객체인지 체크
-            else:
-                pass
-        return inputs
+        return self.reward_model.score_batch(inputs, **kwargs)

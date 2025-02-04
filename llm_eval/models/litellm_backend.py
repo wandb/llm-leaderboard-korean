@@ -1,12 +1,14 @@
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 import time
 import litellm
 
+from . import register_model
 from .base import BaseModel
 
 logger = logging.getLogger(__name__)
 
+@register_model("litellm")
 class LiteLLMBackend(BaseModel):
     """
     LiteLLM을 활용한 다양한 LLM Provider들의 백엔드 구현
@@ -46,10 +48,8 @@ class LiteLLMBackend(BaseModel):
             temperature: 생성 텍스트 무작위성 정도
             **kwargs: 추가 설정값
         """
-        super().__init__(
-            backend_type=provider,
-            model_name=model_name,
-        )
+
+        super().__init__(**kwargs)
         
         self.provider = provider.lower()
         self.model_name = model_name
@@ -91,9 +91,7 @@ class LiteLLMBackend(BaseModel):
         }
         
         # 프로바이더별 모델명 포맷 설정
-        if self.provider == "huggingface":
-            completion_kwargs["model"] = f"{self.model_name}"
-        elif self.provider == "azure":
+        if self.provider == "azure":
             completion_kwargs.update({
                 "model": self.model_name,
                 "engine": self.model_name,
@@ -180,7 +178,14 @@ class LiteLLMBackend(BaseModel):
                 - prediction (str): 생성된 텍스트
                 - logits (dict, optional): return_logits=True인 경우 로그 확률 정보
                 - chain_of_thought (str, optional): cot=True인 경우 추론 과정
+        
+        Raises:
+            NotImplementedError: return_logits=True인 경우 발생
         """
+
+        if return_logits:
+            raise NotImplementedError("LiteLLM backend does not support logits calculation yet")
+
         results = []
         batch_size = len(inputs) if batch_size is None else batch_size
         
@@ -198,7 +203,7 @@ class LiteLLMBackend(BaseModel):
                 reference = item.get("reference", "")
                 
                 # Add CoT trigger if enabled
-                if cot and hasattr(self, 'cot_trigger') and self.cot_trigger:
+                if cot and self.cot_trigger:
                     prompt = f"{prompt}\n{self.cot_trigger}"
 
                 logger.info(
@@ -207,10 +212,6 @@ class LiteLLMBackend(BaseModel):
 
                 try:
                     completion_kwargs = self._prepare_completion_kwargs(prompt)
-                    
-                    # Add logits computation if requested
-                    if return_logits:
-                        completion_kwargs["logprobs"] = True
                     
                     # Generate response
                     prediction = self._generate_with_retry(completion_kwargs)
@@ -223,21 +224,16 @@ class LiteLLMBackend(BaseModel):
                     }
                     
                     # Parse CoT if enabled and parser is available
-                    if cot and hasattr(self, 'cot_parser') and self.cot_parser:
+                    if cot and self.cot_parser:
                         chain_of_thought, final_answer = self.cot_parser(prediction)
                         result_item.update({
                             "chain_of_thought": chain_of_thought,
                             "prediction": final_answer
                         })
-
-                    # Add logits if requested and available
-                    if return_logits and "logprobs" in completion_kwargs:
-                        result_item["logits"] = {
-                            "token_logprobs": completion_kwargs.get("logprobs", []),
-                            "tokens": completion_kwargs.get("tokens", [])
-                        }
                     
                     results.append(result_item)
+
+
                     
                 except Exception as e:
                     logger.error(f"Error generating completion after retries: {str(e)}")

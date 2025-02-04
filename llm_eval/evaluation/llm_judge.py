@@ -105,68 +105,79 @@ class GoldComparisonParser(ResponseParser):
     def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
         if not response:
             raise ValueError("Response is None")
-        if "[[true]]" in response.lower():
+        # lower() for case-insensitivity
+        resp_lower = response.lower()
+        if "[[true]]" in resp_lower:
             return {"correct": True, "step": -1, "model_name": model_name or "unknown"}
-        elif "[[false]]" in response.lower():
+        elif "[[false]]" in resp_lower:
             step_pattern = r"step:\s*\[(\d+)\]"
-            match = re.search(step_pattern, response)
+            match = re.search(step_pattern, response, flags=re.IGNORECASE)
             if match:
                 return {
                     "correct": False,
                     "step": int(match.group(1)),
                     "model_name": model_name or "unknown"
                 }
+            return {"correct": False, "step": None, "model_name": model_name or "unknown"}
         raise ValueError(f"No valid verdict found in response: {response}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2) MultiLLMJudge (original code) - uses multiple LLMs internally for evaluation
+# 2) MultiLLMJudge - updated to use the new "multi.py" structure
 # ─────────────────────────────────────────────────────────────────────────────
 
 class MultiLLMJudge:
     """
-    Class responsible for performing evaluations using multiple LLMs.
+    Class responsible for performing evaluations using a single "judge model" via MultiModel.
 
-    It uses MultiModel to handle multiple sub-models, 
-    and then uses various parser classes to interpret the results.
-
-    Args:
-        models_config: A list of configurations describing the sub-models (LLMs) to load.
-        max_retries: Maximum number of retries for possible API issues or timeouts.
-        retry_delay: Seconds to wait between retries.
-        aggregation_strategy: Strategy for how to aggregate multiple results, e.g., "majority".
-        logger: Optional logger instance.
-
-    Attributes:
-        multi_model: A MultiModel instance to handle parallel or sequential calls to sub-models.
-        parsers: A dictionary mapping JudgeType to the appropriate ResponseParser.
-        prompt_templates: A dictionary containing prompt templates indexed by JudgeType.
+    - We assume models_config is a list with exactly ONE dict 
+      describing the Judge LLM (since the new MultiModel can store only one judge_model).
+    - We use self.multi_model.judge_batch(...) to get the LLM's outputs, 
+      then parse them with the appropriate parser.
     """
+
     def __init__(
         self,
         models_config: List[Dict[str, Any]],
         max_retries: int = 3,
         retry_delay: float = 1.0,
         aggregation_strategy: str = "majority",
-        logger: Optional[logging.Logger] = None
     ):
-        self.multi_model = MultiModel(items_config=models_config)
+        """
+        Args:
+            models_config: a list with exactly ONE item, describing the judge LLM.
+               e.g., [{"name": "huggingface_judge", "params": {...}}]
+            max_retries, retry_delay, aggregation_strategy: not used in this minimal example,
+               but kept for potential expansions (like retrying on API failures).
+        """
+        if not models_config or len(models_config) > 1:
+            raise ValueError(
+                f"MultiLLMJudge currently supports exactly 1 judge model config, got {len(models_config)}."
+            )
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.aggregation_strategy = aggregation_strategy
-        self.logger = logger or logging.getLogger(__name__)
-        
+
+        # Prepare the "judge_model" param for MultiModel
+        judge_config = models_config[0]
+        # We create a multi_model that only has "judge_model"
+        self.multi_model = MultiModel(
+            judge_model=judge_config
+        )
+
+        # Mappings from JudgeType -> Parser
         self.parsers = {
             JudgeType.RUBRIC_AND_RESPONSE: RubricScoreParser(),
             JudgeType.RUBRIC_RESPONSE_AND_GOLD: GoldComparisonParser(),
             JudgeType.RESPONSE_COMPARISON: PairwiseComparisonParser()
         }
-        self.prompt_templates = JUDGE_PROMPTS  # e.g., {JudgeType.RUBRIC_AND_RESPONSE: "Rubric: {rubric}\n...", ...}
+        # The prompt templates used for generating a judge prompt
+        self.prompt_templates = JUDGE_PROMPTS  # e.g. {JudgeType.RUBRIC_AND_RESPONSE: "Rubric: {rubric}\n...", ...}
 
     def judge(self, judge_inputs: List[JudgeInput]) -> List[Dict[str, Any]]:
         """
         Executes LLM-based evaluations for each JudgeInput by constructing appropriate prompts,
-        querying the sub-model(s), and parsing the results.
+        calling multi_model.judge_batch(...), and parsing the results.
 
         Args:
             judge_inputs: List of JudgeInput, each containing the type of evaluation and necessary data.
@@ -177,11 +188,12 @@ class MultiLLMJudge:
                 - "parsed": The parser's output (e.g., score, correctness)
                 - "judge_type": The type of evaluation (string)
         """
-        results = []
-        prompts = []
-        types = []
+        if not judge_inputs:
+            return []
 
-        # Build prompts for each JudgeInput
+        # Build prompts
+        prompts = []
+        judge_types = []
         for j_input in judge_inputs:
             template = self.prompt_templates.get(j_input.judge_type, "")
             filled_prompt = template.format(
@@ -190,19 +202,20 @@ class MultiLLMJudge:
                 gold=j_input.gold_response or "",
                 response_b=j_input.model_response_b or ""
             )
+            # Our MultiModel judge_batch expects a "input" field per sample
             prompts.append({"input": filled_prompt})
-            types.append(j_input.judge_type)
+            judge_types.append(j_input.judge_type)
 
-        # Use multi_model to generate responses in one batch (if desired)
-        outputs = self.multi_model.generate_batch(
-            prompts,
-            return_logits=False
-        )
+        # Call judge_batch to get raw outputs
+        # BaseJudge.judge_batch typically sets item["prediction"] to the model's raw output
+        judged_outputs = self.multi_model.judge_batch(prompts)
 
         # Parse each output according to its JudgeType
-        for out, j_type in zip(outputs, types):
+        results = []
+        for out, j_type in zip(judged_outputs, judge_types):
             raw_output = out.get("prediction", "")
             parser = self.parsers[j_type]
+
             try:
                 parsed_res = parser.parse(raw_output, model_name="JudgeLLM")
             except ValueError as e:
@@ -220,95 +233,129 @@ class MultiLLMJudge:
 # ─────────────────────────────────────────────────────────────────────────────
 # 3) LLMJudgeEvaluator: BaseEvaluator → integrates with the standard pipeline
 # ─────────────────────────────────────────────────────────────────────────────
+
 @register_evaluator("llm_judge")
 class LLMJudgeEvaluator(BaseEvaluator):
     """
-    Evaluator that uses LLM-as-a-Judge logic to assess the quality of model responses.
+    Evaluator that uses an LLM-as-a-Judge approach to assess the quality of model responses.
 
-    Workflow:
-      - For each sample in `samples`, build a JudgeInput (including `prediction`, `reference`, or `rubric`).
-      - Pass these to MultiLLMJudge, which calls specialized LLM(s) for scoring/comparison.
-      - Parse the results into "judge_parsed" fields in `samples`.
-      - Compute overall metrics (e.g., average score, correctness rate) to return.
+    Requirements / Assumptions:
+    - The 'multi_judge_model' argument is a MultiModel instance that has a valid 'judge_model' loaded.
+    - Each sample in 'samples' should contain:
+        * "input" (optional, not strictly used here)
+        * "reference": Gold standard or correct answer
+        * "prediction": The model's generated answer to evaluate
+        * "judge_type": (optional) which type of judging logic to use (RUBRIC_AND_RESPONSE, etc.)
+          If absent, uses 'default_judge_type'.
+        * "rubric", "model_response_b" (optional, for more advanced judge tasks)
+    - The code calls `multi_judge_model.judge_batch()` with N prompts, each derived from a template
+      matching the 'judge_type'. The judge_batch method is expected to fill 'prediction' with
+      the judge model's raw output (one per sample).
+    - The raw outputs are then parsed to extract "score", "correct", or "winner", depending on the judge type.
     """
 
     name = "llm_judge"
 
     def __init__(
         self,
-        judge_models_config: List[Dict[str, Any]],
+        multi_judge_model: MultiModel,
         default_judge_type: Union[str, JudgeType] = "rubric_and_response",
-        max_retries: int = 3,
-        retry_delay: float = 1.0,
-        aggregation_strategy: str = "majority",
-        logger: Optional[logging.Logger] = None,
         **kwargs
     ):
         """
         Args:
-            judge_models_config: Config list for the judge model(s), passed to MultiLLMJudge.
-            default_judge_type: If a sample does not specify a judge_type, use this one.
-            max_retries: Retries for LLM calls.
-            retry_delay: Delay (in seconds) between retries.
-            aggregation_strategy: How to handle multiple judge responses (if any).
-            logger: Optional logger instance.
-            kwargs: Additional parameters if needed.
+            multi_judge_model (MultiModel):
+                A MultiModel instance that has its 'judge_model' set.
+            default_judge_type (str|JudgeType):
+                The judge type to apply if a sample does not specify 'judge_type'.
+                Valid values: "rubric_and_response", "rubric_response_and_gold", "response_comparison".
+            kwargs: 
+                Additional parameters if needed (not used in this minimal example).
         """
         super().__init__()
-        self.logger = logger or logging.getLogger(__name__)
-        self.default_judge_type = (
-            JudgeType(default_judge_type)
-            if isinstance(default_judge_type, str)
-            else default_judge_type
-        )
-        self.judge_engine = MultiLLMJudge(
-            models_config=judge_models_config,
-            max_retries=max_retries,
-            retry_delay=retry_delay,
-            aggregation_strategy=aggregation_strategy,
-            logger=self.logger
-        )
+        # Convert string to JudgeType if needed
+        if isinstance(default_judge_type, str):
+            self.default_judge_type = JudgeType(default_judge_type)
+        else:
+            self.default_judge_type = default_judge_type
 
-    def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
+        self.multi_judge_model = multi_judge_model
+
+        # Define parsers for each judge type
+        self.parsers = {
+            JudgeType.RUBRIC_AND_RESPONSE: RubricScoreParser(),
+            JudgeType.RUBRIC_RESPONSE_AND_GOLD: GoldComparisonParser(),
+            JudgeType.RESPONSE_COMPARISON: PairwiseComparisonParser(),
+        }
+
+        # Prompt templates (dict: JudgeType -> str)
+        self.prompt_templates = JUDGE_PROMPTS
+
+    def evaluate_predictions(
+        self,
+        samples: List[Dict[str, Any]]
+    ) -> Dict[str, float]:
         """
-        Implementation of BaseEvaluator's mandatory method:
-        1) Convert each sample to a JudgeInput (e.g., including `prediction`, `reference`).
-        2) Call judge_engine.judge() to get results from the LLM-based evaluation.
-        3) Store the parsed results in `samples` and calculate any desired metrics.
+        Implementation of BaseEvaluator's evaluate_predictions() method:
+        1) Build judge prompts from each sample (based on judge_type)
+        2) Call `multi_judge_model.judge_batch(...)` to get LLM-based evaluation outputs
+        3) Parse each raw output (prediction) using the appropriate parser
+        4) Record "judge_score", "judge_correct", "judge_winner", etc. in samples
+        5) Compute simple metrics (e.g., average_score, correct_rate) and return
 
         Returns:
-            A dict with metric names and values, e.g.:
-                {"average_score": 4.2, "correct_rate": 0.78}
+            A dict with metric names (e.g. "average_score", "correct_rate") and values.
         """
-        judge_inputs = []
+        if not samples:
+            return {}
+
+        # 1) Build prompts
+        prompts = []
+        judge_types = []
         for s in samples:
-            # If a sample doesn't specify judge_type, use default
+            # Determine judge_type (use default if not provided)
             judge_type_str = s.get("judge_type", self.default_judge_type.value)
-            judge_type = JudgeType(judge_type_str)
+            j_type = JudgeType(judge_type_str)
 
-            j_input = JudgeInput(
-                judge_type=judge_type,
-                model_response=s.get("prediction", ""),
+            # Fill template
+            template = self.prompt_templates.get(j_type, "")
+            filled_prompt = template.format(
                 rubric=s.get("rubric", ""),
-                gold_response=s.get("reference", ""),
-                model_response_b=s.get("model_response_b", None)
+                response=s.get("prediction", ""),
+                gold=s.get("reference", ""),
+                response_b=s.get("model_response_b", "")
             )
-            judge_inputs.append(j_input)
 
-        judge_outputs = self.judge_engine.judge(judge_inputs)
-        # judge_outputs: [{"raw_output": "...", "parsed": {...}, "judge_type": "..."}]
+            # We'll pass this prompt to judge_batch()
+            prompts.append({"input": filled_prompt})
+            judge_types.append(j_type)
 
+        # 2) Call multi_judge_model.judge_batch to get raw outputs
+        judged_results = self.multi_judge_model.judge_batch(prompts)
+        # judge_batch should produce a list of the same length,
+        # each with "prediction" = judge model's raw output.
+
+        # 3) Parse & record results
         total_score = 0.0
         score_count = 0
         total_correct = 0
         total_items = len(samples)
 
-        for sample, jout in zip(samples, judge_outputs):
-            sample["judge_raw_output"] = jout["raw_output"]
-            sample["judge_parsed"] = jout["parsed"]
-            sample["judge_type"] = jout["judge_type"]
+        for sample, out, j_type in zip(samples, judged_results, judge_types):
+            raw_output = out.get("prediction", "")  # The judge's response
+            parser = self.parsers.get(j_type)
 
-            parsed = jout["parsed"]
+            # Parse the raw judge response
+            try:
+                parsed = parser.parse(raw_output, model_name="JudgeLLM")
+            except ValueError as e:
+                parsed = {"error": str(e)}
+
+            # Update the sample with judge-related fields
+            sample["judge_raw_output"] = raw_output
+            sample["judge_parsed"] = parsed
+            sample["judge_type"] = j_type.value
+
             if "score" in parsed:
                 score_count += 1
                 total_score += float(parsed["score"])
@@ -321,15 +368,12 @@ class LLMJudgeEvaluator(BaseEvaluator):
 
             if "winner" in parsed:
                 sample["judge_winner"] = parsed["winner"]
-                # e.g. "A", "B", or "tie". It's up to you to interpret that.
 
+        # 4) Compute basic metrics
         metrics = {}
         if score_count > 0:
-            avg_score = total_score / score_count
-            metrics["average_score"] = avg_score
-
+            metrics["average_score"] = total_score / score_count
         if total_items > 0:
-            correct_rate = total_correct / total_items
-            metrics["correct_rate"] = correct_rate
+            metrics["correct_rate"] = total_correct / total_items
 
         return metrics

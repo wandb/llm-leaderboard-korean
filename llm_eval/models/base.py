@@ -8,13 +8,13 @@ class BaseModel:
     Required method to implement:
       - generate_batch(self, inputs, return_logits=False) -> List[Dict[str, Any]]
         * inputs: [{"input": str, "reference": str, ...}, ...]
-        * return_logits: If True, additional information such as logits or log_probs may be returned.
+
         * Returns: [{"input":..., "reference":..., 
                       "prediction":...,        # Final string output from the model
                       "logits": (optional)..., # if return_logits=True
                       ...}, ...]
     """
-
+    
     def __init__(
         self,
         cot_trigger: Optional[str] = "Let's think step by step.",
@@ -37,7 +37,7 @@ class BaseModel:
         Args:
             inputs: [{"input": str, "reference": str, ...}, ...]
             return_logits: If True, additional information such as logits or logprobs may be returned.
-            cot: If True, 1) appends a prompt like 'Let's think step by step.' to the model prompt,
+
                  2) the model may include its reasoning in the "chain_of_thought" field.
         Returns:
             The same list (or a copy) with each element augmented as follows:
@@ -46,7 +46,7 @@ class BaseModel:
                 "input": ...,
                 "reference": ...,
                 "prediction": <generated answer>,
-                "logits": (optional)..., # if return_logits=True
+
                 "chain_of_thought": "...(intermediate reasoning)..."
                 ...
               },
@@ -71,10 +71,11 @@ class BaseJudge:
         """
         Args:
             inputs: [{"input": ..., "prediction": ..., "reference": ...}, ...]
-                    - Typically, the 'prediction' (generated answer) is used for quality evaluation.
-        Returns:
+            - Typically, the 'prediction' (generated answer) is used for quality evaluation.
+            Returns:
             [{"judge_score": float or int, "judge_explanation": str, ...}, ...]
             - Returns each sample with an added evaluation score/assessment.
+
         """
         raise NotImplementedError("Subclasses must implement judge_batch().")
 
