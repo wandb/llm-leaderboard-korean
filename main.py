@@ -11,6 +11,7 @@ evaluator = Evaluator(
 )
 
 
+"""
 results = evaluator.run(
     model="huggingface",                    
     dataset="haerae_bench",                  
@@ -22,25 +23,26 @@ results = evaluator.run(
     scaling_params={"n":5,"batch_size":3},                                  
     evaluator_params={}                      
 )
+"""
 
 
 
 
-# results = evaluator.run(
-#     model="multi",                     
-#     dataset="haerae_bench",                 
-#     subset="csat_geo",                       
-#     split="test",                           
-#     dataset_params={"revision":"main"},      
-#     model_params={
-#           "generate_model": { "name": "huggingface", "params": { "model_name_or_path": "facebook/opt-350m" ,"device":"cuda"} },
-#           "judge_model": None,
-#           "reward_model": { "name": "huggingface_reward", "params": { "model_name_or_path": "facebook/opt-350m" ,"device":"cuda"}
-#         }},    
-#     scaling_method="best_of_n",                   
-#     scaling_params={"n":5,"batch_size":3},                      
-#     evaluator_params={}                    
-# )
+results = evaluator.run(
+    model="multi",                     
+    dataset="haerae_bench",                 
+    subset="csat_geo",                       
+    split="test",                           
+    dataset_params={"revision":"main"},      
+    model_params={
+          "generate_model": { "name": "huggingface", "params": { "model_name_or_path": "facebook/opt-350m" ,"device":"cuda"} },
+          "judge_model": None,
+          "reward_model": { "name": "huggingface_reward", "params": { "model_name_or_path": "facebook/opt-350m" ,"device":"cuda"}
+        }},    
+    scaling_method="best_of_n",                   
+    scaling_params={"n":5,"batch_size":3},                      
+    evaluator_params={}                    
+)
 
 
 print("Metrics:", results["metrics"])
