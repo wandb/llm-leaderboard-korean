@@ -9,6 +9,11 @@ from llm_eval.models.multi import MultiModel
 from .base import BaseEvaluator
 from . import register_evaluator
 from llm_eval.utils.prompt_template import JUDGE_PROMPTS
+from llm_eval.utils.logging import get_logger
+import logging
+from tqdm import tqdm
+
+logger = get_logger(name="llm_judge", level=logging.INFO)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1) JudgeType, JudgeInput, Parser classes (original code kept intact)

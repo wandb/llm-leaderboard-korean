@@ -9,14 +9,14 @@ logger = logging.getLogger(__name__)
 @register_model("multi")
 class MultiModel:
     """
-    "하나의 MultiModel 객체에 세 가지 역할을 위한 모델을 각각 최대 한 개씩 보관"하고,
-    필요 시점에 따라 메서드를 호출할 수 있는 구조.
+    A MultiModel object that can store up to one model for each of the three roles,
+    and allows you to call the corresponding method as needed.
 
-    - self.generate_model: BaseModel 상속 (텍스트 생성)
-    - self.judge_model: BaseJudge 상속 (LLM-as-a-Judge)
-    - self.reward_model: BaseRewardModel 상속 (보상 점수 계산)
+    - self.generate_model: Inherits from BaseModel (for text generation)
+    - self.judge_model: Inherits from BaseJudge (LLM-as-a-Judge)
+    - self.reward_model: Inherits from BaseRewardModel (for calculating reward scores)
 
-    사용 예시:
+    Example usage:
         config = {
           "generate_model": { "name": "huggingface", "params": { "model_name_or_path": "gpt2" } },
           "judge_model": { "name": "my_judge_llm", "params": {...} },
@@ -24,13 +24,13 @@ class MultiModel:
         }
         multi_model = load_model("multi", **config)
 
-        # 텍스트 생성
+        # Text generation
         generated = multi_model.generate_batch(data, return_logits=False)
 
-        # Judge 평가
+        # Judge evaluation
         judged = multi_model.judge_batch(generated)
 
-        # Reward 점수
+        # Reward scoring
         scored = multi_model.score_batch(judged)
     """
 
@@ -44,20 +44,20 @@ class MultiModel:
         """
         Args:
             generate_model: 
-                - {"name":"huggingface", "params":{...}} 형태, BaseModel 구현체 로드에 필요한 정보
+                - A dict of the form {"name": "huggingface", "params": {...}} to load a BaseModel implementation.
             judge_model:
-                - {"name":"some_judge_backend", "params":{...}}, BaseJudge 구현체
+                - A dict of the form {"name": "some_judge_backend", "params": {...}} to load a BaseJudge implementation.
             reward_model:
-                - {"name":"some_reward_backend", "params":{...}}, BaseRewardModel 구현체
+                - A dict of the form {"name": "some_reward_backend", "params": {...}} to load a BaseRewardModel implementation.
             kwargs:
-                - 나머지 인자들은 무시 or 확장 용도로
+                - Other arguments are ignored or can be used for future extensions.
         """
-        # BaseModel, BaseJudge, BaseRewardModel 인스턴스 or None
+        # Instances of BaseModel, BaseJudge, BaseRewardModel or None
         self.generate_model: Optional[BaseModel] = None
         self.judge_model: Optional[BaseJudge] = None
         self.reward_model: Optional[BaseRewardModel] = None
 
-        # generate_model 로딩
+        # Loading the generate_model
         if generate_model is not None:
             g_name = generate_model.get("name")
             g_params = generate_model.get("params", {})
@@ -67,7 +67,7 @@ class MultiModel:
                 raise ValueError(f"Loaded generate_model is not a BaseModel: {type(loaded)}")
             self.generate_model = loaded
 
-        # judge_model 로딩
+        # Loading the judge_model
         if judge_model is not None:
             j_name = judge_model.get("name")
             j_params = judge_model.get("params", {})
@@ -77,7 +77,7 @@ class MultiModel:
                 raise ValueError(f"Loaded judge_model is not a BaseJudge: {type(loaded)}")
             self.judge_model = loaded
 
-        # reward_model 로딩
+        # Loading the reward_model
         if reward_model is not None:
             r_name = reward_model.get("name")
             r_params = reward_model.get("params", {})
@@ -94,17 +94,17 @@ class MultiModel:
         **kwargs
     ) -> List[Dict[str, Any]]:
         """
-        1) generate_model이 있으면, 각 샘플에 대해 text generation 수행
-        2) 생성된 "prediction" 필드를 샘플에 추가
-        3) return_logits=True면, "logits" 필드도 추가
-        4) N개의 입력 -> N개의 출력 (same length)
+        1) If generate_model exists, perform text generation for each sample.
+        2) Add a "prediction" field to each sample with the generated text.
+        3) If return_logits=True, also add a "logits" field.
+        4) Returns N outputs for N inputs (maintaining the same length).
 
-        예:
-          inputs = [{"input":"Hello", "reference":"World"}, ...]
-          return -> [{"input":"Hello", "reference":"World", "prediction":"..."}, ...]
+        Example:
+          inputs = [{"input": "Hello", "reference": "World"}, ...]
+          returns -> [{"input": "Hello", "reference": "World", "prediction": "..."}, ...]
         """
         if self.generate_model is None:
-            # generate_model이 없으면 그냥 inputs 그대로 반환
+            # If generate_model does not exist, return the inputs unchanged.
             return inputs
 
         return self.generate_model.generate_batch(
@@ -119,15 +119,15 @@ class MultiModel:
         **kwargs
     ) -> List[Dict[str, Any]]:
         """
-        1) judge_model이 있으면, 각 샘플에 대해 judge_batch 로직을 수행
-        2) judge_model은 BaseJudge를 상속, 예: "judge_batch(inputs)" -> 
-           샘플별로 "judge_score", "judge_explanation" 등을 추가
-        3) N->N 매핑
+        1) If judge_model exists, perform judge_batch processing on each sample.
+        2) The judge_model (inheriting from BaseJudge) will add fields such as "judge_score" and "judge_explanation"
+           to each sample.
+        3) Returns N outputs for N inputs.
         """
         if self.judge_model is None:
             return inputs
         
-        # judge_model이 BaseJudge면 judge_model.judge_batch(inputs)로 호출
+        # If judge_model is an instance of BaseJudge, call judge_model.judge_batch(inputs)
         return self.judge_model.judge_batch(inputs, **kwargs)
 
     def score_batch(
@@ -136,9 +136,9 @@ class MultiModel:
         **kwargs
     ) -> List[Dict[str, Any]]:
         """
-        1) reward_model이 있으면, 각 샘플에 대해 score_batch 로직
-        2) reward_model은 BaseRewardModel 상속, 샘플별 "reward" 필드 추가
-        3) N->N 매핑
+        1) If reward_model exists, perform score_batch processing on each sample.
+        2) The reward_model (inheriting from BaseRewardModel) will add a "reward" field to each sample.
+        3) Returns N outputs for N inputs.
         """
         if self.reward_model is None:
             return inputs

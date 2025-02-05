@@ -1,7 +1,7 @@
 # Haerae-Evaluation-Toolkit
 
 <p align="center">
-  <img src="assets/imgs/logo.png" alt="logo" width="200">
+  <img src="assets/imgs/logo.png" alt="logo" width="250">
 </p>
 
 

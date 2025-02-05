@@ -6,19 +6,19 @@ from . import register_dataset
 @register_dataset("haerae_bench")
 class HaeraeDataset(BaseDataset):
     """
-    해례(Haerae) Bench 데이터셋 클래스.
+    Haerae Bench dataset class.
 
-    - subset: None -> 전체 로드
-              list[str] -> 해당 여러 subset만 로드하여 합침
-              str -> 해당 subset만 로드
-    - 각 샘플에는 'options' 필드를 포함 (원 데이터에 없으면 ["(A)", "(B)", "(C)", "(D)", "(E)"] 사용)
-    - '_subset_name' 필드를 추가해, 어떤 서브태스크에서 불러온 데이터인지 표시
-      (Evaluation 시점에 subset별 점수를 구분하기 위해)
+    - subset: None -> load all data
+              list[str] -> load and merge only the specified multiple subsets
+              str -> load only the specified subset
+    - Each sample includes an 'options' field (if not present in the original data, defaults to ["(A)", "(B)", "(C)", "(D)", "(E)"])
+    - Adds a '_subset_name' field to indicate which subtask the data was loaded from,
+      so that evaluation can compute scores separately for each subset.
 
-    사용 예시:
+    Example usage:
         ds = HaeraeDataset(
             dataset_name="haerae_bench",
-            subset=["csat_geo", "csat_law"],  # 여러 subset
+            subset=["csat_geo", "csat_law"],  # multiple subsets
             split="test"
         )
         data = ds.load()
@@ -26,7 +26,7 @@ class HaeraeDataset(BaseDataset):
         #   {
         #     "input": "...",
         #     "reference": "...",
-        #     "options": ["(A)","(B)","(C)","(D)","(E)"], # log-prob 계산을 위해 필요
+        #     "options": ["(A)", "(B)", "(C)", "(D)", "(E)"], # required for log-prob calculation
         #     "_subset_name": "csat_geo"
         #   }, ...
         # ]
@@ -42,11 +42,13 @@ class HaeraeDataset(BaseDataset):
         
     def load(self) -> List[Dict[str, Any]]:
         """
-        데이터를 로드하고 [{"input":..., "reference":..., "options":..., "_subset_name":...}, ...] 형태를 반환.
+        Loads the data and returns it in the format:
+        [{"input": ..., "reference": ..., "options": ..., "_subset_name": ...}, ...]
         """
-        # 1) subset 유형에 따라 나눔
+        # 1) Handle different types of subset parameter
         if self.subset is None:
-            self.subset = ['correct_definition_matching', 
+            self.subset = [
+                'correct_definition_matching', 
                 'csat_geo', 
                 'csat_law', 
                 'csat_socio', 
@@ -58,10 +60,11 @@ class HaeraeDataset(BaseDataset):
                 'proverbs_denoising', 
                 'rare_words', 
                 'standard_nomenclature', 
-                'reading_comprehension']
+                'reading_comprehension'
+            ]
 
         if isinstance(self.subset, list):
-            # 여러 다수의 subset인 경우
+            # In the case of multiple subsets
             all_items = []
             for sub in self.subset:
                 partial_data = load_dataset(
@@ -73,7 +76,7 @@ class HaeraeDataset(BaseDataset):
                 all_items.extend(self._convert_to_list(partial_data, subset_name=sub))
             return all_items
 
-        else:  # subset이 문자열 1개
+        else:  # If subset is a single string
             raw_data = load_dataset(
                 self.dataset_name,
                 self.subset,
@@ -84,15 +87,16 @@ class HaeraeDataset(BaseDataset):
 
     def _convert_to_list(self, hf_dataset, subset_name: str) -> List[Dict[str, Any]]:
         """
-        HuggingFace Dataset 객체(hf_dataset)를 순회하며,
-        {"input":..., "reference":..., "options":..., "_subset_name": subset_name} 형태로 변환.
+        Iterates over the HuggingFace Dataset object (hf_dataset)
+        and converts each item to the form:
+        {"input": ..., "reference": ..., "options": ..., "_subset_name": subset_name}
         """
         processed_list = []
-        # 고정 선택지 A~E
+        # Fixed options A~E
         options = ["(A)", "(B)", "(C)", "(D)", "(E)"]
 
         for item in hf_dataset:
-            # 원본 데이터에서 query, answer 필드 추출 (없으면 빈 문자열)
+            # Extract 'query' and 'answer' fields from the original data (default to empty string if missing)
             query = item.get("query", "")
             answer = item.get("answer", "")
             processed_list.append({
@@ -105,8 +109,9 @@ class HaeraeDataset(BaseDataset):
 
     def get_raw_samples(self) -> Any:
         """
-        원본 데이터를 반환.
-        여러 subset이면 리스트로, 하나거나 None이면 단일 Dataset 반환 (간단 예시).
+        Returns the raw data.
+        If multiple subsets are specified, returns a list; 
+        if a single subset or None is specified, returns a single Dataset (simple example).
         """
         if self.subset is None:
             return load_dataset(self.dataset_name, split=self.split, **self.kwargs)
@@ -128,7 +133,7 @@ class HaeraeDataset(BaseDataset):
 
     def info(self) -> Dict[str, Any]:
         """
-        데이터셋 관련 메타 정보.
+        Returns metadata information about the dataset.
         """
         return {
             "dataset_name": self.dataset_name,

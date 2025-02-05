@@ -4,6 +4,11 @@ from .base import BaseEvaluator
 from . import register_evaluator
 from math_verify import parse, verify
 from math_verify import LatexExtractionConfig, ExprExtractionConfig
+from llm_eval.utils.logging import get_logger
+import logging
+from tqdm import tqdm
+
+logger = get_logger(name="math_match", level=logging.INFO)
 
 @register_evaluator("math_match")
 class MathMatchEvaluator(BaseEvaluator):
