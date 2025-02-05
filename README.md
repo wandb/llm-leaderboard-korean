@@ -1,5 +1,10 @@
 # Haerae-Evaluation-Toolkit
 
+<p align="center">
+  <img src="assets/imgs/logo.png" alt="logo" width="200">
+</p>
+
+
 Haerae-Evaluation-Toolkit is an emerging open-source Python library designed to streamline and standardize the evaluation of Large Language Models (LLMs), with a particular focus on Korean.
 
 > **Currently in Development!**
