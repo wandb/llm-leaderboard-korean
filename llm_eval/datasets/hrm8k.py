@@ -6,18 +6,18 @@ from . import register_dataset
 @register_dataset("hrm8k")
 class HRM8KDataset(BaseDataset):
     """
-    HRM8K 데이터셋 클래스.
+    HRM8K Dataset Class.
 
-    - subset: None -> 전체 로드
-              list[str] -> 해당 여러 subset만 로드하여 합침
-              str -> 해당 subset만 로드
-    - '_subset_name' 필드를 추가해, 어떤 서브태스크에서 불러온 데이터인지 표시
-      (Evaluation 시점에 subset별 점수를 구분하기 위해)
+    - subset: None -> Load the entire dataset
+              list[str] -> Load and combine only the specified subsets
+              str -> Load only the specified subset
+    - Adds a '_subset_name' field to indicate from which subtask the data is loaded
+      (to differentiate scores by subset during evaluation)
 
-    사용 예시:
+    Example usage:
         ds = HRM8KDataset(
             dataset_name="hrm8k",
-            subset=["GSM8K", "KSM"],  # 여러 subset
+            subset=["GSM8K", "KSM"],  # multiple subsets
             split="test"
         )
         data = ds.load()
@@ -40,18 +40,19 @@ class HRM8KDataset(BaseDataset):
         
     def load(self) -> List[Dict[str, Any]]:
         """
-        데이터를 로드하고 [{"input":..., "reference":..., "_subset_name":...}, ...] 형태를 반환.
+        Loads the data and returns it in the format:
+        [{"input":..., "reference":..., "_subset_name":...}, ...]
         """
-        # 1) subset 유형에 따라 나눔
+        # 1) Split based on the type of subset provided
         if self.subset is None:
             self.subset = ['GSM8K', 
-                'KSM', 
-                'MATH', 
-                'MMMLU', 
-                'OMNI_MATH']
+                           'KSM', 
+                           'MATH', 
+                           'MMMLU', 
+                           'OMNI_MATH']
 
         if isinstance(self.subset, list):
-            # 여러 다수의 subset인 경우
+            # Case with multiple subsets
             all_items = []
             for sub in self.subset:
                 partial_data = load_dataset(
@@ -63,7 +64,7 @@ class HRM8KDataset(BaseDataset):
                 all_items.extend(self._convert_to_list(partial_data, subset_name=sub))
             return all_items
 
-        else:  # subset이 문자열 1개
+        else:  # subset is a single string
             raw_data = load_dataset(
                 self.dataset_name,
                 self.subset,
@@ -74,15 +75,14 @@ class HRM8KDataset(BaseDataset):
 
     def _convert_to_list(self, hf_dataset, subset_name: str) -> List[Dict[str, Any]]:
         """
-        HuggingFace Dataset 객체(hf_dataset)를 순회하며,
-        {"input":..., "reference":...,  "_subset_name": subset_name} 형태로 변환.
+        Iterates over the HuggingFace Dataset (hf_dataset) and converts each entry to:
+        {"input":..., "reference":...,  "_subset_name": subset_name}
         """
         processed_list = []
-        # 고정 선택지 A~E
-
+        # Fixed options A~E
 
         for item in hf_dataset:
-            # 원본 데이터에서 query, answer 필드 추출 (없으면 빈 문자열)
+            # Extract the 'question' and 'answer' fields from the original data (use empty string if missing)
             query = "put your final answer within \\boxed{}." + item.get("question", "")
             answer = item.get("answer", "")
             processed_list.append({
@@ -94,8 +94,9 @@ class HRM8KDataset(BaseDataset):
 
     def get_raw_samples(self) -> Any:
         """
-        원본 데이터를 반환.
-        여러 subset이면 리스트로, 하나거나 None이면 단일 Dataset 반환 (간단 예시).
+        Returns the raw dataset.
+        If multiple subsets are specified, returns a list; if a single subset or None is specified,
+        returns a single Dataset (simple example).
         """
         if self.subset is None:
             return load_dataset(self.dataset_name, split=self.split, **self.kwargs)
@@ -117,7 +118,7 @@ class HRM8KDataset(BaseDataset):
 
     def info(self) -> Dict[str, Any]:
         """
-        데이터셋 관련 메타 정보.
+        Returns meta information related to the dataset.
         """
         return {
             "dataset_name": self.dataset_name,
@@ -125,8 +126,8 @@ class HRM8KDataset(BaseDataset):
             "split": self.split,
             "description": (
                 "HRM8K dataset. "
-                "subset=list -> load partial subsets, "
-                "subset=str -> load single subset."
+                "If subset is a list -> loads partial subsets, "
+                "if subset is a string -> loads a single subset."
             ),
             "evaluation_only": None
         }

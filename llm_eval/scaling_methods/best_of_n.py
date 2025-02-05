@@ -3,6 +3,7 @@ from llm_eval.models.base import BaseModel
 from .base import BaseScalingMethod
 from . import register_scaling_method
 from llm_eval.utils.logging import get_logger
+from tqdm import tqdm
 import logging
 
 logger = get_logger(name="best_of_n", level=logging.INFO)
@@ -51,7 +52,7 @@ class BestOfN(BaseScalingMethod):
         
         final_outputs = []
         total_samples = len(data)
-
+        logger.info("Starting Best-Of-N Scaling")
         # Process data in batches
         for batch_start in range(0, total_samples, self.batch_size):
             # 1) Prepare batch

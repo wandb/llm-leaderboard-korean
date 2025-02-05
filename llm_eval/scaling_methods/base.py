@@ -3,23 +3,23 @@ from llm_eval.models.base import BaseModel
 
 class BaseScalingMethod:
     """
-    Scaling Method Base 클래스.
+    Scaling Method Base class.
 
-    * 핵심 아이디어:
-      1) data(샘플 리스트)와 모델(BaseModel)을 입력받아,
-      2) 여러 후보 생성/검색 전략을 사용하여 "prediction" 필드를 업데이트한 뒤
-      3) 동일한 데이터 리스트(또는 복사본)를 반환한다.
+    * Key Idea:
+      1) Accept a data list (samples) and a model (BaseModel) as input,
+      2) Update the "prediction" field using various candidate generation/search strategies,
+      3) Return the same data list (or its copy).
 
-    * data 형식 예시:
+    * Example data format:
       [
         {"input": str, "reference": str, ...},
         {"input": str, "reference": str, ...},
         ...
       ]
 
-    * 반환 형식:
+    * Return format:
       [
-        {"input":..., "reference":..., "prediction": "...", ...},
+        {"input": ..., "reference": ..., "prediction": "...", ...},
         ...
       ]
     """
@@ -27,19 +27,19 @@ class BaseScalingMethod:
     def __init__(self, model: BaseModel = None, use_cot: bool = False, **kwargs):
         self.model = model
         self.use_cot = use_cot
-        self.kwargs = kwargs  # n, beam_width, etc.
+        self.kwargs = kwargs  # e.g., n, beam_width, etc.
 
     def apply(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        스케일링 로직의 메인 엔트리 포인트.
+        Main entry point for the scaling logic.
         Args:
-            data: [{"input":..., "reference":...}, ...]
+            data: A list of dictionaries, e.g., [{"input": ..., "reference": ...}, ...]
 
         Returns:
-            data와 동일한 구조이되, "prediction" 필드가 업데이트된 리스트.
+            A list with the same structure as the input, but with the "prediction" field updated.
         """
         raise NotImplementedError("Subclasses must implement apply().")
     
     def set_params(self, **kwargs):
-        """파라미터 업데이트 (n, beam_width 등)."""
+        """Update parameters (e.g., n, beam_width, etc.)."""
         self.kwargs.update(kwargs)

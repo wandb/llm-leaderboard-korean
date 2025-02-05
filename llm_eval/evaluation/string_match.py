@@ -5,6 +5,11 @@ from typing import List, Dict, Any, Optional, Union
 from .base import BaseEvaluator
 from . import register_evaluator
 from llm_eval.utils.prompt_template import extract_final_answer
+from llm_eval.utils.logging import get_logger
+import logging
+from tqdm import tqdm
+
+logger = get_logger(name="string_match", level=logging.INFO)
 
 @register_evaluator("string_match")
 class StringMatchEvaluator(BaseEvaluator):
@@ -109,7 +114,7 @@ class StringMatchEvaluator(BaseEvaluator):
         """
         total = len(samples)
         correct = 0
-
+        logger.info("evaluating outputs")
         for sample in samples:
             pred = self.parse_prediction(sample["prediction"])
             ref = self.parse_prediction(sample["reference"])

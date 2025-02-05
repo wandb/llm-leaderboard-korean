@@ -97,6 +97,7 @@ class HuggingFaceJudge(BaseJudge):
 
         results: List[Dict[str, Any]] = []
         # Process in chunks according to batch_size
+        logger.info("starting llm-as-judge")
         for start_idx in range(0, len(inputs), self.batch_size):
             batch = inputs[start_idx : start_idx + self.batch_size]
 

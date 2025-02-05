@@ -6,18 +6,18 @@ from . import register_dataset
 @register_dataset("k2_eval")
 class K2_EvalDataset(BaseDataset):
     """
-    K2-Eval 데이터셋 클래스
+    K2-Eval Dataset Class
 
-    - subset: None -> ["knowledge"] 로 설정
-              list[str] -> 여러 subset만 로드하여 합침
-              str -> 해당 subset만 로드
+    - subset: None -> set to ["knowledge"]
+              list[str] -> load and merge multiple subsets
+              str -> load only the specified subset
 
-    * 로직:
-      - input: question + "\n선택지 : a, b, c, d"
-      - reference: gold_answer 값(0~3)에 따라 a/b/c/d 중 실제 텍스트
+    * Logic:
+      - input: question + "\nOptions: a, b, c, d"
+      - reference: the text of the option corresponding to gold_answer (0~3)
       - options: [a, b, c, d]
 
-    예시:
+    Example:
         ds = K2_EvalDataset(
             dataset_name="HAERAE-HUB/K2-Eval",
             subset="knowledge",
@@ -26,8 +26,8 @@ class K2_EvalDataset(BaseDataset):
         data = ds.load()
         # data -> [
         #   {
-        #     "input": "질문\n선택지 : ...",
-        #     "reference": "...",  # gold_answer 인덱스에 해당하는 선택지
+        #     "input": "question\nOptions: ...",
+        #     "reference": "...",  # the option text corresponding to the gold_answer index
         #     "options": ["...", "...", "...", "..."],
         #     "_subset_name": "knowledge"
         #   }, ...
@@ -45,15 +45,15 @@ class K2_EvalDataset(BaseDataset):
 
     def load(self) -> List[Dict[str, Any]]:
         """
-        데이터를 로드하고 
-        [{"input":"...", "reference":"...", "options":[a,b,c,d], "_subset_name":...}, ...] 형태를 반환.
+        Load the data and return it in the following format:
+        [{"input": "...", "reference": "...", "options": [a, b, c, d], "_subset_name": ...}, ...]
         """
-        # 1) subset 기본값 처리
+        # 1) Handle default value for subset
         if self.subset is None:
-            # K2-Eval은 knowledge subset만 현재 활용 가능 (generate는 아직.. )
+            # For K2-Eval, only the 'knowledge' subset is currently available (generate is not supported yet)
             self.subset = ["knowledge"]
 
-        # 여러 subset 경우
+        # When multiple subsets are provided
         if isinstance(self.subset, list):
             all_items = []
             for sub in self.subset:
@@ -67,7 +67,7 @@ class K2_EvalDataset(BaseDataset):
             return all_items
 
         else:
-            # subset이 문자열 1개
+            # When subset is a single string
             raw_data = load_dataset(
                 self.dataset_name,
                 self.subset,
@@ -78,8 +78,8 @@ class K2_EvalDataset(BaseDataset):
 
     def _convert_to_list(self, hf_dataset, subset_name: str) -> List[Dict[str, Any]]:
         """
-        HuggingFace Dataset 객체(hf_dataset)를 순회하며,
-        {"input":..., "reference":..., "options":[...], "_subset_name": subset_name} 형태로 변환.
+        Iterate over the HuggingFace Dataset (hf_dataset) and convert each item into the format:
+        {"input": ..., "reference": ..., "options": [...], "_subset_name": subset_name}
         """
         processed_list = []
 
@@ -87,23 +87,23 @@ class K2_EvalDataset(BaseDataset):
             question = item.get("question", "")
             gold_idx = item.get("gold_answer", -1)
 
-            # 선택지 텍스트들을 리스트화
+            # Convert the option texts into a list
             choices = [
-                item.get("a", ""),  # 0
-                item.get("b", ""),  # 1
-                item.get("c", ""),  # 2
-                item.get("d", ""),  # 3
+                item.get("a", ""),  # index 0
+                item.get("b", ""),  # index 1
+                item.get("c", ""),  # index 2
+                item.get("d", ""),  # index 3
             ]
 
-            # gold_idx가 0~3 범위 안이라면 그 인덱스의 문자열을 정답 참조
+            # If gold_idx is within the range 0~3, use the corresponding option as the reference
             if 0 <= gold_idx < len(choices):
                 reference_text = choices[gold_idx]
             else:
                 reference_text = ""
 
-            # input에 선택지 표시
-            # 예) "질문\n선택지 : optionA, optionB, optionC, optionD"
-            input_text = question.strip() + "\n선택지 : " + ", ".join(choices)+"\n답:"
+            # Format the input text to include the question and options
+            # Example: "question\nOptions: optionA, optionB, optionC, optionD\nAnswer:"
+            input_text = question.strip() + "\nOptions: " + ", ".join(choices) + "\nAnswer:"
 
             processed_list.append({
                 "input": input_text,
@@ -116,8 +116,9 @@ class K2_EvalDataset(BaseDataset):
 
     def get_raw_samples(self) -> Any:
         """
-        원본 데이터를 반환.
-        여러 subset이면 리스트로, 하나거나 None이면 단일 Dataset 반환 (간단 예시).
+        Return the raw data.
+        If multiple subsets are specified, returns a list of datasets;
+        if a single subset or None is specified, returns a single Dataset.
         """
         if self.subset is None:
             return load_dataset(self.dataset_name, split=self.split, **self.kwargs)
@@ -138,15 +139,15 @@ class K2_EvalDataset(BaseDataset):
             )
 
     def info(self) -> Dict[str, Any]:
-        """데이터셋 관련 메타 정보."""
+        """Return meta-information about the dataset."""
         return {
             "dataset_name": self.dataset_name,
             "subset": self.subset,
             "split": self.split,
             "description": (
                 "K2_Eval benchmark featuring multiple-choice knowledge tasks. "
-                "Columns: question, gold_answer(0~3), a, b, c, d. "
-                "subset=list -> load partial subsets, subset=str -> load single subset."
+                "Columns: question, gold_answer (0~3), a, b, c, d. "
+                "subset=list -> loads multiple subsets, subset=str -> loads a single subset."
             ),
             "evaluation_only": None,
         }

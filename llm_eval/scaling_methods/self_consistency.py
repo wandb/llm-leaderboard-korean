@@ -5,6 +5,11 @@ from llm_eval.models.base import BaseModel
 from .base import BaseScalingMethod
 from . import register_scaling_method
 from llm_eval.utils.prompt_template import extract_final_answer # default parser
+from llm_eval.utils.logging import get_logger
+import logging
+from tqdm import tqdm
+
+logger = get_logger(name="runner", level=logging.INFO)
 
 @register_scaling_method("self_consistency")
 class SelfConsistencyScalingMethod(BaseScalingMethod):
@@ -40,7 +45,8 @@ class SelfConsistencyScalingMethod(BaseScalingMethod):
         if not self.model:
             raise ValueError("SelfConsistencyScalingMethod: model is not set.")
 
-        for sample in data:
+        logger.info("starting self-consistency voting")
+        for sample in tqdm(data):
             original_prompt = sample["input"]
             prompt = original_prompt + self.prompt_cot
 

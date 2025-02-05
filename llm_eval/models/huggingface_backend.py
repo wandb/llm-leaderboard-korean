@@ -47,7 +47,7 @@ class HuggingFaceModel(BaseModel):
         **kwargs
     ):
         super().__init__(**kwargs)
-        logger.info(f"[HuggingFaceModel] Loading tokenizer/model from {model_name_or_path}")
+        logger.info(f"Loading tokenizer/model from {model_name_or_path}")
 
         # Load tokenizer and model
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
@@ -58,7 +58,7 @@ class HuggingFaceModel(BaseModel):
         self.device = device
         if self.device != "cpu":
             self.model.to(self.device)
-            logger.info(f"[HuggingFaceModel] Model moved to {self.device}")
+            logger.info(f"Model moved to {self.device}")
 
         # Inference hyperparameters
         self.max_new_tokens = max_new_tokens
@@ -97,11 +97,11 @@ class HuggingFaceModel(BaseModel):
         if isinstance(batch_size, str) and batch_size.lower() == "auto":
             auto_mode = True
             current_bs = 128  # "auto" initial batch size
-            logger.info(f"[HuggingFaceModel] Batch size set to 'auto'. Starting with batch size {current_bs}.")
+            logger.info(f" Batch size set to 'auto'. Starting with batch size {current_bs}.")
         else:
             auto_mode = False
             current_bs = batch_size if batch_size is not None else len(inputs)
-            logger.info(f"[HuggingFaceModel] Batch size set to {current_bs}.")
+            logger.info(f" Batch size set to {current_bs}.")
 
         while True:
             try:
@@ -156,7 +156,7 @@ class HuggingFaceModel(BaseModel):
                     elif return_logits and not isinstance(outputs, dict):
                         sequences = outputs
                         scores_list = None
-                        logger.warning("[HuggingFaceModel] `return_dict_in_generate=True` was set, but output is not a dict. No scores available.")
+                        logger.warning(" `return_dict_in_generate=True` was set, but output is not a dict. No scores available.")
                     else:
                         sequences = outputs
                         scores_list = None

@@ -100,6 +100,7 @@ class HuggingFaceReward(BaseRewardModel):
         
         # Compute the log probabilities for the tokens after the prompt for each sample.
         rewards = []
+        logger.info("calculating rewards")
         for i in range(batch_size):
             p_len = prompt_lengths[i]
             seq_len = actual_lengths[i]  # Actual sequence length (without padding)

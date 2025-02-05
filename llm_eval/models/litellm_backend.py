@@ -11,13 +11,13 @@ logger = logging.getLogger(__name__)
 @register_model("litellm")
 class LiteLLMBackend(BaseModel):
     """
-    LiteLLM을 활용한 다양한 LLM Provider들의 백엔드 구현
-    
+    Backend implementation for various LLM Providers using LiteLLM
+
     Attributes:
-        provider (str): LLM 제공자 (예: openai, anthropic, bedrock, azure 등)
-        model_name (str): 사용할 모델명
-        max_new_tokens (int): 생성할 최대 토큰 수
-        temperature (float): 생성 텍스트의 무작위성 정도 (0.0 ~ 1.0)
+        provider (str): LLM provider (e.g., openai, anthropic, bedrock, azure, etc.)
+        model_name (str): Name of the model to use
+        max_new_tokens (int): Maximum number of tokens to generate
+        temperature (float): Degree of randomness in generated text (0.0 ~ 1.0)
     """
     
     def __init__(
@@ -34,19 +34,19 @@ class LiteLLMBackend(BaseModel):
         **kwargs
     ):
         """
-        LiteLLM 백엔드 초기화
-        
+        Initialize the LiteLLM backend
+
         Args:
-            provider: LLM 제공자명
-            model_name: 사용할 모델명
-            api_key: API 키 (OpenAI, Azure)
-            api_base: API 기본 URL (OpenAI, Azure)
-            aws_access_key_id: AWS 액세스 키 ID (Bedrock)
-            aws_secret_access_key: AWS 시크릿 키 (Bedrock)
-            anthropic_api_key: Anthropic API 키
-            max_new_tokens: 최대 생성 토큰 수
-            temperature: 생성 텍스트 무작위성 정도
-            **kwargs: 추가 설정값
+            provider: Name of the LLM provider
+            model_name: Name of the model to use
+            api_key: API key (for OpenAI, Azure)
+            api_base: Base URL for the API (for OpenAI, Azure)
+            aws_access_key_id: AWS access key ID (for Bedrock)
+            aws_secret_access_key: AWS secret key (for Bedrock)
+            anthropic_api_key: Anthropic API key
+            max_new_tokens: Maximum number of tokens to generate
+            temperature: Degree of randomness in the generated text
+            **kwargs: Additional configuration parameters
         """
 
         super().__init__(**kwargs)
@@ -57,7 +57,7 @@ class LiteLLMBackend(BaseModel):
         self.temperature = temperature
         self.extra_kwargs = kwargs
 
-        # LiteLLM 인스턴스별 설정을 위한 completion_kwargs 구성
+        # Configure completion_kwargs for each LiteLLM instance
         self.completion_kwargs = {
             "api_key": api_key,
             "api_base": api_base,
@@ -73,24 +73,24 @@ class LiteLLMBackend(BaseModel):
 
     def _prepare_completion_kwargs(self, prompt: str) -> Dict[str, Any]:
         """
-        LiteLLM completion 함수에 전달할 인자 준비
-        
+        Prepare the arguments to pass to the LiteLLM completion function
+
         Args:
-            prompt: 입력 프롬프트
-            
+            prompt: Input prompt text
+
         Returns:
-            Dict[str, Any]: LiteLLM completion 함수에 전달할 인자 딕셔너리
+            Dict[str, Any]: Dictionary of arguments for the LiteLLM completion function
         """
-        # 기본 completion 설정
+        # Basic completion settings
         completion_kwargs = {
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": self.max_new_tokens,
             "temperature": self.temperature,
-            **self.completion_kwargs,  # 인스턴스별 API 설정 추가
+            **self.completion_kwargs,  # Add instance-specific API settings
             **self.extra_kwargs
         }
         
-        # 프로바이더별 모델명 포맷 설정
+        # Set model name format based on provider
         if self.provider == "azure":
             completion_kwargs.update({
                 "model": self.model_name,
@@ -111,18 +111,18 @@ class LiteLLMBackend(BaseModel):
         initial_wait: int = 4
     ) -> str:
         """
-        재시도 로직이 포함된 텍스트 생성 함수
-        
+        Generate text with retry logic
+
         Args:
-            completion_kwargs: LiteLLM completion 함수에 전달할 인자
-            max_attempts: 최대 시도 횟수
-            initial_wait: 첫 재시도 전 대기 시간(초)
-            
+            completion_kwargs: Arguments to pass to the LiteLLM completion function
+            max_attempts: Maximum number of attempts
+            initial_wait: Wait time before the first retry (in seconds)
+
         Returns:
-            str: 생성된 텍스트
-            
+            str: Generated text
+
         Raises:
-            Exception: 모든 재시도 실패 시 발생
+            Exception: If all retry attempts fail
         """
         attempt = 0
         last_exception = None
@@ -136,7 +136,7 @@ class LiteLLMBackend(BaseModel):
                 last_exception = e
                 
                 if attempt < max_attempts:
-                    # 지수 백오프: 4초, 8초, 16초...
+                    # Exponential backoff: 4s, 8s, 16s...
                     wait_time = initial_wait * (2 ** (attempt - 1))
                     logger.warning(
                         f"Attempt {attempt} failed with error: {str(e)}. "
@@ -156,31 +156,31 @@ class LiteLLMBackend(BaseModel):
         batch_size: Optional[Union[int, str]] = 1
     ) -> List[Dict[str, Any]]:
         """
-        배치 형태의 텍스트 생성 수행
+        Perform batch text generation
 
         Args:
-            inputs (List[Dict[str, Any]]): 입력 데이터 리스트. 각 항목은 다음을 포함해야 함:
-                - input (str): 입력 텍스트/프롬프트
-                - reference (str): 참조 텍스트 (선택사항)
-            return_logits (bool, optional): 로그 확률값 반환 여부. 기본값은 False.
-                True인 경우 각 아이템에 "logits" 필드가 추가됨
-            cot (bool, optional): Chain-of-Thought 사용 여부. 기본값은 False.
-                True인 경우 입력 프롬프트에 CoT 트리거가 추가됨
-            batch_size (Optional[Union[int, str]], optional): 배치 크기. 기본값은 1.
-                - "auto": 자동으로 배치 크기 조정
-                - int: 지정된 고정 배치 크기 사용
-                - None: inputs의 길이를 배치 크기로 사용
+            inputs (List[Dict[str, Any]]): List of input data. Each item should include:
+                - input (str): Input text/prompt
+                - reference (str): Reference text (optional)
+            return_logits (bool, optional): Whether to return log probabilities. Defaults to False.
+                If True, each item will include a "logits" field.
+            cot (bool, optional): Whether to use Chain-of-Thought. Defaults to False.
+                If True, a CoT trigger will be added to the input prompt.
+            batch_size (Optional[Union[int, str]], optional): Batch size. Defaults to 1.
+                - "auto": Automatically adjust the batch size
+                - int: Use a fixed batch size
+                - None: Use the length of inputs as the batch size
 
         Returns:
-            List[Dict[str, Any]]: 생성 결과 리스트. 각 항목은 다음을 포함:
-                - input (str): 원본 입력 텍스트
-                - reference (str): 원본 참조 텍스트
-                - prediction (str): 생성된 텍스트
-                - logits (dict, optional): return_logits=True인 경우 로그 확률 정보
-                - chain_of_thought (str, optional): cot=True인 경우 추론 과정
+            List[Dict[str, Any]]: List of generation results. Each item includes:
+                - input (str): Original input text
+                - reference (str): Original reference text
+                - prediction (str): Generated text
+                - logits (dict, optional): Log probability information if return_logits=True
+                - chain_of_thought (str, optional): Inference process if cot=True
         
         Raises:
-            NotImplementedError: return_logits=True인 경우 발생
+            NotImplementedError: If return_logits=True is specified, as it is not supported yet
         """
 
         if return_logits:
@@ -233,8 +233,6 @@ class LiteLLMBackend(BaseModel):
                     
                     results.append(result_item)
 
-
-                    
                 except Exception as e:
                     logger.error(f"Error generating completion after retries: {str(e)}")
                     results.append({
