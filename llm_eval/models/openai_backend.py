@@ -150,6 +150,7 @@ class OpenAIModel(BaseModel):
         inputs: Union[str, List[Dict], Dict],
         return_logits: bool = False,
         use_chat_api: Optional[bool] = None,
+        until: Optional[Union[str, List[str]]] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         params = self.default_params.copy()
@@ -157,6 +158,13 @@ class OpenAIModel(BaseModel):
         use_chat_api = self.use_chat_api if use_chat_api is None else use_chat_api
 
         payload = {"model": self.model_name}
+
+        # Add stop sequences if provided
+        if until is not None:
+            if isinstance(until, str):
+                until = [until]
+            payload["stop"] = until
+
 
         if use_chat_api:
             messages = []
@@ -235,6 +243,7 @@ class OpenAIModel(BaseModel):
         raise_error: bool = True,
         max_retries: int = 3,
         cot: bool = False,
+        until: Optional[Union[str, List[str]]] = None,
         **kwargs,
     ) -> List[Dict[str, Any]]:
         """
@@ -263,6 +272,7 @@ class OpenAIModel(BaseModel):
                         item["input"],
                         return_logits=return_logits,
                         use_chat_api=use_chat_api,
+                        until=until,  # Pass stop sequences to payload
                         **kwargs,
                     )
 

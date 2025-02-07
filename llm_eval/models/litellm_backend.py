@@ -71,7 +71,7 @@ class LiteLLMBackend(BaseModel):
         elif provider == "anthropic":
             self.completion_kwargs["api_key"] = anthropic_api_key
 
-    def _prepare_completion_kwargs(self, prompt: str) -> Dict[str, Any]:
+    def _prepare_completion_kwargs(self, prompt: str, until: Optional[Union[str, List[str]]] = None) -> Dict[str, Any]:
         """
         Prepare the arguments to pass to the LiteLLM completion function
 
@@ -90,6 +90,10 @@ class LiteLLMBackend(BaseModel):
             **self.extra_kwargs
         }
         
+        # Add stop sequences if provided
+        if until is not None:
+            completion_kwargs["stop"] = until if isinstance(until, list) else [until]
+
         # Set model name format based on provider
         if self.provider == "azure":
             completion_kwargs.update({
@@ -153,7 +157,9 @@ class LiteLLMBackend(BaseModel):
         inputs: List[Dict[str, Any]],
         return_logits: bool = False,
         cot: bool = False,
-        batch_size: Optional[Union[int, str]] = 1
+        batch_size: Optional[Union[int, str]] = 1,
+        until: Optional[Union[str, List[str]]] = None,
+        **kwargs
     ) -> List[Dict[str, Any]]:
         """
         Perform batch text generation
@@ -211,7 +217,7 @@ class LiteLLMBackend(BaseModel):
                 )
 
                 try:
-                    completion_kwargs = self._prepare_completion_kwargs(prompt)
+                    completion_kwargs = self._prepare_completion_kwargs(prompt, until=until)
                     
                     # Generate response
                     prediction = self._generate_with_retry(completion_kwargs)

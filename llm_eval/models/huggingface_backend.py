@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional, Callable, Tuple, Union
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import StoppingCriteria, StoppingCriteriaList
 
 from .base import BaseModel
 from . import register_model
@@ -71,7 +72,9 @@ class HuggingFaceModel(BaseModel):
         inputs: List[Dict[str, Any]],
         return_logits: bool = True,
         cot: bool = False,
-        batch_size: Optional[Union[int, str]] = 1 # auto
+        batch_size: Optional[Union[int, str]] = 1, # auto
+        until: Optional[Union[str, List[str]]] = None,
+        **kwargs
     ) -> List[Dict[str, Any]]:
         """
         Processes a batch of inputs to generate text outputs and updates each item with the final prediction.
@@ -103,6 +106,27 @@ class HuggingFaceModel(BaseModel):
             current_bs = batch_size if batch_size is not None else len(inputs)
             logger.info(f" Batch size set to {current_bs}.")
 
+        stopping_criteria = None
+        if until is not None:
+            if isinstance(until, str):
+                until = [until]
+
+            class StoppingCriteriaSub(StoppingCriteria):
+                def __init__(self, tokenizer, stops=[], encounters=1):
+                    super().__init__()
+                    self.tokenizer = tokenizer
+                    self.stops = stops
+
+                def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+                    decoded = self.tokenizer.decode(input_ids[0])
+                    return any(stop in decoded for stop in self.stops)
+
+            stopping_criteria = StoppingCriteriaList([StoppingCriteriaSub(self.tokenizer, stops=until)])
+        
+
+        
+        
+        
         while True:
             try:
                 results = []
@@ -142,6 +166,9 @@ class HuggingFaceModel(BaseModel):
                             "return_dict_in_generate": True,
                             "output_scores": True,
                         })
+                    
+                    if stopping_criteria is not None:
+                        gen_kwargs["stopping_criteria"] = stopping_criteria
 
                     # Generate
                     with torch.no_grad():
