@@ -30,7 +30,8 @@ class BaseModel:
         inputs: List[Dict[str, Any]],
         return_logits: bool = False,
         cot: bool = False,
-        batch_size: Optional[Union[int, str]] = "auto"
+        batch_size: Optional[Union[int, str]] = "auto",
+        until: Optional[Union[str, List[str]]] = None
     ) -> List[Dict[str, Any]]:
         """
         Method to generate text (answers) from the LLM.
