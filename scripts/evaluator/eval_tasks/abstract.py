@@ -1,0 +1,58 @@
+from utils import WandbConfigSingleton
+from evaluator.eval_utils import (
+    apply_chat_template,
+    task_to_sub_category,
+    LLMAsyncProcessor,
+    normalize,
+    text_formatter,
+)
+
+import json
+from pathlib import Path
+import pandas as pd
+from toolz import pipe
+from tqdm import tqdm
+from abc import ABC
+
+class AbstractEvaluator(ABC):
+    def __init__(self, few_shots:bool):
+        self.retrieve_wandb_instance()
+        self.dataset_name = None
+        self.tasks = None
+        self.test_max_num_samples = None
+        self.val_max_num_samples = None
+        self.few_shots = few_shots
+        self.num_few_shots = self.cfg.get("num_few_shots", None) if few_shots else 0
+        self.instructions = pd.read_csv("scripts/evaluator/eval_tasks/instructions.csv")
+
+    def retrieve_wandb_instance(self):
+        # Retrieve the instance from WandbConfigSingleton and load the W&B run and configuration
+        self.instance = WandbConfigSingleton.get_instance()
+        self.run = self.instance.run
+        self.cfg = self.instance.config
+        self.llm = self.instance.llm
+
+    def download_dataset(self, dataset_name):
+        # download dataset
+        artifact = self.run.use_artifact(self.cfg[dataset_name].artifacts_path, type="dataset")
+        artifact_dir = artifact.download()
+        dataset_dir = Path(artifact_dir) / self.cfg[dataset_name].dataset_dir
+        print(dataset_dir)
+        if not dataset_dir.exists():
+            print(f"skip {dataset_name} because it is not found in {artifact_dir}")
+            raise FileNotFoundError(f"self.dataset_dir not found: {dataset_dir}")
+        return artifact_dir, dataset_dir
+    
+    def read_task_data(self, artifact_dir, dataset_dir, task, subset=""):
+        # read task data
+        dataset_dir = dataset_dir.joinpath(subset)
+        task_data_path = dataset_dir / f"{task}.json"
+        if not task_data_path.exists():
+            print(f"skip {task} because it is not found in {artifact_dir}")
+            # raise FileNotFoundError(f"skip {task} because it is not found in {artifact_dir}")
+        with task_data_path.open(encoding="utf-8") as f:
+            task_data = json.load(f)
+        return task_data, task_data_path
+
+    def evaluate(self):
+        pass

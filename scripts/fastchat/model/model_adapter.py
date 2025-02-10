@@ -29,7 +29,7 @@ from transformers import (
 from fastchat.constants import CPU_ISA
 from fastchat.conversation import Conversation, get_conv_template
 from fastchat.utils import get_gpu_memory
-from config_singleton import WandbConfigSingleton
+from utils import WandbConfigSingleton
 
 import wandb
 

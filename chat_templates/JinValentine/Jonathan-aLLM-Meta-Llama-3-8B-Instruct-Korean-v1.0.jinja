@@ -1,1 +1,0 @@
-{% set loop_messages = messages %}{% for message in loop_messages %}{% set content = message['role'] + ':\n'+ message['content']+'\n' %}{% if loop.index0 == 0 %}{% set content = bos_token + content %}{% endif %}{{ content }}{% endfor %}{% if add_generation_prompt %}{{ '\n' }}{% endif %}

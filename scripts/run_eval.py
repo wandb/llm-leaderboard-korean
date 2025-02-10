@@ -4,9 +4,9 @@ from argparse import ArgumentParser
 from omegaconf import OmegaConf
 import questionary
 
-from config_singleton import WandbConfigSingleton
-from llm_inference_adapter import get_llm_inference_engine
-from vllm_server import shutdown_vllm_server
+from utils import WandbConfigSingleton
+from utils import get_llm_inference_engine
+from utils import shutdown_vllm_server
 from blend_run import blend_run
 from evaluator import (
     Evaluator,
