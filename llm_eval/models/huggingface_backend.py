@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional, Callable, Tuple, Union
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import StoppingCriteria, StoppingCriteriaList
 
 from .base import BaseModel
 from . import register_model
@@ -41,15 +42,13 @@ class HuggingFaceModel(BaseModel):
         model_name_or_path: str,
         device: str = "cpu",
         max_new_tokens: int = 128,
-        cot_trigger: Optional[str] = "Let's think step by step.",
         temperature: float = 1.0,
         top_p: float = 0.95,
         do_sample: bool = True,
-        cot_parser: Optional[Callable[[str], Tuple[str, str]]] = extract_final_answer,
         **kwargs
     ):
         super().__init__(**kwargs)
-        logger.info(f"[HuggingFaceModel] Loading tokenizer/model from {model_name_or_path}")
+        logger.info(f"Loading tokenizer/model from {model_name_or_path}")
 
         # Load tokenizer and model
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
@@ -60,22 +59,22 @@ class HuggingFaceModel(BaseModel):
         self.device = device
         if self.device != "cpu":
             self.model.to(self.device)
-            logger.info(f"[HuggingFaceModel] Model moved to {self.device}")
+            logger.info(f"Model moved to {self.device}")
 
         # Inference hyperparameters
         self.max_new_tokens = max_new_tokens
-        self.cot_trigger = cot_trigger
         self.temperature = temperature
         self.top_p = top_p
         self.do_sample = do_sample
-        self.cot_parser = cot_parser
 
     def generate_batch(
         self,
         inputs: List[Dict[str, Any]],
-        return_logits: bool = False,
+        return_logits: bool = True,
         cot: bool = False,
-        batch_size: Optional[Union[int, str]] = 1 # auto
+        batch_size: Optional[Union[int, str]] = 1, # auto
+        until: Optional[Union[str, List[str]]] = None,
+        **kwargs
     ) -> List[Dict[str, Any]]:
         """
         Processes a batch of inputs to generate text outputs and updates each item with the final prediction.
@@ -101,12 +100,33 @@ class HuggingFaceModel(BaseModel):
         if isinstance(batch_size, str) and batch_size.lower() == "auto":
             auto_mode = True
             current_bs = 128  # "auto" initial batch size
-            logger.info(f"[HuggingFaceModel] Batch size set to 'auto'. Starting with batch size {current_bs}.")
+            logger.info(f" Batch size set to 'auto'. Starting with batch size {current_bs}.")
         else:
             auto_mode = False
             current_bs = batch_size if batch_size is not None else len(inputs)
-            logger.info(f"[HuggingFaceModel] Batch size set to {current_bs}.")
+            logger.info(f" Batch size set to {current_bs}.")
 
+        stopping_criteria = None
+        if until is not None:
+            if isinstance(until, str):
+                until = [until]
+
+            class StoppingCriteriaSub(StoppingCriteria):
+                def __init__(self, tokenizer, stops=[], encounters=1):
+                    super().__init__()
+                    self.tokenizer = tokenizer
+                    self.stops = stops
+
+                def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+                    decoded = self.tokenizer.decode(input_ids[0])
+                    return any(stop in decoded for stop in self.stops)
+
+            stopping_criteria = StoppingCriteriaList([StoppingCriteriaSub(self.tokenizer, stops=until)])
+        
+
+        
+        
+        
         while True:
             try:
                 results = []
@@ -146,6 +166,9 @@ class HuggingFaceModel(BaseModel):
                             "return_dict_in_generate": True,
                             "output_scores": True,
                         })
+                    
+                    if stopping_criteria is not None:
+                        gen_kwargs["stopping_criteria"] = stopping_criteria
 
                     # Generate
                     with torch.no_grad():
@@ -160,7 +183,7 @@ class HuggingFaceModel(BaseModel):
                     elif return_logits and not isinstance(outputs, dict):
                         sequences = outputs
                         scores_list = None
-                        logger.warning("[HuggingFaceModel] `return_dict_in_generate=True` was set, but output is not a dict. No scores available.")
+                        logger.warning(" `return_dict_in_generate=True` was set, but output is not a dict. No scores available.")
                     else:
                         sequences = outputs
                         scores_list = None

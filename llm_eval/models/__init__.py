@@ -1,15 +1,15 @@
 from typing import Dict, Type
 from .base import BaseModel
 
-# 1) model들을 등록할 전역 레지스트리 (dict)
+# 1) Global registry (dict) to register models
 MODEL_REGISTRY: Dict[str, Type[BaseModel]] = {}
 
 
-# 2) 레지스트리에 등록할 헬퍼 함수
+# 2) Helper function to register a model in the registry
 def register_model(name: str):
     """
-    Model /Judge/ Reward 클래스를 레지스트리에 등록하기 위한 데코레이터.
-    사용 예:
+    Decorator to register a Model / Judge / Reward class in the registry.
+    Example usage:
         @register_model("vllm")
         class VLLMModel(BaseModel):
             ...
@@ -24,10 +24,10 @@ def register_model(name: str):
     return decorator
 
 
-# 3) 레지스트리에서 model 인스턴스를 생성하는 함수
+# 3) Function to create a model instance from the registry
 def load_model(name: str, **kwargs) -> BaseModel:
     """
-    문자열 name을 받아 해당 모델 클래스를 찾아 인스턴스화 후 반환.
+    Takes a string 'name', finds the corresponding model class, instantiates it, and returns the instance.
     """
     if name not in MODEL_REGISTRY:
         raise ValueError(
@@ -37,9 +37,7 @@ def load_model(name: str, **kwargs) -> BaseModel:
     return model_cls(**kwargs)
 
 
-# 5) 실제 backend들 import -> 데코레이터로 등록
-# from .vllm_backend import VLLMModel
-# from .huggingface_backend import HFModel
+# 5) Import actual backends -> they are registered via decorators
 from .openai_backend import OpenAIModel
 from .multi import MultiModel
 from .huggingface_backend import HuggingFaceModel

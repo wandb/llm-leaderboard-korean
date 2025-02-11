@@ -6,48 +6,81 @@ from typing import List, Dict, Any, Optional, Union
 from copy import deepcopy
 from .base import BaseModel
 from . import register_model
+from llm_eval.utils.logging import get_logger
+import logging
+from tqdm import tqdm
 
-logger = logging.getLogger("openai_backend")
-logger.setLevel(logging.INFO)
-
+logger = get_logger(name="runner", level=logging.INFO)
 
 @register_model("openai")
 class OpenAIModel(BaseModel):
+    """
+    An implementation of a Vision Language Model based on the OpenAI API, which processes inputs that include text and images.
+
+    For example, it can process a sample like:
+        {
+            "input": {
+                "content": [
+                    {"type": "text", "text": "What can you see in this image?"},
+                    {"type": "image_url", "image_url": "https://example.com/image.jpg"}
+                ]
+            }
+        }
+
+    Or a base64 encoded image:
+        {
+            "input": {
+                "content": [
+                    {"type": "text", "text": "Please describe this image"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/jpeg;base64,...", "detail": "high"}
+                    }
+                ]
+            }
+        }
+
+    Args:
+        api_key (str): OpenAI API key
+        api_base (str): API base URL (default: OpenAI endpoint)
+        model_name (str): Model identifier (e.g., gpt-4-vision-preview)
+        system_message (Optional[str]): System message for chat completion
+        use_chat_api (bool): Whether to use the chat API (default: True)
+        is_vision_model (bool): Whether the model is a vision model (default: False)
+        limit_mm_per_prompt (Optional[Dict[str, int]]): Multimedia limits per prompt
+        **kwargs: Additional API parameters (temperature, max_tokens, etc.)
+    """
+
     def __init__(
         self,
         api_key: str,
-        api_base: str = "https://api.openai.com/v1",
-        model_name: str = str,  # gpt-4o-mini, o1, o1-mini 등
+        api_base: str,
+        model_name: str = str,  # e.g., gpt-4o-mini, o1, o1-mini, etc.
         system_message: Optional[str] = None,
-        use_chat_api: Optional[bool] = None,
+        use_chat_api: bool = True,
+        is_vision_model: bool = False,
         limit_mm_per_prompt: Optional[Dict[str, int]] = None,
         **kwargs,
     ):
         super().__init__()
-        if not api_key:
-            raise ValueError("API key is required")
         if not model_name:
             raise ValueError("model_name is required")
 
-        # 인스턴스별 독립적인 API 클라이언트 설정
+        # Set up an independent API client for each instance
         self._client = openai.Client(api_key=api_key, base_url=api_base)
         self.model_name = model_name
         self.system_message = system_message
         self.limit_mm_per_prompt = limit_mm_per_prompt or {}
 
-        # API 타입 자동 감지
-        self.use_chat_api = (
-            use_chat_api
-            if use_chat_api in kwargs
-            else any(x in model_name.lower() for x in ["gpt-4o", "gpt-4o-mini"])
-        )
-        self.is_vision_model = "vision" in model_name
+        # Set API type and vision model flags based on initialization parameters
+        self.use_chat_api = use_chat_api
+        self.is_vision_model = is_vision_model
 
-        # API 파라미터 기본값 설정
+        # Set default API parameters
         self.default_params = kwargs
 
     def _process_image_content(self, content: Union[str, Dict, List]) -> Dict:
-        """이미지 콘텐츠를 OpenAI Vision API 형식으로 변환"""
+        """Converts image content into the OpenAI Vision API format."""
         VALID_DETAILS = {"high", "low", "auto"}
 
         def validate_detail(detail: str) -> str:
@@ -71,7 +104,7 @@ class OpenAIModel(BaseModel):
                 )
             return [
                 self._process_image_content(item) for item in content
-            ]  # 재귀적 처리
+            ]  # Recursive processing
 
         if isinstance(content, str):
             if content.startswith(("http://", "https://")):
@@ -117,6 +150,7 @@ class OpenAIModel(BaseModel):
         inputs: Union[str, List[Dict], Dict],
         return_logits: bool = False,
         use_chat_api: Optional[bool] = None,
+        until: Optional[Union[str, List[str]]] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         params = self.default_params.copy()
@@ -125,16 +159,23 @@ class OpenAIModel(BaseModel):
 
         payload = {"model": self.model_name}
 
+        # Add stop sequences if provided
+        if until is not None:
+            if isinstance(until, str):
+                until = [until]
+            payload["stop"] = until
+
+
         if use_chat_api:
             messages = []
             if self.system_message:
                 messages.append({"role": "system", "content": self.system_message})
 
-            # Vision 또는 일반 입력 처리
+            # Process vision or general inputs
             if self.is_vision_model and isinstance(inputs, dict):
                 content = inputs.get("content", [])
                 if isinstance(content, list):
-                    # 이미지 개수 제한 체크
+                    # Check image count limit
                     image_count = sum(
                         1
                         for item in content
@@ -181,7 +222,7 @@ class OpenAIModel(BaseModel):
                 }
             )
 
-        # 추가 파라미터 설정
+        # Set additional parameters
         for param in [
             "max_tokens",
             "temperature",
@@ -202,25 +243,26 @@ class OpenAIModel(BaseModel):
         raise_error: bool = True,
         max_retries: int = 3,
         cot: bool = False,
+        until: Optional[Union[str, List[str]]] = None,
         **kwargs,
     ) -> List[Dict[str, Any]]:
         """
-        배치 형태의 텍스트 생성 수행
+        Performs batch text generation.
 
         Args:
             inputs: [{"input": str|dict, "reference": str, ...}, ...]
-                   input이 dict인 경우 멀티모달 데이터 포함 가능
-                   예: {
-                       "content": [
-                           {"type": "text", "text": "What's in this image?"},
-                           {"type": "image_url", "image_url": {"url": "..."}}
-                       ]
-                   }
+                    If input is a dict, it can include multimodal data.
+                    For example: {
+                        "content": [
+                            {"type": "text", "text": "What's in this image?"},
+                            {"type": "image_url", "image_url": {"url": "..."}}
+                        ]
+                    }
         """
         outputs = []
-
+        logger.info("generating output")
         for input_item in inputs:
-            # 입력 복사하여 원본 보존
+            # Create a copy of the input to preserve the original
             item = deepcopy(input_item)
             result = None
 
@@ -230,6 +272,7 @@ class OpenAIModel(BaseModel):
                         item["input"],
                         return_logits=return_logits,
                         use_chat_api=use_chat_api,
+                        until=until,  # Pass stop sequences to payload
                         **kwargs,
                     )
 
@@ -242,9 +285,7 @@ class OpenAIModel(BaseModel):
                         if return_logits:
                             result.update(
                                 {
-                                    "logprobs": response.choices[
-                                        0
-                                    ].logprobs.token_logprobs,
+                                    "logprobs": response.choices[0].logprobs.token_logprobs,
                                     "tokens": response.choices[0].logprobs.tokens,
                                 }
                             )
@@ -271,7 +312,7 @@ class OpenAIModel(BaseModel):
                         }
                     time.sleep(min(2**attempt, 32))  # Exponential backoff
 
-            # 결과를 새로운 딕셔너리에 복사
+            # Copy the result into a new dictionary
             output_item = deepcopy(item)
             output_item.update(
                 result
