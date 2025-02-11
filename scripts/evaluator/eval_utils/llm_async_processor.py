@@ -4,6 +4,7 @@ import asyncio
 import functools
 import traceback
 from typing import Any, TypeAlias, List, Tuple
+from openai import OpenAI
 
 import backoff
 from langchain.schema import AIMessage
@@ -58,17 +59,22 @@ class LLMAsyncProcessor:
                     print(f"Retrying request due to empty content. Retry attempt {i+1} of {n}.")
         elif self.api_type == "amazon_bedrock":
             response = self.llm.invoke(messages, **kwargs)
-        else:
-            raise NotImplementedError(
-                "Synchronous invoke is only implemented for Google API"
+        elif self.api_type == "openai":
+            client = OpenAI()
+            response = client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": m["role"], "content": m["content"]} for m in messages]
             )
+            return AIMessage(content=response.choices[0].message.content)
+        else:
+            raise NotImplementedError(f"Synchronous invoke is not implemented for API type: {self.api_type}")
         return response
 
     @error_handler
     @backoff.on_exception(backoff.expo, Exception, max_tries=MAX_TRIES)
     async def _ainvoke(self, messages: Messages, **kwargs) -> Tuple[AIMessage, float]:
         await asyncio.sleep(self.inference_interval)
-        if self.api_type in ["google", "amazon_bedrock"]:
+        if self.api_type in ["google", "amazon_bedrock", "openai"]:
             return await asyncio.to_thread(self._invoke, messages, **kwargs)
         else:
             if self.model_name == "tokyotech-llm/Swallow-7b-instruct-v0.1":

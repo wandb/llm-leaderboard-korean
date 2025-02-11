@@ -475,13 +475,25 @@ def chat_completion_openai(model, conv, temperature, max_tokens):
     for _ in range(API_MAX_RETRY):
         try:
             messages = conv.to_openai_api_messages()
-            response = openai.chat.completions.create(
-                model=model,
-                messages=messages,
-                n=1,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
+            if "o1" in model or "o3" in model:
+                processed_messages = []
+                for message in messages:
+                    if message["role"] == "system":
+                        processed_messages.append({"role": "user", "content": f"System instruction: {message['content']}"})
+                    else:
+                        processed_messages.append(message)
+                messages = processed_messages
+            api_params = {
+                "model": model,
+                "messages": messages,
+                "n": 1,
+            }
+            if not("o1" in model or "o3" in model):
+                api_params["max_tokens"] = max_tokens
+                api_params["temperature"] = temperature
+
+            response = openai.chat.completions.create(**api_params)
+            #time.sleep(5)
             output = response.choices[0].message.content
             break
         except openai.OpenAIError as e:
