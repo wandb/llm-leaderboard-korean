@@ -35,26 +35,23 @@ class KUDGEDataset(BaseDataset):
          - prediction: response
          - reference: original_human_score
 
+    **자동으로 evaluation only 적용**
+    - 오직 `split="test"`일 때만 데이터셋이 정상적으로 로드됨
+    - `split="train"` 또는 `split="validation"` 사용 시 ValueError 발생
+
     사용 예시:
         ds = KUDGEDataset(
             dataset_name="KUDGE",
-            subset=["Pariwise"],  # 여러 subset
-            split="test"
+            subset=["Pairwise"],  
+            split="test"  # evaluation only 적용됨
         )
         data = ds.load()
-        # data -> [
-        #   {
-        #     "input": "judge_query",
-        #     "prediction": "chosen_response",
-        #     "reference": "winner (A: model1, B: model2)",
-        #     "_subset_name": "Pariwise",
-        #   }, ...
-        # ]
     """
+
     def __init__(
         self, 
         dataset_name: str = "HAERAE-HUB/KUDGE",
-        subset: str = None,  # Union[str, list] -> str로 변경
+        subset: str = None,  
         split: str = "test",
         **kwargs
     ):
@@ -63,11 +60,15 @@ class KUDGEDataset(BaseDataset):
         Args:
             dataset_name: HuggingFace 데이터셋 이름
             subset: 로드할 서브셋 이름(들)
-            split: 데이터 분할(train/test 등)
+            split: 데이터 분할 (예: "train", "test", "validation")
             **kwargs: 추가 데이터 로드 옵션
         """
+        # 오직 "test" split만 허용함.
+        if split != "test":
+            raise ValueError("This dataset is for evaluation only. Use 'test' split.")
+            
         super().__init__(dataset_name, split=split, subset=subset, **kwargs)
-        
+
     def load(self) -> List[Dict[str, Any]]:
         """
         데이터를 로드하고 표준 형식으로 변환하여 반환
@@ -94,13 +95,6 @@ class KUDGEDataset(BaseDataset):
     def _convert_to_list(self, hf_dataset, subset_name: str) -> List[Dict[str, Any]]:
         """
         HuggingFace Dataset 객체를 평가용 표준 형식으로 변환
-
-        Args:
-            hf_dataset: HuggingFace Dataset 객체
-            subset_name: 서브셋 이름
-
-        Returns:
-            List[Dict[str, Any]]: 변환된 데이터 리스트
         """
         processed_list = []
         
@@ -149,7 +143,6 @@ class KUDGEDataset(BaseDataset):
             raise ValueError(f"Unknown subset: {subset_name}")
         
         for item in hf_dataset:
-            # 기본 필드 구성
             result = {
                 "input": "\n".join(str(item.get(field, '')) for field in rule['input_fields']),
                 "prediction": str(item.get(rule['prediction_field'], '')),
@@ -157,13 +150,12 @@ class KUDGEDataset(BaseDataset):
                 "_subset_name": subset_name
             }
                 
-            # 추가 필드 처리
             if 'additional_fields' in rule:
                 for key, field in rule['additional_fields'].items():
                     if field in item:
                         result[key] = str(item[field])
                     else:
-                        result[key] = field  # 고정값 필드
+                        result[key] = field  
             
             processed_list.append(result)
 
@@ -211,5 +203,6 @@ class KUDGEDataset(BaseDataset):
                 "subset=list -> load partial subsets, "
                 "subset=str -> load single subset."
             ),
-            "evaluation_only": None
+            "evaluation_only": self.split == "test"  # split이 "test"일 때만 evaluation only
         }
+
