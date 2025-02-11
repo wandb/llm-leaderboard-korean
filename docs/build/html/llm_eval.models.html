@@ -1,0 +1,578 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>llm_eval.models package &mdash; Hret 0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2709fde1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="llm_eval.scaling_methods package" href="llm_eval.scaling_methods.html" />
+    <link rel="prev" title="llm_eval.evaluation package" href="llm_eval.evaluation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Hret
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">llm_eval</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="llm_eval.html">llm_eval package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="llm_eval.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="llm_eval.datasets.html">llm_eval.datasets package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="llm_eval.evaluation.html">llm_eval.evaluation package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">llm_eval.models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="llm_eval.scaling_methods.html">llm_eval.scaling_methods package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="llm_eval.test.html">llm_eval.test package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="llm_eval.utils.html">llm_eval.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="llm_eval.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="llm_eval.html#module-llm_eval.evaluator">llm_eval.evaluator module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="llm_eval.html#module-llm_eval.runner">llm_eval.runner module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="llm_eval.html#module-llm_eval">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Hret</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">llm_eval</a></li>
+          <li class="breadcrumb-item"><a href="llm_eval.html">llm_eval package</a></li>
+      <li class="breadcrumb-item active">llm_eval.models package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/llm_eval.models.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="llm-eval-models-package">
+<h1>llm_eval.models package<a class="headerlink" href="#llm-eval-models-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-llm_eval.models.base">
+<span id="llm-eval-models-base-module"></span><h2>llm_eval.models.base module<a class="headerlink" href="#module-llm_eval.models.base" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="llm_eval.models.base.BaseJudge">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">llm_eval.models.base.</span></span><span class="sig-name descname"><span class="pre">BaseJudge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.models.base.BaseJudge" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Abstract base class for the Judge model (LLM-as-a-Judge).
+It takes generated text (answers) as input and evaluates their quality/appropriateness.
+For example, it can be used for chain-of-thought based self-consistency evaluation, star ratings (1-5 points), etc.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="llm_eval.models.base.BaseJudge.judge_batch">
+<span class="sig-name descname"><span class="pre">judge_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#llm_eval.models.base.BaseJudge.judge_batch" title="Link to this definition"></a></dt>
+<dd><dl class="simple">
+<dt>Args:</dt><dd><p>inputs: [{“input”: …, “prediction”: …, “reference”: …}, …]
+- Typically, the ‘prediction’ (generated answer) is used for quality evaluation.
+Returns:
+[{“judge_score”: float or int, “judge_explanation”: str, …}, …]
+- Returns each sample with an added evaluation score/assessment.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="llm_eval.models.base.BaseModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">llm_eval.models.base.</span></span><span class="sig-name descname"><span class="pre">BaseModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">cot_trigger:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&quot;Let's</span> <span class="pre">think</span> <span class="pre">step</span> <span class="pre">by</span> <span class="pre">step.&quot;,</span> <span class="pre">cot_parser:</span> <span class="pre">~typing.Callable[[str],</span> <span class="pre">~typing.Tuple[str,</span> <span class="pre">str]]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">extract_final_answer&gt;,</span> <span class="pre">**kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.models.base.BaseModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Abstract base class that all model backends must inherit.</p>
+<dl class="simple">
+<dt>Required method to implement:</dt><dd><ul class="simple">
+<li><p>generate_batch(self, inputs, return_logits=False) -&gt; List[Dict[str, Any]]
+* inputs: [{“input”: str, “reference”: str, …}, …]</p>
+<ul>
+<li><dl class="simple">
+<dt>Returns: [{“input”:…, “reference”:…, </dt><dd><p>“prediction”:…,        # Final string output from the model
+“logits”: (optional)…, # if return_logits=True
+…}, …]</p>
+</dd>
+</dl>
+</li>
+</ul>
+</li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="llm_eval.models.base.BaseModel.generate_batch">
+<span class="sig-name descname"><span class="pre">generate_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_logits</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'auto'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">until</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#llm_eval.models.base.BaseModel.generate_batch" title="Link to this definition"></a></dt>
+<dd><p>Method to generate text (answers) from the LLM.
+Args:</p>
+<blockquote>
+<div><p>inputs: [{“input”: str, “reference”: str, …}, …]
+return_logits: If True, additional information such as logits or logprobs may be returned.</p>
+<blockquote>
+<div><ol class="arabic simple" start="2">
+<li><p>the model may include its reasoning in the “chain_of_thought” field.</p></li>
+</ol>
+</div></blockquote>
+</div></blockquote>
+<dl>
+<dt>Returns:</dt><dd><p>The same list (or a copy) with each element augmented as follows:
+[</p>
+<blockquote>
+<div><dl>
+<dt>{</dt><dd><p>“input”: …,
+“reference”: …,
+“prediction”: &lt;generated answer&gt;,</p>
+<p>“chain_of_thought”: “…(intermediate reasoning)…”
+…</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="llm_eval.models.base.BaseRewardModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">llm_eval.models.base.</span></span><span class="sig-name descname"><span class="pre">BaseRewardModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.models.base.BaseRewardModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Abstract class dedicated to Reward models (usable in DVTS, etc.).
+It estimates a scalar reward value from a text answer.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="llm_eval.models.base.BaseRewardModel.score_batch">
+<span class="sig-name descname"><span class="pre">score_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#llm_eval.models.base.BaseRewardModel.score_batch" title="Link to this definition"></a></dt>
+<dd><dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>inputs: [{“input”:…, “prediction”:…, “reference”:…}, …]</dt><dd><ul class="simple">
+<li><p>Typically, the ‘prediction’ is used as input to compute the reward score.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>[{“reward”: float, …}, …]
+- Each sample is augmented with a ‘reward’ field.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-llm_eval.models.huggingface_backend">
+<span id="llm-eval-models-huggingface-backend-module"></span><h2>llm_eval.models.huggingface_backend module<a class="headerlink" href="#module-llm_eval.models.huggingface_backend" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="llm_eval.models.huggingface_backend.HuggingFaceModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">llm_eval.models.huggingface_backend.</span></span><span class="sig-name descname"><span class="pre">HuggingFaceModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_name_or_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_new_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.95</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_sample</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.models.huggingface_backend.HuggingFaceModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#llm_eval.models.base.BaseModel" title="llm_eval.models.base.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></a></p>
+<p>A backend model class that uses HuggingFace Transformers.</p>
+<dl class="simple">
+<dt>Main points:</dt><dd><ul class="simple">
+<li><p>If <cite>return_logits=True</cite>, we call <cite>model.generate(…, return_dict_in_generate=True, output_scores=True)</cite>
+so that “scores” (logits per step) are included in the output, allowing us to compute log probabilities.</p></li>
+<li><p>If a <cite>cot_parser</cite> function is provided, we can separate chain-of-thought text from the final answer.</p></li>
+<li><p>This code avoids using the older GenerationOutput class, which may not be available in recent Transformers versions.</p></li>
+</ul>
+</dd>
+<dt>Args:</dt><dd><p>model_name_or_path (str): HF Hub model ID or local path.
+device (str): ‘cpu’, ‘cuda’, ‘cuda:0’, etc.
+max_new_tokens (int): Maximum new tokens to generate in one call.
+cot_trigger (str|None): Optional CoT (Chain-of-Thought) trigger appended to the prompt. If None, no CoT trigger.
+temperature (float): Sampling temperature.
+top_p (float): Nucleus sampling probability.
+do_sample (bool): If True, sampling mode; if False, greedy generation.
+cot_parser (callable|None): A function that takes a string (generated text) and returns (chain_of_thought, final_answer).
+<a href="#id1"><span class="problematic" id="id2">**</span></a>kwargs: Additional parameters as needed.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="llm_eval.models.huggingface_backend.HuggingFaceModel.generate_batch">
+<span class="sig-name descname"><span class="pre">generate_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_logits</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">until</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#llm_eval.models.huggingface_backend.HuggingFaceModel.generate_batch" title="Link to this definition"></a></dt>
+<dd><p>Processes a batch of inputs to generate text outputs and updates each item with the final prediction.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>inputs (List[Dict[str, Any]]): </dt><dd><p>A list of items, each containing at least {“input”: str, “reference”: str, …}.</p>
+</dd>
+<dt>return_logits (bool): </dt><dd><p>If True, compute log probabilities for the generated tokens and store them in item[“logits”].</p>
+</dd>
+<dt>cot (bool): </dt><dd><p>If True, append self.cot_trigger to the original prompt (if defined) and parse out chain-of-thought.</p>
+</dd>
+<dt>batch_size (int | str): </dt><dd><p>The batch size to use. If “auto”, it starts with a default and reduces if OOM occurs.</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>List[Dict[str, Any]]:</dt><dd><dl class="simple">
+<dt>An updated list where each item has new fields:</dt><dd><ul class="simple">
+<li><p>“prediction”: the generated final answer</p></li>
+<li><p>“chain_of_thought”: optional CoT text if parsed</p></li>
+<li><p>“logits”: optional dict containing log probabilities if <cite>return_logits=True</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-llm_eval.models.huggingface_judge">
+<span id="llm-eval-models-huggingface-judge-module"></span><h2>llm_eval.models.huggingface_judge module<a class="headerlink" href="#module-llm_eval.models.huggingface_judge" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="llm_eval.models.huggingface_judge.HuggingFaceJudge">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">llm_eval.models.huggingface_judge.</span></span><span class="sig-name descname"><span class="pre">HuggingFaceJudge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_name_or_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_new_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.95</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_sample</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.models.huggingface_judge.HuggingFaceJudge" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#llm_eval.models.base.BaseJudge" title="llm_eval.models.base.BaseJudge"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseJudge</span></code></a></p>
+<p>A ‘judge’ model implementation based on HuggingFace Transformers.</p>
+<p>This class is designed for scenarios where an LLM is used to evaluate
+(or ‘judge’) existing answers by generating a short rating, correctness, or
+preference output. The ‘judge_batch’ method:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Expects each sample to have “input” containing the full judge prompt
+(rubric, reference, model output, etc.).</p></li>
+<li><p>Generates a short response indicating a score, correctness, or comparison result.</p></li>
+<li><p>Stores the raw generation in ‘sample[“prediction”]’.</p></li>
+</ul>
+</div></blockquote>
+<p>The higher-level evaluator (e.g., LLMJudgeEvaluator) parses these outputs
+(e.g., “[[score: 4.5]]”) using a suitable parser (RubricScoreParser, etc.)
+to extract structured metrics.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="llm_eval.models.huggingface_judge.HuggingFaceJudge.judge_batch">
+<span class="sig-name descname"><span class="pre">judge_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#llm_eval.models.huggingface_judge.HuggingFaceJudge.judge_batch" title="Link to this definition"></a></dt>
+<dd><p>Processes a batch of judge prompts and generates a short response for each.</p>
+<dl class="simple">
+<dt>Each ‘item’ in ‘inputs’ must have:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>“input”: The entire prompt for the judge model </dt><dd><p>(rubric, the model’s answer to evaluate, gold, etc.).</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>The output for each sample will contain:</dt><dd><ul class="simple">
+<li><p>“prediction”: The raw string generated by the judge LLM.</p></li>
+</ul>
+</dd>
+<dt>Args:</dt><dd><p>inputs (List[Dict[str, Any]]): A list of samples, each with an ‘input’ field.
+<a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs: Unused or passed along (extension point).</p>
+</dd>
+<dt>Returns:</dt><dd><p>The same list of samples, where each sample now has “prediction” 
+set to the judge model’s raw output.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-llm_eval.models.huggingface_reward">
+<span id="llm-eval-models-huggingface-reward-module"></span><h2>llm_eval.models.huggingface_reward module<a class="headerlink" href="#module-llm_eval.models.huggingface_reward" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="llm_eval.models.huggingface_reward.HuggingFaceReward">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">llm_eval.models.huggingface_reward.</span></span><span class="sig-name descname"><span class="pre">HuggingFaceReward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_name_or_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.models.huggingface_reward.HuggingFaceReward" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#llm_eval.models.base.BaseRewardModel" title="llm_eval.models.base.BaseRewardModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRewardModel</span></code></a></p>
+<blockquote>
+<div><p>HuggingFaceReward computes a reward for a given sample by calculating the
+conditional log likelihood (average log probability) of the generated answer.</p>
+<dl class="simple">
+<dt>For example, for a sample like:</dt><dd><dl class="simple">
+<dt>{</dt><dd><p>“input”: “Problem: …</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+<dl>
+<dt>Answer:”,</dt><dd><blockquote>
+<div><blockquote>
+<div><p>“prediction”: “ generated answer text…”</p>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+<p>The reward is computed as the average log probability of the tokens in the generated
+answer (i.e., the part after the prompt), as predicted by the model.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="llm_eval.models.huggingface_reward.HuggingFaceReward.score_batch">
+<span class="sig-name descname"><span class="pre">score_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#llm_eval.models.huggingface_reward.HuggingFaceReward.score_batch" title="Link to this definition"></a></dt>
+<dd><p>For each sample, combine the “input” and “prediction” fields to form the full text,
+and compute the conditional log likelihood for the tokens corresponding to the generated answer.
+The reward is computed as the average log probability over these tokens.</p>
+<dl class="simple">
+<dt>The computation steps are as follows:</dt><dd><ol class="arabic simple">
+<li><p>For each sample, construct the full text as input + prediction.</p></li>
+<li><p>Calculate the number of tokens in the prompt (input) separately.</p></li>
+<li><p>Tokenize the full text in a batch.</p></li>
+<li><p>Pass the tokenized inputs through the model to obtain logits.</p></li>
+<li><p>Using the shifted logits, compute the log probabilities for each token,
+and then compute the average log probability over the generated part (after the prompt).</p></li>
+<li><p>Add the computed reward to each sample in the “reward” field.</p></li>
+</ol>
+</dd>
+<dt>Args:</dt><dd><p>inputs: List of samples, where each sample must contain at least the “input” and “prediction” fields.</p>
+</dd>
+<dt>Returns:</dt><dd><p>The list of input samples with an additional “reward” field added to each sample.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="llm-eval-models-litellm-backend-module">
+<h2>llm_eval.models.litellm_backend module<a class="headerlink" href="#llm-eval-models-litellm-backend-module" title="Link to this heading"></a></h2>
+</section>
+<section id="module-llm_eval.models.multi">
+<span id="llm-eval-models-multi-module"></span><h2>llm_eval.models.multi module<a class="headerlink" href="#module-llm_eval.models.multi" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="llm_eval.models.multi.MultiModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">llm_eval.models.multi.</span></span><span class="sig-name descname"><span class="pre">MultiModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">generate_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">judge_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reward_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.models.multi.MultiModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A MultiModel object that can store up to one model for each of the three roles,
+and allows you to call the corresponding method as needed.</p>
+<ul class="simple">
+<li><p>self.generate_model: Inherits from BaseModel (for text generation)</p></li>
+<li><p>self.judge_model: Inherits from BaseJudge (LLM-as-a-Judge)</p></li>
+<li><p>self.reward_model: Inherits from BaseRewardModel (for calculating reward scores)</p></li>
+</ul>
+<dl>
+<dt>Example usage:</dt><dd><dl class="simple">
+<dt>config = {</dt><dd><p>“generate_model”: { “name”: “huggingface”, “params”: { “model_name_or_path”: “gpt2” } },
+“judge_model”: { “name”: “my_judge_llm”, “params”: {…} },
+“reward_model”: None</p>
+</dd>
+</dl>
+<p>}
+multi_model = load_model(“multi”, <a href="#id5"><span class="problematic" id="id6">**</span></a>config)</p>
+<p># Text generation
+generated = multi_model.generate_batch(data, return_logits=False)</p>
+<p># Judge evaluation
+judged = multi_model.judge_batch(generated)</p>
+<p># Reward scoring
+scored = multi_model.score_batch(judged)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="llm_eval.models.multi.MultiModel.generate_batch">
+<span class="sig-name descname"><span class="pre">generate_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_logits</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#llm_eval.models.multi.MultiModel.generate_batch" title="Link to this definition"></a></dt>
+<dd><ol class="arabic simple">
+<li><p>If generate_model exists, perform text generation for each sample.</p></li>
+<li><p>Add a “prediction” field to each sample with the generated text.</p></li>
+<li><p>If return_logits=True, also add a “logits” field.</p></li>
+<li><p>Returns N outputs for N inputs (maintaining the same length).</p></li>
+</ol>
+<dl class="simple">
+<dt>Example:</dt><dd><p>inputs = [{“input”: “Hello”, “reference”: “World”}, …]
+returns -&gt; [{“input”: “Hello”, “reference”: “World”, “prediction”: “…”}, …]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="llm_eval.models.multi.MultiModel.judge_batch">
+<span class="sig-name descname"><span class="pre">judge_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#llm_eval.models.multi.MultiModel.judge_batch" title="Link to this definition"></a></dt>
+<dd><ol class="arabic simple">
+<li><p>If judge_model exists, perform judge_batch processing on each sample.</p></li>
+<li><p>The judge_model (inheriting from BaseJudge) will add fields such as “judge_score” and “judge_explanation”
+to each sample.</p></li>
+<li><p>Returns N outputs for N inputs.</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="llm_eval.models.multi.MultiModel.score_batch">
+<span class="sig-name descname"><span class="pre">score_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#llm_eval.models.multi.MultiModel.score_batch" title="Link to this definition"></a></dt>
+<dd><ol class="arabic simple">
+<li><p>If reward_model exists, perform score_batch processing on each sample.</p></li>
+<li><p>The reward_model (inheriting from BaseRewardModel) will add a “reward” field to each sample.</p></li>
+<li><p>Returns N outputs for N inputs.</p></li>
+</ol>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-llm_eval.models.openai_backend">
+<span id="llm-eval-models-openai-backend-module"></span><h2>llm_eval.models.openai_backend module<a class="headerlink" href="#module-llm_eval.models.openai_backend" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="llm_eval.models.openai_backend.OpenAIModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">llm_eval.models.openai_backend.</span></span><span class="sig-name descname"><span class="pre">OpenAIModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">api_key:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_base:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">&lt;class</span> <span class="pre">'str'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system_message:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_chat_api:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_vision_model:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit_mm_per_prompt:</span> <span class="pre">~typing.Dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">int]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.models.openai_backend.OpenAIModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#llm_eval.models.base.BaseModel" title="llm_eval.models.base.BaseModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></a></p>
+<p>An implementation of a Vision Language Model based on the OpenAI API, which processes inputs that include text and images.</p>
+<dl>
+<dt>For example, it can process a sample like:</dt><dd><dl>
+<dt>{</dt><dd><dl>
+<dt>“input”: {</dt><dd><dl class="simple">
+<dt>“content”: [</dt><dd><p>{“type”: “text”, “text”: “What can you see in this image?”},
+{“type”: “image_url”, “image_url”: “<a class="reference external" href="https://example.com/image.jpg">https://example.com/image.jpg</a>”}</p>
+</dd>
+</dl>
+<p>]</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+<dt>Or a base64 encoded image:</dt><dd><dl>
+<dt>{</dt><dd><dl>
+<dt>“input”: {</dt><dd><dl>
+<dt>“content”: [</dt><dd><p>{“type”: “text”, “text”: “Please describe this image”},
+{</p>
+<blockquote>
+<div><p>“type”: “image_url”,
+“image_url”: {“url”: “<a class="reference external" href="data:image/jpeg;base64">data:image/jpeg;base64</a>,…”, “detail”: “high”}</p>
+</div></blockquote>
+<p>}</p>
+</dd>
+</dl>
+<p>]</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+<dt>Args:</dt><dd><p>api_key (str): OpenAI API key
+api_base (str): API base URL (default: OpenAI endpoint)
+model_name (str): Model identifier (e.g., gpt-4-vision-preview)
+system_message (Optional[str]): System message for chat completion
+use_chat_api (bool): Whether to use the chat API (default: True)
+is_vision_model (bool): Whether the model is a vision model (default: False)
+limit_mm_per_prompt (Optional[Dict[str, int]]): Multimedia limits per prompt
+<a href="#id7"><span class="problematic" id="id8">**</span></a>kwargs: Additional API parameters (temperature, max_tokens, etc.)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="llm_eval.models.openai_backend.OpenAIModel.generate_batch">
+<span class="sig-name descname"><span class="pre">generate_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_logits</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_chat_api</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_retries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cot</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">until</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#llm_eval.models.openai_backend.OpenAIModel.generate_batch" title="Link to this definition"></a></dt>
+<dd><p>Performs batch text generation.</p>
+<dl>
+<dt>Args:</dt><dd><dl>
+<dt>inputs: [{“input”: str|dict, “reference”: str, …}, …]</dt><dd><p>If input is a dict, it can include multimodal data.
+For example: {</p>
+<blockquote>
+<div><dl class="simple">
+<dt>“content”: [</dt><dd><p>{“type”: “text”, “text”: “What’s in this image?”},
+{“type”: “image_url”, “image_url”: {“url”: “…”}}</p>
+</dd>
+</dl>
+<p>]</p>
+</div></blockquote>
+<p>}</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-llm_eval.models">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-llm_eval.models" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.models.load_model">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.models.</span></span><span class="sig-name descname"><span class="pre">load_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#llm_eval.models.base.BaseModel" title="llm_eval.models.base.BaseModel"><span class="pre">BaseModel</span></a></span></span><a class="headerlink" href="#llm_eval.models.load_model" title="Link to this definition"></a></dt>
+<dd><p>Takes a string ‘name’, finds the corresponding model class, instantiates it, and returns the instance.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.models.register_model">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.models.</span></span><span class="sig-name descname"><span class="pre">register_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.models.register_model" title="Link to this definition"></a></dt>
+<dd><p>Decorator to register a Model / Judge / Reward class in the registry.
+Example usage:</p>
+<blockquote>
+<div><p>&#64;register_model(“vllm”)
+class VLLMModel(BaseModel):</p>
+<blockquote>
+<div><p>…</p>
+</div></blockquote>
+</div></blockquote>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="llm_eval.evaluation.html" class="btn btn-neutral float-left" title="llm_eval.evaluation package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="llm_eval.scaling_methods.html" class="btn btn-neutral float-right" title="llm_eval.scaling_methods package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Haerae.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
