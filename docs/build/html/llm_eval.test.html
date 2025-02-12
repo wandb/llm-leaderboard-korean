@@ -1,0 +1,231 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>llm_eval.test package &mdash; Hret 0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2709fde1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="llm_eval.utils package" href="llm_eval.utils.html" />
+    <link rel="prev" title="llm_eval.scaling_methods package" href="llm_eval.scaling_methods.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Hret
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">llm_eval</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="llm_eval.html">llm_eval package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="llm_eval.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="llm_eval.datasets.html">llm_eval.datasets package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="llm_eval.evaluation.html">llm_eval.evaluation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="llm_eval.models.html">llm_eval.models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="llm_eval.scaling_methods.html">llm_eval.scaling_methods package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">llm_eval.test package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="llm_eval.utils.html">llm_eval.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="llm_eval.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="llm_eval.html#module-llm_eval.evaluator">llm_eval.evaluator module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="llm_eval.html#module-llm_eval.runner">llm_eval.runner module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="llm_eval.html#module-llm_eval">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Hret</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">llm_eval</a></li>
+          <li class="breadcrumb-item"><a href="llm_eval.html">llm_eval package</a></li>
+      <li class="breadcrumb-item active">llm_eval.test package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/llm_eval.test.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="llm-eval-test-package">
+<h1>llm_eval.test package<a class="headerlink" href="#llm-eval-test-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-llm_eval.test.test_datasets">
+<span id="llm-eval-test-test-datasets-module"></span><h2>llm_eval.test.test_datasets module<a class="headerlink" href="#module-llm_eval.test.test_datasets" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_datasets.test_dataset_load_output">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_datasets.</span></span><span class="sig-name descname"><span class="pre">test_dataset_load_output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_datasets.test_dataset_load_output" title="Link to this definition"></a></dt>
+<dd><p>등록된 모든 데이터셋이 실제로 load()를 통해
+[{‘input’:…, ‘reference’:…}, …] 형태를 반환하는지 확인.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_datasets.test_dataset_registration">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_datasets.</span></span><span class="sig-name descname"><span class="pre">test_dataset_registration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_datasets.test_dataset_registration" title="Link to this definition"></a></dt>
+<dd><ol class="arabic simple">
+<li><p>dataset_key가 레지스트리에 정상 등록되어 있는지</p></li>
+<li><p>load_datasets() 호출 시 에러 없이 인스턴스가 생성되는지</p></li>
+</ol>
+</dd></dl>
+
+</section>
+<section id="module-llm_eval.test.test_evaluations">
+<span id="llm-eval-test-test-evaluations-module"></span><h2>llm_eval.test.test_evaluations module<a class="headerlink" href="#module-llm_eval.test.test_evaluations" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_evaluations.test_evaluator_registration">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_evaluations.</span></span><span class="sig-name descname"><span class="pre">test_evaluator_registration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">eval_key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_evaluations.test_evaluator_registration" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_evaluations.test_evaluator_simple_run">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_evaluations.</span></span><span class="sig-name descname"><span class="pre">test_evaluator_simple_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">eval_key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_evaluations.test_evaluator_simple_run" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-llm_eval.test.test_llm_judge">
+<span id="llm-eval-test-test-llm-judge-module"></span><h2>llm_eval.test.test_llm_judge module<a class="headerlink" href="#module-llm_eval.test.test_llm_judge" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_llm_judge.judge">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_llm_judge.</span></span><span class="sig-name descname"><span class="pre">judge</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_llm_judge.judge" title="Link to this definition"></a></dt>
+<dd><p>pytest fixture: 모듈 범위에서 한 번만 실행.
+MultiLLMJudge 인스턴스를 생성 후 반환.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_llm_judge.test_comparison_judge">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_llm_judge.</span></span><span class="sig-name descname"><span class="pre">test_comparison_judge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">judge</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_llm_judge.test_comparison_judge" title="Link to this definition"></a></dt>
+<dd><ol class="arabic simple" start="3">
+<li><p>Model response 간 비교 테스트</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_llm_judge.test_gold_judge">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_llm_judge.</span></span><span class="sig-name descname"><span class="pre">test_gold_judge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">judge</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_llm_judge.test_gold_judge" title="Link to this definition"></a></dt>
+<dd><ol class="arabic simple" start="2">
+<li><p>Gold answer와의 비교 테스트</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_llm_judge.test_rubric_judge">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_llm_judge.</span></span><span class="sig-name descname"><span class="pre">test_rubric_judge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">judge</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_llm_judge.test_rubric_judge" title="Link to this definition"></a></dt>
+<dd><ol class="arabic simple">
+<li><p>Rubric 방식 평가 테스트</p></li>
+</ol>
+</dd></dl>
+
+</section>
+<section id="module-llm_eval.test.test_models">
+<span id="llm-eval-test-test-models-module"></span><h2>llm_eval.test.test_models module<a class="headerlink" href="#module-llm_eval.test.test_models" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_models.test_model_generate_batch">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_models.</span></span><span class="sig-name descname"><span class="pre">test_model_generate_batch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_models.test_model_generate_batch" title="Link to this definition"></a></dt>
+<dd><p>단순 샘플 입력에 대해 model.generate_batch()가
+‘prediction’ 필드를 반환하는지 확인.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_models.test_model_registration">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_models.</span></span><span class="sig-name descname"><span class="pre">test_model_registration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_models.test_model_registration" title="Link to this definition"></a></dt>
+<dd><p>모델이 레지스트리에 등록되어 있고, load_model()로 생성 가능한지 확인.</p>
+</dd></dl>
+
+</section>
+<section id="module-llm_eval.test.test_scaling">
+<span id="llm-eval-test-test-scaling-module"></span><h2>llm_eval.test.test_scaling module<a class="headerlink" href="#module-llm_eval.test.test_scaling" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_scaling.test_scaler_apply">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_scaling.</span></span><span class="sig-name descname"><span class="pre">test_scaler_apply</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scaler_key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_scaling.test_scaler_apply" title="Link to this definition"></a></dt>
+<dd><p>각 scaler에 대해 간단히 apply() 로직이 동작하는지 확인.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="llm_eval.test.test_scaling.test_scaler_registration">
+<span class="sig-prename descclassname"><span class="pre">llm_eval.test.test_scaling.</span></span><span class="sig-name descname"><span class="pre">test_scaler_registration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scaler_key</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#llm_eval.test.test_scaling.test_scaler_registration" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-llm_eval.test">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-llm_eval.test" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="llm_eval.scaling_methods.html" class="btn btn-neutral float-left" title="llm_eval.scaling_methods package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="llm_eval.utils.html" class="btn btn-neutral float-right" title="llm_eval.utils package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Haerae.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
