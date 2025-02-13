@@ -10,6 +10,7 @@ from .base import BaseModel
 from . import register_model
 from llm_eval.utils.logging import get_logger
 from llm_eval.utils.prompt_template import extract_final_answer
+from tqdm import tqdm
 
 logger = get_logger(name="huggingface", level=logging.INFO)
 
@@ -45,13 +46,14 @@ class HuggingFaceModel(BaseModel):
         temperature: float = 1.0,
         top_p: float = 0.95,
         do_sample: bool = True,
+        batch_size: int = 1,
         **kwargs
     ):
         super().__init__(**kwargs)
         logger.info(f"Loading tokenizer/model from {model_name_or_path}")
 
         # Load tokenizer and model
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, padding_side='left')
         self.model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
         self.model.eval()
 
@@ -66,13 +68,14 @@ class HuggingFaceModel(BaseModel):
         self.temperature = temperature
         self.top_p = top_p
         self.do_sample = do_sample
+        self.batch_size = batch_size
 
     def generate_batch(
         self,
         inputs: List[Dict[str, Any]],
         return_logits: bool = True,
         cot: bool = False,
-        batch_size: Optional[Union[int, str]] = 1, # auto
+        batch_size: Optional[Union[int, str]] = None, # auto
         until: Optional[Union[str, List[str]]] = None,
         **kwargs
     ) -> List[Dict[str, Any]]:
@@ -97,6 +100,8 @@ class HuggingFaceModel(BaseModel):
                   - "logits": optional dict containing log probabilities if `return_logits=True`.
         """
         # Determine initial batch size
+        if batch_size is None:
+            batch_size = self.batch_size
         if isinstance(batch_size, str) and batch_size.lower() == "auto":
             auto_mode = True
             current_bs = 128  # "auto" initial batch size
@@ -114,7 +119,7 @@ class HuggingFaceModel(BaseModel):
             class StoppingCriteriaSub(StoppingCriteria):
                 def __init__(self, tokenizer, stops=[], encounters=1):
                     super().__init__()
-                    self.tokenizer = tokenizer
+                    self.tokenizer = tokenizer(padding_side='left')
                     self.stops = stops
 
                 def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
@@ -123,15 +128,11 @@ class HuggingFaceModel(BaseModel):
 
             stopping_criteria = StoppingCriteriaList([StoppingCriteriaSub(self.tokenizer, stops=until)])
         
-
-        
-        
-        
         while True:
             try:
                 results = []
                 # Process in chunks
-                for start in range(0, len(inputs), current_bs):
+                for start in tqdm(range(0, len(inputs), current_bs)):
                     batch_items = inputs[start:start + current_bs]
 
                     # Build prompts
