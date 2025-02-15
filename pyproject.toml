@@ -1,0 +1,15 @@
+[project]
+name = "haerae-evaluation-toolkit"   
+version = "0.1.0"     
+dependencies = [      
+    "pre-commit==4.0.1",    
+    "transformers>=4.26.0", 
+    "torch>=2.0.0",        
+    "pytest>=7.3.0",       
+    "openai>=1.0.0",       
+    "datasets>=3.2.0",     
+    "litellm>=1.59.0",     
+    "math-verify",        
+    "pandas",              
+    "tqdm"                 
+]
