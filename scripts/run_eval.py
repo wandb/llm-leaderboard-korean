@@ -47,6 +47,9 @@ custom_cfg = OmegaConf.load(custom_cfg_path)
 base_cfg_path = config_dir / base_cfg_name
 base_cfg = OmegaConf.load(base_cfg_path)
 custom_cfg = OmegaConf.merge(base_cfg, custom_cfg)
+if "o1" in custom_cfg.model.pretrained_model_name_or_path or "o3" in custom_cfg.model.pretrained_model_name_or_path:
+    del custom_cfg.generator["temperature"]
+    del custom_cfg.generator["max_tokens"]
 cfg_dict = OmegaConf.to_container(custom_cfg, resolve=True)
 assert isinstance(cfg_dict, dict), "instance.config must be a DictConfig"
 
