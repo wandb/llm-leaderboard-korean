@@ -54,7 +54,8 @@ class SelfConsistencyScalingMethod(BaseScalingMethod):
             for _ in range(self.n_paths):
                 outputs = self.model.generate_batch(
                     [{"input": prompt}],
-                    return_logits=False
+                    return_logits=False,
+                    show_progress=False
                 )
                 raw_text = outputs[0].get("prediction", "")
 

@@ -54,7 +54,7 @@ class BestOfN(BaseScalingMethod):
         total_samples = len(data)
         logger.info("Starting Best-Of-N Scaling")
         # Process data in batches
-        for batch_start in range(0, total_samples, self.batch_size):
+        for batch_start in tqdm(range(0, total_samples, self.batch_size)):
             # 1) Prepare batch
             batch_samples = []
             for local_idx in range(self.batch_size):
@@ -74,7 +74,8 @@ class BestOfN(BaseScalingMethod):
             for _ in range(self.n):
                 outputs = self.model.generate_batch(
                     batch_samples,
-                    batch_size=self.batch_size
+                    batch_size=self.batch_size,
+                    show_progress=False
                 )
 
                 # Collect candidate texts

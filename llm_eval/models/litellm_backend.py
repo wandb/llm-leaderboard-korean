@@ -159,6 +159,7 @@ class LiteLLMBackend(BaseModel):
         cot: bool = False,
         batch_size: Optional[Union[int, str]] = 1,
         until: Optional[Union[str, List[str]]] = None,
+        show_progress: bool = True,  # 진행바 표시 여부를 결정하는 인자 추가
         **kwargs
     ) -> List[Dict[str, Any]]:
         """

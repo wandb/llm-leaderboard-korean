@@ -244,6 +244,7 @@ class OpenAIModel(BaseModel):
         max_retries: int = 3,
         cot: bool = False,
         until: Optional[Union[str, List[str]]] = None,
+        show_progress: bool = True,  # 진행바 표시 여부를 결정하는 인자 추가
         **kwargs,
     ) -> List[Dict[str, Any]]:
         """
