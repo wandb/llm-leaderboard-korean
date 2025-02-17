@@ -75,8 +75,9 @@ class HuggingFaceModel(BaseModel):
         inputs: List[Dict[str, Any]],
         return_logits: bool = True,
         cot: bool = False,
-        batch_size: Optional[Union[int, str]] = None, # auto
+        batch_size: Optional[Union[int, str]] = None,  # auto
         until: Optional[Union[str, List[str]]] = None,
+        show_progress: bool = True,  # 진행바 표시 여부를 결정하는 인자 추가
         **kwargs
     ) -> List[Dict[str, Any]]:
         """
@@ -132,7 +133,7 @@ class HuggingFaceModel(BaseModel):
             try:
                 results = []
                 # Process in chunks
-                for start in tqdm(range(0, len(inputs), current_bs)):
+                for start in tqdm(range(0, len(inputs), current_bs), disable=not show_progress):
                     batch_items = inputs[start:start + current_bs]
 
                     # Build prompts
