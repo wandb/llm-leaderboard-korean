@@ -15,6 +15,7 @@ from tqdm import tqdm
 
 logger = get_logger(name="llm_judge", level=logging.INFO)
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 1) JudgeType, JudgeInput, Parser classes (original code kept intact)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -113,7 +114,7 @@ class GoldComparisonParser(ResponseParser):
         # lower() for case-insensitivity
         resp_lower = response.lower()
         if "[[true]]" in resp_lower:
-            return {"correct": True, "step": -1, "model_name": model_name or "unknown"}
+            return {"correct": True, "model_name": model_name or "unknown"}
         elif "[[false]]" in resp_lower:
             step_pattern = r"step:\s*\[(\d+)\]"
             match = re.search(step_pattern, response, flags=re.IGNORECASE)
@@ -212,7 +213,6 @@ class MultiLLMJudge:
             judge_types.append(j_input.judge_type)
 
         # Call judge_batch to get raw outputs
-        # BaseJudge.judge_batch typically sets item["prediction"] to the model's raw output
         judged_outputs = self.multi_model.judge_batch(prompts)
 
         # Parse each output according to its JudgeType
@@ -253,7 +253,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
         * "judge_type": (optional) which type of judging logic to use (RUBRIC_AND_RESPONSE, etc.)
           If absent, uses 'default_judge_type'.
         * "rubric", "model_response_b" (optional, for more advanced judge tasks)
-    - The code calls `multi_judge_model.judge_batch()` with N prompts, each derived from a template
+    - The code calls `multi_judge_model.judge_batch(...)` with N prompts, each derived from a template
       matching the 'judge_type'. The judge_batch method is expected to fill 'prediction' with
       the judge model's raw output (one per sample).
     - The raw outputs are then parsed to extract "score", "correct", or "winner", depending on the judge type.
@@ -322,7 +322,6 @@ class LLMJudgeEvaluator(BaseEvaluator):
             judge_type_str = s.get("judge_type", self.default_judge_type.value)
             j_type = JudgeType(judge_type_str)
 
-            # Fill template
             template = self.prompt_templates.get(j_type, "")
             filled_prompt = template.format(
                 rubric=s.get("rubric", ""),
@@ -331,50 +330,59 @@ class LLMJudgeEvaluator(BaseEvaluator):
                 response_b=s.get("model_response_b", "")
             )
 
-            # We'll pass this prompt to judge_batch()
             prompts.append({"input": filled_prompt})
             judge_types.append(j_type)
 
         # 2) Call multi_judge_model.judge_batch to get raw outputs
         judged_results = self.multi_judge_model.judge_batch(prompts)
-        # judge_batch should produce a list of the same length,
-        # each with "prediction" = judge model's raw output.
 
-        # 3) Parse & record results
         total_score = 0.0
         score_count = 0
         total_correct = 0
         total_items = len(samples)
 
         for sample, out, j_type in zip(samples, judged_results, judge_types):
-            raw_output = out.get("prediction", "")  # The judge's response
+            raw_output = out.get("prediction", "")
             parser = self.parsers.get(j_type)
 
-            # Parse the raw judge response
             try:
                 parsed = parser.parse(raw_output, model_name="JudgeLLM")
             except ValueError as e:
                 parsed = {"error": str(e)}
 
-            # Update the sample with judge-related fields
+            # Store raw and parsed data
             sample["judge_raw_output"] = raw_output
             sample["judge_parsed"] = parsed
             sample["judge_type"] = j_type.value
 
-            if "score" in parsed:
-                score_count += 1
-                total_score += float(parsed["score"])
-                sample["judge_score"] = float(parsed["score"])
-
+            # is_correct 계산 로직
+            is_correct = None
             if "correct" in parsed:
-                if parsed["correct"] is True:
+                is_correct = bool(parsed["correct"])
+                if is_correct:
                     total_correct += 1
-                sample["judge_correct"] = bool(parsed["correct"])
+            sample["judge_correct"] = is_correct
 
+            # Create or update "evaluation" dict
+            sample["evaluation"] = {
+                "raw_output": raw_output,
+                "parsed": parsed,
+                "is_correct": is_correct,
+            }
+
+            # Check if there's a numeric score
+            if "score" in parsed:
+                sc = float(parsed["score"])
+                score_count += 1
+                total_score += sc
+                sample["judge_score"] = sc
+                sample["evaluation"]["score"] = sc
+
+            # If there's a winner field
             if "winner" in parsed:
                 sample["judge_winner"] = parsed["winner"]
+                sample["evaluation"]["winner"] = parsed["winner"]
 
-        # 4) Compute basic metrics
         metrics = {}
         if score_count > 0:
             metrics["average_score"] = total_score / score_count
