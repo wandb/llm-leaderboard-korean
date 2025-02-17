@@ -90,7 +90,8 @@ class MathMatchEvaluator(BaseEvaluator):
 
     def extract_answer(self, text: str) -> str:
         """
-        Extracts the final answer from text containing Chain-of-Thought reasoning.
+        Extracts the final answer from text containing Chain-of-Thought reasoning,
+        based on regex patterns. If extract_final_answer is False, returns as-is.
         """
         if not text or not self.extract_final_answer:
             return text
@@ -134,13 +135,16 @@ class MathMatchEvaluator(BaseEvaluator):
         
         Returns:
             Dict containing accuracy score and optionally detailed metrics.
+
+        Additionally, for each sample, adds an "evaluation" field with "is_correct"
+        to indicate whether the verification was successful (True) or not (False).
         """
         total = len(samples)
         correct = 0
         parse_failures = 0
         verify_failures = 0
 
-        for sample in samples:
+        for sample in tqdm(samples, desc="Math-Match Evaluation"):
             # Extract final answers if needed
             pred_text = self.extract_answer(str(sample.get("prediction", "")))
             ref_text = self.extract_answer(str(sample.get("reference", "")))
@@ -151,13 +155,18 @@ class MathMatchEvaluator(BaseEvaluator):
 
             if pred is None or ref is None:
                 parse_failures += 1
+                sample["evaluation"] = {"is_correct": False}
                 continue
 
             # Verify mathematical equivalence
-            if self.verify_equivalent(pred, ref):
+            is_correct = self.verify_equivalent(pred, ref)
+            if is_correct:
                 correct += 1
             else:
                 verify_failures += 1
+
+            # Record "is_correct" in the sample
+            sample["evaluation"] = {"is_correct": is_correct}
 
         metrics = {
             "accuracy": correct / total if total else 0.0,

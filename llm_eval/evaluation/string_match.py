@@ -111,15 +111,31 @@ class StringMatchEvaluator(BaseEvaluator):
         """
         Computes accuracy based on whether the normalized prediction
         and reference values are exactly the same.
+
+        Additionally, each sample will have an "evaluation" field with
+        normalized_pred, normalized_ref, and is_correct.
         """
         total = len(samples)
         correct = 0
-        logger.info("evaluating outputs")
-        for sample in samples:
-            pred = self.parse_prediction(sample["prediction"])
-            ref = self.parse_prediction(sample["reference"])
-            if pred == ref:
+        logger.info("Evaluating outputs using string match...")
+
+        for sample in tqdm(samples, desc="String-Match Evaluation"):
+            pred_norm = self.parse_prediction(sample["prediction"])
+            ref_norm = self.parse_prediction(sample["reference"])
+
+            # Check if they match
+            is_correct = (pred_norm == ref_norm)
+            if is_correct:
                 correct += 1
+
+            ### CHANGED / ADDED SECTION ###
+            # Record the evaluation info
+            sample["evaluation"] = {
+                "normalized_pred": pred_norm,
+                "normalized_ref": ref_norm,
+                "is_correct": is_correct
+            }
+            ### CHANGED / ADDED SECTION ###
 
         accuracy = correct / total if total else 0.0
         return {"accuracy": accuracy}

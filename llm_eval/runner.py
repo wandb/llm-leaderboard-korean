@@ -7,6 +7,7 @@ from llm_eval.models import load_model, BaseModel
 from llm_eval.scaling_methods import load_scaling_method, BaseScalingMethod
 from llm_eval.evaluation import get_evaluator, BaseEvaluator
 from llm_eval.utils.logging import get_logger
+from llm_eval.utils.util import EvaluationResult  
 
 logger = get_logger(name="runner", level=logging.INFO)
 
@@ -17,13 +18,7 @@ class PipelineRunner:
       - Dataset loading
       - (Optional) Scaling method for model inference
       - Evaluation
-      - Final results
-
-    Usage:
-      1) Provide dataset name/subset/split
-      2) Specify model backend, optional scaling method, and evaluation method
-      3) Additional parameters (dataset_params, model_backend_params, etc.)
-      4) Call run() to execute the pipeline
+      - Final results (as an EvaluationResult object)
     """
 
     def __init__(
@@ -154,20 +149,16 @@ class PipelineRunner:
         )
         self.evaluator = get_evaluator(self.evaluation_method_name, **self.evaluator_params)
 
-    def run(self) -> Dict[str, Any]:
+    def run(self) -> EvaluationResult:
         """
         Executes the pipeline:
           1) Dataset load
           2) Skips or applies scaling method (model inference)
           3) Evaluation
-          4) Returns final results
+          4) Returns final results in an EvaluationResult object
 
         Returns:
-            {
-                "metrics": {...},
-                "samples": [...],
-                "info": {...}  # additional metadata
-            }
+            EvaluationResult: Encapsulates metrics, samples, and pipeline info.
         """
         if not self.dataset or not self.model or not self.evaluator:
             raise RuntimeError("Pipeline components are not fully loaded.")
@@ -179,7 +170,6 @@ class PipelineRunner:
         logger.info(f"[Pipeline] Dataset loaded. Number of samples: {len(data)}")
 
         # 2) Skip or apply inference/scaling
-        # Check if 'prediction' already exists in all samples
         already_has_prediction = all("prediction" in item for item in data)
         if already_has_prediction:
             logger.info(
@@ -199,15 +189,14 @@ class PipelineRunner:
 
         # 3) Evaluation
         logger.info(f"[Pipeline] Evaluating with {self.evaluation_method_name}")
-        # If you need to call judge_batch / score_batch inside evaluator, pass model=self.model
-        eval_results = self.evaluator.evaluate(predictions, model=None)
+        eval_dict = self.evaluator.evaluate(predictions, model=None)
+        # eval_dict 예시: {"metrics": {...}, "samples": [...], ...}
 
-        # 4) Summarize results
+        # 4) Wrap results into an EvaluationResult
         end_time = time.time()
         elapsed = end_time - start_time
-        logger.info(f"[Pipeline] Done. Elapsed time: {elapsed:.2f} s")
 
-        eval_results["info"] = {
+        pipeline_info = {
             "dataset_name": self.dataset_name,
             "subset": self.subset,
             "split": self.split,
@@ -217,4 +206,17 @@ class PipelineRunner:
             "elapsed_time_sec": elapsed,
         }
 
-        return eval_results
+        # Merge any existing info from eval_dict
+        metrics = eval_dict.get("metrics", {})
+        samples = eval_dict.get("samples", [])
+        existing_info = eval_dict.get("info", {})
+        merged_info = {**existing_info, **pipeline_info}
+
+        # Construct the EvaluationResult object
+        result = EvaluationResult(
+            metrics=metrics,
+            samples=samples,
+            info=merged_info
+        )
+
+        return result
