@@ -2,6 +2,7 @@ import logging
 from typing import List, Dict, Any, Optional, Union
 import time
 import litellm
+from tqdm import tqdm
 
 from . import register_model
 from .base import BaseModel
@@ -201,8 +202,9 @@ class LiteLLMBackend(BaseModel):
             batch_size = len(inputs)
             logger.info(f"[LiteLLMBackend] Using auto batch size: {batch_size}")
         
+            logger.info(f"[LiteLLMBackend] Generating text...")
         # Process in batches
-        for start_idx in range(0, len(inputs), batch_size):
+        for start_idx in tqdm(range(0, len(inputs), batch_size), disable = not show_progress):
             batch_items = inputs[start_idx:start_idx + batch_size]
             
             for idx, item in enumerate(batch_items):
@@ -213,9 +215,7 @@ class LiteLLMBackend(BaseModel):
                 if cot and self.cot_trigger:
                     prompt = f"{prompt}\n{self.cot_trigger}"
 
-                logger.info(
-                    f"[LiteLLMBackend] Generating text for item {start_idx+idx+1}/{len(inputs)}: {prompt[:50]}..."
-                )
+                
 
                 try:
                     completion_kwargs = self._prepare_completion_kwargs(prompt, until=until)
