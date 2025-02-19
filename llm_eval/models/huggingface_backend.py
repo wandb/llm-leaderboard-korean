@@ -173,19 +173,15 @@ class HuggingFaceModel(BaseModel):
                         gen_kwargs["stopping_criteria"] = stopping_criteria
 
                     # Generate
+                    # Generate
                     with torch.no_grad():
                         outputs = self.model.generate(**encoded, **gen_kwargs)
-
-                    # For the latest versions of HF, 'outputs' can be either:
-                    # - A dict with "sequences" and "scores" if return_dict_in_generate=True
-                    # - A standard tensor if return_dict_in_generate=False
-                    if return_logits and isinstance(outputs, dict):
-                        sequences = outputs["sequences"]
-                        scores_list = outputs["scores"]  # a list of (batch_size, vocab_size) tensors
-                    elif return_logits and not isinstance(outputs, dict):
-                        sequences = outputs
-                        scores_list = None
-                        logger.warning(" `return_dict_in_generate=True` was set, but output is not a dict. No scores available.")
+                    if isinstance(outputs, dict):
+                        sequences = outputs.get("sequences", outputs)
+                        if return_logits:
+                            scores_list = outputs.get("scores", None)
+                        else:
+                            scores_list = None
                     else:
                         sequences = outputs
                         scores_list = None
