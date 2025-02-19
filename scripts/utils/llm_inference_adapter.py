@@ -155,6 +155,15 @@ def get_llm_inference_engine():
             **cfg.generator,
         )
 
+    elif api_type == "xai":
+        # use LangChain OpenAI integration
+        llm = ChatOpenAI(
+            api_key=os.environ["XAI_API_KEY"],
+            model=cfg.model.pretrained_model_name_or_path,
+            base_url="https://api.x.ai/v1",
+            **cfg.generator,
+        )
+
     # elif api_type == "azure-openai":
     #     llm = AzureChatOpenAI(
     #         api_key=os.environ["OPENAI_API_KEY"],
