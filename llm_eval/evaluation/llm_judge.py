@@ -263,7 +263,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
 
     def __init__(
         self,
-        multi_judge_model: MultiModel,
+        model: MultiModel,
         default_judge_type: Union[str, JudgeType] = "rubric_and_response",
         **kwargs
     ):
