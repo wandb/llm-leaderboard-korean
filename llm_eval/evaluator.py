@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from llm_eval.runner import PipelineRunner
 from llm_eval.utils.logging import get_logger
+from llm_eval.utils.util import EvaluationResult
 
 logger = get_logger(name="evaluator", level=logging.INFO)
 
@@ -99,7 +100,7 @@ class Evaluator:
         reward_params: Optional[Dict[str, Any]] = None,
         scaling_params: Optional[Dict[str, Any]] = None,
         evaluator_params: Optional[Dict[str, Any]] = None,
-    ) -> "EvaluationResult":
+    ) -> EvaluationResult:
         """Runs the full LLM evaluation pipeline.
 
         This involves:
