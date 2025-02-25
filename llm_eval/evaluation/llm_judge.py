@@ -317,23 +317,37 @@ class LLMJudgeEvaluator(BaseEvaluator):
         prompts = []
         judge_types = []
         for s in samples:
-            # Determine judge_type (use default if not provided)
             judge_type_str = s.get("judge_type", self.default_judge_type.value)
-            j_type = JudgeType(judge_type_str)
+            try:
+                j_type = JudgeType(judge_type_str)
+            except Exception as e:
+                logger.error(f"Invalid judge_type '{judge_type_str}' in sample {s}, using default '{self.default_judge_type.value}'.")
+                j_type = self.default_judge_type
 
             template = self.prompt_templates.get(j_type, "")
-            filled_prompt = template.format(
-                rubric=s.get("rubric", ""),
-                response=s.get("prediction", ""),
-                gold=s.get("reference", ""),
-                response_b=s.get("model_response_b", "")
-            )
-
+            try:
+                filled_prompt = template.format(
+                    rubric=s.get("rubric", "").strip(),
+                    response=s.get("prediction", "").strip(),
+                    gold=s.get("reference", "").strip(),
+                    response_b=s.get("model_response_b", "").strip()
+                )
+            except Exception as e:
+                logger.error(f"Error formatting judge prompt for sample {s}: {e}")
+                filled_prompt = "Invalid prompt."
+            if not filled_prompt.strip():
+                logger.warning("Filled judge prompt is empty; assigning default prompt.")
+                filled_prompt = "No prompt provided for judge evaluation."
             prompts.append({"input": filled_prompt})
             judge_types.append(j_type)
 
         # 2) Call multi_judge_model.judge_batch to get raw outputs
-        judged_results = self.multi_judge_model.judge_batch(prompts)
+        try:
+            judged_results = self.multi_judge_model.judge_batch(prompts)
+        except Exception as e:
+            logger.error(f"Error during judge_batch call: {e}")
+            judged_results = [{"prediction": ""} for _ in prompts]
+
 
         total_score = 0.0
         score_count = 0
@@ -341,15 +355,18 @@ class LLMJudgeEvaluator(BaseEvaluator):
         total_items = len(samples)
 
         for sample, out, j_type in zip(samples, judged_results, judge_types):
-            raw_output = out.get("prediction", "")
+            raw_output = out.get("prediction", "").strip()
+            if not raw_output:
+                logger.warning(f"Empty judge output for sample {sample}. Using default error output.")
+                raw_output = "[[score: 0]]"  # 기본값; 필요에 따라 조정
             parser = self.parsers.get(j_type)
-
             try:
                 parsed = parser.parse(raw_output, model_name="JudgeLLM")
             except ValueError as e:
+                logger.error(f"Parser error for sample {sample} with raw_output '{raw_output}': {e}")
                 parsed = {"error": str(e)}
-
-            # Store raw and parsed data
+            if "evaluation" not in sample or not isinstance(sample["evaluation"], dict):
+                sample["evaluation"] = {}
             sample["judge_raw_output"] = raw_output
             sample["judge_parsed"] = parsed
             sample["judge_type"] = j_type.value
@@ -357,7 +374,11 @@ class LLMJudgeEvaluator(BaseEvaluator):
             # is_correct 계산 로직
             is_correct = None
             if "correct" in parsed:
-                is_correct = bool(parsed["correct"])
+                try:
+                    is_correct = bool(parsed["correct"])
+                except Exception as e:
+                    logger.error(f"Error converting 'correct' value {parsed.get('correct')} to bool: {e}")
+                    is_correct = False
                 if is_correct:
                     total_correct += 1
             sample["judge_correct"] = is_correct
@@ -371,12 +392,17 @@ class LLMJudgeEvaluator(BaseEvaluator):
 
             # Check if there's a numeric score
             if "score" in parsed:
-                sc = float(parsed["score"])
-                score_count += 1
-                total_score += sc
-                sample["judge_score"] = sc
-                sample["evaluation"]["score"] = sc
-
+                try:
+                    sc = float(parsed["score"])
+                    score_count += 1
+                    total_score += sc
+                    sample["judge_score"] = sc
+                    sample["evaluation"]["score"] = sc
+                except Exception as e:
+                    logger.error(f"Error converting score {parsed.get('score')} to float: {e}")
+                    sample["judge_score"] = 0.0
+                    sample["evaluation"]["score"] = 0.0
+                    
             # If there's a winner field
             if "winner" in parsed:
                 sample["judge_winner"] = parsed["winner"]
