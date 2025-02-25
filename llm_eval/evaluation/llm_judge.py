@@ -284,8 +284,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
         else:
             self.default_judge_type = default_judge_type
 
-        self.multi_judge_model = multi_judge_model
-
+        self.multi_judge_model = model
         # Define parsers for each judge type
         self.parsers = {
             JudgeType.RUBRIC_AND_RESPONSE: RubricScoreParser(),

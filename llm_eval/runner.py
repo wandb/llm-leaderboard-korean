@@ -147,7 +147,10 @@ class PipelineRunner:
             f"[Pipeline] Loading evaluator: {self.evaluation_method_name} "
             f"with params={self.evaluator_params}"
         )
-        self.evaluator = get_evaluator(self.evaluation_method_name, **self.evaluator_params)
+        if self.evaluation_method_name == "llm_judge":
+            self.evaluator = get_evaluator(self.evaluation_method_name, model=self.model, **self.evaluator_params)
+        else:
+            self.evaluator = get_evaluator(self.evaluation_method_name, **self.evaluator_params)
 
     def run(self) -> EvaluationResult:
         """
