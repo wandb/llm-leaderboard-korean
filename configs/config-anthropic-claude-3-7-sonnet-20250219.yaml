@@ -11,4 +11,4 @@ model:
   pretrained_model_name_or_path: "anthropic/claude-3-7-sonnet-20250219" #if you use openai api, put the name of model
   size_category: "api"
   size: null 
-  release_date: "2/24/2025"
+  release_date: "2/19/2025"
