@@ -189,7 +189,7 @@ class PipelineRunner:
 
         # 3) Evaluation
         logger.info(f"[Pipeline] Evaluating with {self.evaluation_method_name}")
-        eval_dict = self.evaluator.evaluate(predictions, model=None)
+        eval_dict = self.evaluator.evaluate(predictions, model=self.model)
         # eval_dict 예시: {"metrics": {...}, "samples": [...], ...}
 
         # 4) Wrap results into an EvaluationResult

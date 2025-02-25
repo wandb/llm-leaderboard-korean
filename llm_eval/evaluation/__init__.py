@@ -20,16 +20,15 @@ def register_evaluator(name: str):
     return decorator
 
 # 3) Function to create an instance of an Evaluator from the registry
-def get_evaluator(name: str) -> BaseEvaluator:
+def get_evaluator(name: str, **kwargs) -> BaseEvaluator:
     """
-    Retrieves the evaluator class by its name (string), instantiates it, and returns the instance.
-    Additional parameters can be added here if required.
+    Retrieves the evaluator class by its name (string), instantiates it with any additional parameters, and returns the instance.
     """
     if name not in EVALUATION_REGISTRY:
-        raise ValueError(f"Evaluator '{name}' not found in registry. Check available keys: {list(EVALUATION_REGISTRY.keys())}")
+        raise ValueError(f"Evaluator '{name}' not found in registry. Available keys: {list(EVALUATION_REGISTRY.keys())}")
     evaluator_cls = EVALUATION_REGISTRY[name]
-    return evaluator_cls()  # If the __init__ requires no parameters
- 
+    return evaluator_cls(**kwargs)
+
 # 4) Import and register actual evaluator files
 # Import evaluator implementations from files such as logit_based.py, exact_match.py, etc.
 # This can be done via wildcard imports where the classes decorated with @register_evaluator will register themselves,
