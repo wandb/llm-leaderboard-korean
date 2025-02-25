@@ -7,6 +7,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from .base import BaseJudge
 from . import register_model
+from tqdm import tqdm
+
 from llm_eval.utils.logging import get_logger
 
 logger = get_logger(name="huggingface_judge", level=logging.INFO)
@@ -98,7 +100,7 @@ class HuggingFaceJudge(BaseJudge):
         results: List[Dict[str, Any]] = []
         # Process in chunks according to batch_size
         logger.info("starting llm-as-judge")
-        for start_idx in range(0, len(inputs), self.batch_size):
+        for start_idx in tqdm(range(0, len(inputs), self.batch_size)):
             batch = inputs[start_idx : start_idx + self.batch_size]
 
             # Extract prompts
