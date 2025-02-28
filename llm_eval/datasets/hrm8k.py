@@ -84,7 +84,8 @@ class HRM8KDataset(BaseDataset):
         for item in hf_dataset:
             # Extract the 'question' and 'answer' fields from the original data (use empty string if missing)
             query = "put your final answer within \\boxed{}." + item.get("question", "")
-            answer = item.get("answer", "")
+            # answer = item.get("answer", "")
+            answer = str(item.get("answer", ""))
             processed_list.append({
                 "input": query.strip(),
                 "reference": answer.strip(),
