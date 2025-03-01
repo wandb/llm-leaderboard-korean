@@ -30,6 +30,7 @@ MULTILINGUAL_ANSWER_REGEXES = [
     r"답변\s*:",
     r"정답\s*:",
     r"답\s*:",
+    r"답안\s*:",
     r"答案\s*[:：]",
     r"解答\s*[:：]",
     r"回答\s*[:：]",

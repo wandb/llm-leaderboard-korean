@@ -9,7 +9,7 @@ from transformers import StoppingCriteria, StoppingCriteriaList
 from .base import BaseModel
 from . import register_model
 from llm_eval.utils.logging import get_logger
-from llm_eval.utils.prompt_template import extract_final_answer
+from llm_eval.utils.prompt_template import default_cot_parser
 from tqdm import tqdm
 
 logger = get_logger(name="huggingface", level=logging.INFO)
@@ -23,7 +23,7 @@ class HuggingFaceModel(BaseModel):
     Main points:
       - If `return_logits=True`, we call `model.generate(..., return_dict_in_generate=True, output_scores=True)`
         so that "scores" (logits per step) are included in the output, allowing us to compute log probabilities.
-      - If a `cot_parser` function is provided, we can separate chain-of-thought text from the final answer.
+      - If a `cot_parser` function is provided, we can separate chain-of-thought (CoT) text from the final answer.
       - This code avoids using the older GenerationOutput class, which may not be available in recent Transformers versions.
     
     Args:
@@ -34,7 +34,11 @@ class HuggingFaceModel(BaseModel):
         temperature (float): Sampling temperature.
         top_p (float): Nucleus sampling probability.
         do_sample (bool): If True, sampling mode; if False, greedy generation.
-        cot_parser (callable|None): A function that takes a string (generated text) and returns (chain_of_thought, final_answer).
+        batch_size (int): Batch size to use for generation.
+        cot (bool): Whether to use chain-of-thought prompting. If True and `cot_trigger` is provided,
+                    the trigger is appended to the prompt.
+        cot_parser (callable|None): A function that takes a string (generated text) and returns a tuple 
+                    (chain_of_thought, final_answer). If None, no CoT parsing is applied.
         **kwargs: Additional parameters as needed.
     """
 
@@ -48,6 +52,7 @@ class HuggingFaceModel(BaseModel):
         do_sample: bool = True,
         batch_size: int = 1,
         cot: bool = False,
+        cot_parser: Optional[Callable[[str], Tuple[str, str]]] = default_cot_parser,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -71,6 +76,7 @@ class HuggingFaceModel(BaseModel):
         self.do_sample = do_sample
         self.batch_size = batch_size
         self.cot = cot
+        self.cot_parser = cot_parser
 
     def generate_batch(
         self,
