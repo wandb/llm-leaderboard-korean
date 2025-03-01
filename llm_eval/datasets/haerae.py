@@ -98,6 +98,7 @@ class HaeraeDataset(BaseDataset):
         for item in hf_dataset:
             # Extract 'query' and 'answer' fields from the original data (default to empty string if missing)
             query = item.get("query", "")
+            query = query.replace("### 정답", "").strip() # haerae containes '### 정답', but have to be removed for parsing/cot/etc
             answer = item.get("answer", "")
             processed_list.append({
                 "input": query.strip(),

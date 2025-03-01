@@ -324,7 +324,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
                 logger.error(f"Invalid judge_type '{judge_type_str}' in sample {s}, using default '{self.default_judge_type.value}'.")
                 j_type = self.default_judge_type
 
-            template = self.prompt_templates.get(j_type, "")
+            template = self.prompt_templates.get(j_type.name, "")
             try:
                 filled_prompt = template.format(
                     rubric=s.get("rubric", "").strip(),
