@@ -47,6 +47,7 @@ class HuggingFaceModel(BaseModel):
         top_p: float = 0.95,
         do_sample: bool = True,
         batch_size: int = 1,
+        cot: bool = False,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -69,12 +70,12 @@ class HuggingFaceModel(BaseModel):
         self.top_p = top_p
         self.do_sample = do_sample
         self.batch_size = batch_size
+        self.cot = cot
 
     def generate_batch(
         self,
         inputs: List[Dict[str, Any]],
         return_logits: bool = True,
-        cot: bool = False,
         batch_size: Optional[Union[int, str]] = None,  # auto
         until: Optional[Union[str, List[str]]] = None,
         show_progress: bool = True,  # 진행바 표시 여부를 결정하는 인자 추가
@@ -88,8 +89,6 @@ class HuggingFaceModel(BaseModel):
                 A list of items, each containing at least {"input": str, "reference": str, ...}.
             return_logits (bool): 
                 If True, compute log probabilities for the generated tokens and store them in item["logits"].
-            cot (bool): 
-                If True, append self.cot_trigger to the original prompt (if defined) and parse out chain-of-thought.
             batch_size (int | str): 
                 The batch size to use. If "auto", it starts with a default and reduces if OOM occurs.
 
@@ -138,7 +137,7 @@ class HuggingFaceModel(BaseModel):
 
                     # Build prompts
                     prompts = [
-                        f"{item['input']}\n{self.cot_trigger}\n" if (cot and self.cot_trigger) else item["input"]
+                        f"{item['input']}\n{self.cot_trigger}\n" if (self.cot and self.cot_trigger) else item["input"]
                         for item in batch_items
                     ]
 
@@ -197,7 +196,7 @@ class HuggingFaceModel(BaseModel):
                         # Parse CoT if needed
                         final_answer = generated_text
                         chain_of_thought = None
-                        if cot and self.cot_parser is not None:
+                        if self.cot and self.cot_parser is not None:
                             chain_of_thought, final_answer = self.cot_parser(generated_text)
 
                         item["prediction"] = final_answer
