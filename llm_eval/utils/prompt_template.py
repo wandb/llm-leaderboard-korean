@@ -1,28 +1,43 @@
 import re
+from typing import List, Dict, Any, Optional, Callable, Tuple, Union
 
 def extract_final_answer(raw_output: str) -> str:
     """
-    Chain-of-thought(CoT) 등 불필요한 서술이 섞인 raw_output에서
-    MULTILINGUAL_ANSWER_PATTERN을 사용해 실제 최종 답만 추출.
+    Extracts the final answer from a raw output that may contain unnecessary chain-of-thought (CoT) details,
+    using the MULTILINGUAL_ANSWER_PATTERN.
 
-    1) 패턴 매칭: "정답:", "답변:", "Answer:", etc. 뒤에 나오는 텍스트를 그룹(content)으로 캡처
-    2) 찾지 못하면 raw_output 그대로 반환
-    3) 찾았다면, match.group("content")를 줄바꿈 등으로 split해 첫 부분만 사용하거나,
-       strip()만 적용하는 식으로 가공 가능.
+    Steps:
+      1) Pattern matching: Capture the text following markers such as "정답:", "답변:", "Answer:", etc.
+      2) If no match is found, return the original raw_output.
+      3) If a match is found, process the captured group ("content")—for example, split by newline and take the first part,
+         or simply apply strip()—as appropriate.
 
     Returns:
-        str: 추출된 최종 답변(또는 raw_output 전체)
+        str: The extracted final answer (or the original raw_output if no match is found).
     """
     match = re.search(MULTILINGUAL_ANSWER_PATTERN, raw_output, flags=re.DOTALL)
     if match:
-        # group("content")가 실제로 캡처된 "최종 답안 부분"
+        # The "content" group captures the actual final answer part.
         content = match.group("content")
-        # 최종적으로, 첫 줄만 떼거나 전체를 살리거나 -> 상황에 맞게 조정
-        # 여기서는 단순히 strip()만 해준다.
+        # Final processing: here we simply strip the whitespace.
         return content.strip()
     else:
-        # 패턴이 없는 경우 원본 반환
+        # If the pattern is not found, return the original raw output.
         return raw_output
+
+def default_cot_parser(raw_output: str) -> Tuple[str, str]:
+    """
+    Default chain-of-thought (CoT) parser.
+    Uses the extract_final_answer function to extract the final answer from the raw output, 
+    and returns an empty string for the chain-of-thought portion.
+
+    Returns:
+        Tuple[str, str]: A tuple (chain_of_thought, final_answer).
+    """
+    final_answer = extract_final_answer(raw_output)
+    chain_of_thought = ""  # Optionally, add logic here to extract the chain-of-thought portion from raw_output.
+    return chain_of_thought, final_answer
+
     
 MULTILINGUAL_ANSWER_REGEXES = [
     r"Answer\s*:",
