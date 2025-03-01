@@ -28,17 +28,25 @@ def extract_final_answer(raw_output: str) -> str:
 def default_cot_parser(raw_output: str) -> Tuple[str, str]:
     """
     Default chain-of-thought (CoT) parser.
-    Uses the extract_final_answer function to extract the final answer from the raw output, 
-    and returns an empty string for the chain-of-thought portion.
+    Uses the extract_final_answer function to extract the final answer from the raw output,
+    and considers everything before the final answer as the chain-of-thought.
 
     Returns:
         Tuple[str, str]: A tuple (chain_of_thought, final_answer).
     """
     final_answer = extract_final_answer(raw_output)
-    chain_of_thought = ""  # Optionally, add logic here to extract the chain-of-thought portion from raw_output.
+    if final_answer:
+        # Find the last occurrence of the final_answer within raw_output
+        idx = raw_output.rfind(final_answer)
+        if idx != -1:
+            chain_of_thought = raw_output[:idx].strip()
+        else:
+            chain_of_thought = ""
+    else:
+        chain_of_thought = ""
     return chain_of_thought, final_answer
 
-    
+
 MULTILINGUAL_ANSWER_REGEXES = [
     r"Answer\s*:",
     r"Final\s*Answer\s*:",
