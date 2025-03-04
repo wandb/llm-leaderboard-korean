@@ -12,4 +12,4 @@ model:
   size_category: "30B≤"
   base_url: "https://api.deepseek.com/v1"
   size: 685000000000
-  release_date: "26/12/2024"
+  release_date: "12/26/2024"
