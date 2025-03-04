@@ -8,3 +8,4 @@ litellm>=1.59.0
 math-verify
 pandas
 tqdm
+langdetect

@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+"""
+Evaluator CLI 
+
+This module provides a high-level interface to run the full LLM evaluation pipeline,
+which includes dataset loading, model inference (with optional scaling),
+evaluation, and additional post-processing such as language penalization.
+"""
+
 import argparse
 import json
 import logging
@@ -11,16 +20,11 @@ logger = get_logger(name="evaluator", level=logging.INFO)
 
 
 def _parse_json_str(json_str: Optional[str]) -> Dict[str, Any]:
-    """Parses a JSON string into a dictionary.
+    """
+    Parses a JSON string into a dictionary.
 
     If the input string is None or empty, returns an empty dictionary.
-    If parsing fails due to `json.JSONDecodeError`, logs a warning and returns an empty dictionary.
-
-    Args:
-        json_str (Optional[str]): The JSON string to parse.
-
-    Returns:
-        Dict[str, Any]: The parsed dictionary. Empty if input is None or parsing fails.
+    If parsing fails due to a JSONDecodeError, logs a warning and returns {}.
     """
     if not json_str:
         return {}
@@ -32,24 +36,11 @@ def _parse_json_str(json_str: Optional[str]) -> Dict[str, Any]:
 
 
 class Evaluator:
-    """High-level interface for running the LLM evaluation pipeline.
-
-    This class can optionally handle:
-      - A main generation model,
-      - A judge model (LLM-as-a-Judge), and
-      - A reward model (for reward scoring).
-
-    If both `judge_model` and `reward_model` are `None`, a single model backend
-    is loaded. Otherwise, it constructs a 'multi' backend (MultiModel) that
-    contains the generate, judge, and/or reward models.
-
-    Attributes:
-        default_model_backend (str): Name of the default generation model backend.
-        default_judge_backend (Optional[str]): Name of the default judge model backend.
-        default_reward_backend (Optional[str]): Name of the default reward model backend.
-        default_scaling_method (Optional[str]): Name of the default scaling method (e.g., 'beam_search').
-        default_evaluation_method (str): Name of the default evaluation method (e.g., 'string_match').
-        default_split (str): Default dataset split ('train', 'valid', or 'test').
+    """
+    High-level interface for running the full LLM evaluation pipeline.
+    This class leverages PipelineRunner internally to connect dataset, model,
+    scaling method, and evaluator components. It supports judge/reward backends
+    via MultiModel if specified.
     """
 
     def __init__(
@@ -61,21 +52,16 @@ class Evaluator:
         default_evaluation_method: str = "string_match",
         default_split: str = "test",
     ):
-        """Initializes the Evaluator with default backend configurations.
+        """
+        Initializes the Evaluator with default backend configurations.
 
         Args:
-            default_model_backend (str, optional):
-                Name of the default generation model backend. Defaults to "huggingface".
-            default_judge_backend (Optional[str], optional):
-                Name of the default judge model backend. If None, no judge backend is used by default.
-            default_reward_backend (Optional[str], optional):
-                Name of the default reward model backend. If None, no reward backend is used by default.
-            default_scaling_method (Optional[str], optional):
-                Name of the default scaling method (e.g., "beam_search"). Defaults to None.
-            default_evaluation_method (str, optional):
-                Name of the default evaluation method. Defaults to "string_match".
-            default_split (str, optional):
-                Default dataset split. Typically "train", "valid", or "test". Defaults to "test".
+            default_model_backend (str): Default generation model backend.
+            default_judge_backend (Optional[str]): Default judge model backend (if any).
+            default_reward_backend (Optional[str]): Default reward model backend (if any).
+            default_scaling_method (Optional[str]): Default scaling method (e.g., "beam_search").
+            default_evaluation_method (str): Default evaluation method (e.g., "string_match").
+            default_split (str): Default dataset split (e.g., "test").
         """
         self.default_model_backend = default_model_backend
         self.default_judge_backend = default_judge_backend
@@ -100,55 +86,36 @@ class Evaluator:
         reward_params: Optional[Dict[str, Any]] = None,
         scaling_params: Optional[Dict[str, Any]] = None,
         evaluator_params: Optional[Dict[str, Any]] = None,
+        language_penalize: bool = True,
     ) -> EvaluationResult:
-        """Runs the full LLM evaluation pipeline.
-
-        This involves:
-          1) Loading the dataset,
-          2) Loading the model (or constructing a MultiModel if judge/reward models are provided),
-          3) Applying the scaling method (if any),
-          4) Performing the evaluation,
-          5) Returning the final results wrapped in an `EvaluationResult` object.
+        """
+        Runs the full LLM evaluation pipeline, which involves:
+          1. Loading the dataset,
+          2. Loading the model (or constructing a MultiModel if judge/reward are provided),
+          3. Applying the scaling method (if specified),
+          4. Evaluating the generated predictions,
+          5. Optionally applying a language penalizer,
+          6. Returning the final results as an EvaluationResult.
 
         Args:
-            model (Optional[str], optional):
-                The main model backend name to use. If None, uses `default_model_backend`.
-            judge_model (Optional[str], optional):
-                The judge model backend name. If provided, triggers MultiModel usage.
-            reward_model (Optional[str], optional):
-                The reward model backend name. If provided, triggers MultiModel usage.
-            dataset (str, optional):
-                The dataset name in the registry. Defaults to "haerae_bench".
-            subset (Union[str, List[str], None], optional):
-                The subset or config for the dataset (e.g., "csat_geo"). Defaults to None.
-            split (Optional[str], optional):
-                Which data split to use. If None, uses `default_split`. Defaults to None.
-            scaling_method (Optional[str], optional):
-                Name of the scaling method in the registry (e.g., "beam_search").
-                If None, uses `default_scaling_method`. Defaults to None.
-            evaluation_method (Optional[str], optional):
-                Name of the evaluation method in the registry (e.g., "string_match").
-                If None, uses `default_evaluation_method`. Defaults to None.
-            dataset_params (Optional[Dict[str, Any]], optional):
-                Additional parameters for the dataset loader.
-            model_params (Optional[Dict[str, Any]], optional):
-                Additional parameters for the main model. Only used if not in MultiModel mode.
-            judge_params (Optional[Dict[str, Any]], optional):
-                Additional parameters for the judge model in MultiModel mode.
-            reward_params (Optional[Dict[str, Any]], optional):
-                Additional parameters for the reward model in MultiModel mode.
-            scaling_params (Optional[Dict[str, Any]], optional):
-                Additional parameters for the scaling method (e.g., beam width, number of samples).
-            evaluator_params (Optional[Dict[str, Any]], optional):
-                Additional parameters for the evaluator (e.g., CoT flags).
+            model (Optional[str]): Main model backend name. Defaults to default_model_backend.
+            judge_model (Optional[str]): Judge model backend name.
+            reward_model (Optional[str]): Reward model backend name.
+            dataset (str): Dataset name (registry key). Defaults to "haerae_bench".
+            subset (Union[str, List[str], None]): Dataset subset/config name.
+            split (Optional[str]): Dataset split (e.g., "train", "test"). Defaults to default_split.
+            scaling_method (Optional[str]): Scaling method name (registry key). Defaults to default_scaling_method.
+            evaluation_method (Optional[str]): Evaluation method name (registry key). Defaults to default_evaluation_method.
+            dataset_params (Optional[Dict[str, Any]]): Additional parameters for dataset loading.
+            model_params (Optional[Dict[str, Any]]): Additional parameters for the main model.
+            judge_params (Optional[Dict[str, Any]]): Additional parameters for the judge model.
+            reward_params (Optional[Dict[str, Any]]): Additional parameters for the reward model.
+            scaling_params (Optional[Dict[str, Any]]): Additional parameters for the scaling method.
+            evaluator_params (Optional[Dict[str, Any]]): Additional parameters for the evaluator.
+            language_penalize (bool): If True, apply the language penalizer to predictions.
 
         Returns:
-            EvaluationResult:
-                An object containing the evaluation metrics, sample-level outputs,
-                and possibly extra information about the run.
-
-        Raises:
-            RuntimeError: If any required configuration is invalid or missing.
+            EvaluationResult: Object containing evaluation metrics, sample outputs, and run info.
         """
         from llm_eval.utils.util import EvaluationResult
 
@@ -164,31 +131,26 @@ class Evaluator:
         use_multi = (judge_backend_name is not None) or (reward_backend_name is not None)
 
         if use_multi:
-            # Construct MultiModel config
             multi_config = {
                 "generate_model": None,
                 "judge_model": None,
-                "reward_model": None
+                "reward_model": None,
             }
-
-            # Fill the multi_config dictionary
             if model_backend_name:
                 multi_config["generate_model"] = {
                     "name": model_backend_name,
-                    "params": model_params or {}
+                    "params": model_params or {},
                 }
             if judge_backend_name:
                 multi_config["judge_model"] = {
                     "name": judge_backend_name,
-                    "params": judge_params or {}
+                    "params": judge_params or {},
                 }
             if reward_backend_name:
                 multi_config["reward_model"] = {
                     "name": reward_backend_name,
-                    "params": reward_params or {}
+                    "params": reward_params or {},
                 }
-
-            # Use "multi" backend in the pipeline runner
             runner = PipelineRunner(
                 dataset_name=dataset,
                 subset=subset,
@@ -200,9 +162,9 @@ class Evaluator:
                 model_backend_params=multi_config,
                 scaling_params=scaling_params or {},
                 evaluator_params=evaluator_params or {},
+                language_penalize=language_penalize,
             )
         else:
-            # Use a single model backend
             runner = PipelineRunner(
                 dataset_name=dataset,
                 subset=subset,
@@ -214,6 +176,7 @@ class Evaluator:
                 model_backend_params=model_params or {},
                 scaling_params=scaling_params or {},
                 evaluator_params=evaluator_params or {},
+                language_penalize=language_penalize,
             )
 
         eval_result: EvaluationResult = runner.run()
@@ -221,43 +184,45 @@ class Evaluator:
 
 
 def main():
-    """Command-line entry point for the Evaluator.
-
-    This CLI interface supports:
-      - A main model, a judge model, and a reward model (each optional except the main model).
-      - A dataset name, subset, and split.
-      - A scaling method and evaluation method.
-      - Additional JSON-encoded parameters for dataset, model, judge, reward, scaling, and evaluator.
-
-    The pipeline results are saved to a JSON file if `--output_file` is specified,
-    otherwise printed to stdout.
-
-    Raises:
-        SystemExit: If argparse fails or invalid command-line options are given.
+    """
+    Command-line entry point for the Evaluator CLI.
+    Supports configuration via JSON parameters for dataset, model, scaling, and evaluator.
+    The final evaluation results are output as JSON, either to stdout or to a specified file.
     """
     parser = argparse.ArgumentParser(description="LLM Evaluator CLI (Supports Judge/Reward)")
     parser.add_argument("--model", type=str, default=None, help="Main model backend name")
     parser.add_argument("--judge_model", type=str, default=None, help="Judge model backend name")
     parser.add_argument("--reward_model", type=str, default=None, help="Reward model backend name")
-
     parser.add_argument("--dataset", type=str, default="haerae_bench", help="Dataset name (registry key)")
     parser.add_argument("--subset", type=str, default=None, help="Dataset subset/config name")
-    parser.add_argument("--split", type=str, default="test", help="Dataset split (e.g. 'train', 'test')")
+    parser.add_argument("--split", type=str, default="test", help="Dataset split (e.g., 'train', 'test')")
     parser.add_argument("--scaling_method", type=str, default=None, help="Scaling method (registry key)")
     parser.add_argument("--evaluation_method", type=str, default="string_match", help="Evaluation method (registry key)")
-    parser.add_argument("--output_file", type=str, default=None, help="Where to store results (JSON)")
+    parser.add_argument("--output_file", type=str, default=None, help="File path to save JSON results")
 
-    # JSON parameters
-    parser.add_argument("--dataset_params", type=str, default=None, help="JSON string for dataset params")
-    parser.add_argument("--model_params", type=str, default=None, help="JSON string for main model params")
-    parser.add_argument("--judge_params", type=str, default=None, help="JSON string for judge model params")
-    parser.add_argument("--reward_params", type=str, default=None, help="JSON string for reward model params")
-    parser.add_argument("--scaling_params", type=str, default=None, help="JSON string for scaling method params")
-    parser.add_argument("--evaluator_params", type=str, default=None, help="JSON string for evaluator params")
+    # Additional parameters passed as JSON strings
+    parser.add_argument("--dataset_params", type=str, default=None, help="JSON string for dataset parameters")
+    parser.add_argument("--model_params", type=str, default=None, help="JSON string for main model parameters")
+    parser.add_argument("--judge_params", type=str, default=None, help="JSON string for judge model parameters")
+    parser.add_argument("--reward_params", type=str, default=None, help="JSON string for reward model parameters")
+    parser.add_argument("--scaling_params", type=str, default=None, help="JSON string for scaling method parameters")
+    parser.add_argument("--evaluator_params", type=str, default=None, help="JSON string for evaluator parameters")
+
+    # Language penalizer flags and target language parameter
+    parser.add_argument("--language_penalize", action="store_true", help="Enable language penalizer")
+    parser.add_argument("--no_language_penalize", action="store_true", help="Disable language penalizer")
+    parser.add_argument("--target_lang", type=str, default="ko", help="Target language code for penalizer (e.g., 'ko')")
 
     args = parser.parse_args()
 
-    # Parse the JSON strings
+    # Determine language penalize flag based on arguments
+    language_penalize_flag = True
+    if args.no_language_penalize:
+        language_penalize_flag = False
+    elif args.language_penalize:
+        language_penalize_flag = True
+
+
     dataset_params = _parse_json_str(args.dataset_params)
     model_params = _parse_json_str(args.model_params)
     judge_params = _parse_json_str(args.judge_params)
@@ -265,7 +230,14 @@ def main():
     scaling_params = _parse_json_str(args.scaling_params)
     evaluator_params = _parse_json_str(args.evaluator_params)
 
-    evaluator = Evaluator()
+    evaluator = Evaluator(
+        default_model_backend="huggingface",
+        default_judge_backend=None,
+        default_reward_backend=None,
+        default_scaling_method=None,
+        default_evaluation_method="string_match",
+        default_split="test",
+    )
 
     eval_result = evaluator.run(
         model=args.model,
@@ -282,9 +254,9 @@ def main():
         reward_params=reward_params,
         scaling_params=scaling_params,
         evaluator_params=evaluator_params,
+        language_penalize=language_penalize_flag,
     )
 
-    # Convert EvaluationResult to dict for serialization
     result_dict = eval_result.to_dict()
 
     if args.output_file:
@@ -293,3 +265,7 @@ def main():
         print(f"Results saved to {args.output_file}")
     else:
         print(json.dumps(result_dict, ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    main()
