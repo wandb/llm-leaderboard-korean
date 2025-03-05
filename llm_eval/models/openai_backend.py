@@ -63,13 +63,12 @@ class OpenAIModel(BaseModel):
         super().__init__(**kwargs)
         if not model_name:
             raise ValueError("model_name is required")
-        if not api_key:
-            raise ValueError("api_key is required")
         if not api_base:
             raise ValueError("api_base is required")
         
         # Set up OpenAI API credentials
-        openai.api_key = api_key
+        if api_key:
+            openai.api_key = api_key
         openai.api_base = api_base
         
         self.model_name = model_name
