@@ -36,10 +36,16 @@ class HaeraeDataset(BaseDataset):
         dataset_name: str = "HAERAE-HUB/HAE_RAE_BENCH_1.1",
         subset: Optional[Union[str, list]] = None,
         split: str = "test",
+        base_prompt_template: Optional[str] = None,
         **kwargs
     ):
-        super().__init__(dataset_name, split=split, subset=subset, **kwargs)
-        
+        if base_prompt_template is None:
+            base_prompt_template = (
+                "다음은 객관식 문제입니다. 당신의 추론 과정을 간결하게 요약한 후, "
+                "\"따라서, 정답은: X\"라고 결론지으십시오. 여기서 X는 (A), (B), (C), (D), (E) 중 하나입니다. {query}"
+            )
+        super().__init__(dataset_name, split=split, subset=subset, base_prompt_template=base_prompt_template, **kwargs)
+
     def load(self) -> List[Dict[str, Any]]:
         """
         Loads the data and returns it in the format:
@@ -96,12 +102,14 @@ class HaeraeDataset(BaseDataset):
         options = ["(A)", "(B)", "(C)", "(D)", "(E)"]
 
         for item in hf_dataset:
-            # Extract 'query' and 'answer' fields from the original data (default to empty string if missing)
             query = item.get("query", "")
             query = query.replace("### 정답", "").strip() # haerae containes '### 정답', but have to be removed for parsing/cot/etc
+            if self.base_prompt_template:
+                query = self.base_prompt_template.format(query=query)
+            
             answer = item.get("answer", "")
             processed_list.append({
-                "input": query.strip(),
+                "input": query,
                 "reference": answer.strip(),
                 "options": options,
                 "_subset_name": subset_name,

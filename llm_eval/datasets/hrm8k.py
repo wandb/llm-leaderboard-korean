@@ -8,11 +8,12 @@ class HRM8KDataset(BaseDataset):
     """
     HRM8K Dataset Class.
 
-    - subset: None -> Load the entire dataset
-              list[str] -> Load and combine only the specified subsets
-              str -> Load only the specified subset
-    - Adds a '_subset_name' field to indicate from which subtask the data is loaded
-      (to differentiate scores by subset during evaluation)
+    - subset: 
+         None -> Load the entire dataset
+         list[str] -> Load and combine only the specified subsets
+         str -> Load only the specified subset
+    - Adds a '_subset_name' field to indicate from which subtask the data is loaded,
+      which is used to differentiate scores by subset during evaluation.
 
     Example usage:
         ds = HRM8KDataset(
@@ -34,25 +35,38 @@ class HRM8KDataset(BaseDataset):
         dataset_name: str = "HAERAE-HUB/HRM8K",
         subset: Optional[Union[str, list]] = None,
         split: str = "test",
+        base_prompt_template: Optional[str] = None,
         **kwargs
     ):
-        super().__init__(dataset_name, split=split, subset=subset, **kwargs)
+        """
+        Initializes the HRM8K dataset.
+
+        Args:
+            dataset_name (str): Unique identifier for the dataset.
+            subset (str or list[str] or None): Subset(s) to load.
+            split (str): The dataset split, e.g., "train", "test", or "validation".
+            base_prompt_template (str, optional): A prompt template to format the input. 
+                If not provided, a default template is used.
+            **kwargs: Additional parameters for dataset loading (e.g., HF config, revision, use_auth_token).
+        """
+        super().__init__(dataset_name, split=split, subset=subset, base_prompt_template=base_prompt_template, **kwargs)
         
     def load(self) -> List[Dict[str, Any]]:
         """
-        Loads the data and returns it in the format:
-        [{"input":..., "reference":..., "_subset_name":...}, ...]
+        Loads the dataset and converts it into a standardized format.
+
+        Returns:
+            List[Dict[str, Any]]: A list of processed samples, where each sample is a dictionary with:
+                - "input": The formatted prompt.
+                - "reference": The expected answer.
+                - "_subset_name": The name of the subset from which the sample was loaded.
         """
-        # 1) Split based on the type of subset provided
+        # If no subset is specified, use the default list of subsets.
         if self.subset is None:
-            self.subset = ['GSM8K', 
-                           'KSM', 
-                           'MATH', 
-                           'MMMLU', 
-                           'OMNI_MATH']
+            self.subset = ['GSM8K', 'KSM', 'MATH', 'MMMLU', 'OMNI_MATH']
 
         if isinstance(self.subset, list):
-            # Case with multiple subsets
+            # Load and combine multiple subsets.
             all_items = []
             for sub in self.subset:
                 partial_data = load_dataset(
@@ -63,8 +77,8 @@ class HRM8KDataset(BaseDataset):
                 )
                 all_items.extend(self._convert_to_list(partial_data, subset_name=sub))
             return all_items
-
-        else:  # subset is a single string
+        else:
+            # Load a single subset.
             raw_data = load_dataset(
                 self.dataset_name,
                 self.subset,
@@ -75,19 +89,32 @@ class HRM8KDataset(BaseDataset):
 
     def _convert_to_list(self, hf_dataset, subset_name: str) -> List[Dict[str, Any]]:
         """
-        Iterates over the HuggingFace Dataset (hf_dataset) and converts each entry to:
-        {"input":..., "reference":...,  "_subset_name": subset_name}
+        Converts the HuggingFace Dataset object into a standardized format.
+
+        English Comments:
+        - Iterates over each sample in the HuggingFace dataset and constructs a formatted input using a prompt template.
+        - If `self.base_prompt_template` is provided, it is used to format the prompt; otherwise, a default template is applied.
+        - The default template instructs the model to "put your final answer within \\boxed{}" and then shows the question.
+        - Each processed sample includes the "input", "reference", and "_subset_name" fields.
+
+        Returns:
+            List[Dict[str, Any]]: A list of processed samples.
         """
         processed_list = []
-        # Fixed options A~E
-
+        # Define a default prompt template if none is provided.
+        default_template = "put your final answer within \\boxed{}.\nQuestion: {question}"
+        
         for item in hf_dataset:
-            # Extract the 'question' and 'answer' fields from the original data (use empty string if missing)
-            query = "put your final answer within \\boxed{}." + item.get("question", "")
-            # answer = item.get("answer", "")
+            # Extract and clean the question text.
+            raw_question = item.get("question", "").strip()
+            # Use the provided base_prompt_template or fall back to the default template.
+            template = self.base_prompt_template if self.base_prompt_template else default_template
+            formatted_query = template.format(question=raw_question)
+            
+            # Extract the answer and ensure it is a string.
             answer = str(item.get("answer", ""))
             processed_list.append({
-                "input": query.strip(),
+                "input": formatted_query.strip(),
                 "reference": answer.strip(),
                 "_subset_name": subset_name,
             })
@@ -96,8 +123,10 @@ class HRM8KDataset(BaseDataset):
     def get_raw_samples(self) -> Any:
         """
         Returns the raw dataset.
-        If multiple subsets are specified, returns a list; if a single subset or None is specified,
-        returns a single Dataset (simple example).
+
+        Returns:
+            Any: If multiple subsets are specified, returns a list of Dataset objects;
+                 if a single subset or None is specified, returns a single Dataset object.
         """
         if self.subset is None:
             return load_dataset(self.dataset_name, split=self.split, **self.kwargs)
@@ -119,7 +148,10 @@ class HRM8KDataset(BaseDataset):
 
     def info(self) -> Dict[str, Any]:
         """
-        Returns meta information related to the dataset.
+        Returns metadata information about the dataset.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the dataset name, subset, split, and a description.
         """
         return {
             "dataset_name": self.dataset_name,
@@ -127,7 +159,7 @@ class HRM8KDataset(BaseDataset):
             "split": self.split,
             "description": (
                 "HRM8K dataset. "
-                "If subset is a list -> loads partial subsets, "
+                "If subset is a list -> loads multiple subsets, "
                 "if subset is a string -> loads a single subset."
             ),
             "evaluation_only": None

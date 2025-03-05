@@ -39,6 +39,7 @@ class K2_EvalDataset(BaseDataset):
         dataset_name: str = "HAERAE-HUB/K2-Eval",
         subset: Optional[Union[str, list]] = None,
         split: str = "test",
+        base_prompt_template: Optional[str] = None,
         **kwargs
     ):
         super().__init__(dataset_name, split=split, subset=subset, **kwargs)

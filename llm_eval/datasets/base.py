@@ -18,7 +18,7 @@ class BaseDataset:
       - info(): Provides metadata about the dataset.
     """
 
-    def __init__(self, dataset_name: str, split: str = "test", subset: str = None, **kwargs):
+    def __init__(self, dataset_name: str, split: str = "test", subset: str = None, base_prompt_template : str = None, **kwargs):
         """
         Args:
             dataset_name (str):
@@ -33,6 +33,7 @@ class BaseDataset:
         self.dataset_name = dataset_name
         self.split = split
         self.subset = subset
+        self.base_prompt_template = base_prompt_template
         self.kwargs = kwargs  # Store additional parameters for extensibility
 
     def load(self) -> List[Dict[str, Any]]:
