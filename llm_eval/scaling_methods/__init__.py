@@ -33,4 +33,4 @@ def load_scaling_method(name: str, **kwargs) -> BaseScalingMethod:
 # 4) Import modules to trigger registration via decorators
 from .self_consistency import SelfConsistencyScalingMethod
 from .best_of_n import BestOfN
-# from .beam_search import BeamSearch
+from .beam_search import BeamSearch
