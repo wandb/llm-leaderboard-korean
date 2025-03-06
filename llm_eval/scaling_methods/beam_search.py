@@ -1,7 +1,7 @@
 import copy
 import logging
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, Union
 
 import numpy as np
 import torch
@@ -11,6 +11,7 @@ from tqdm import tqdm
 from .base import BaseScalingMethod
 from . import register_scaling_method
 from llm_eval.models.base import BaseModel
+from llm_eval.models.multi import MultiModel
 from llm_eval.utils.logging import get_logger
 
 logger = get_logger(name="beam_search", level=logging.INFO)
@@ -65,7 +66,7 @@ class BeamSearch(BaseScalingMethod):
 
     def __init__(
         self,
-        model: BaseModel = None,
+        model: Union[BaseModel, Multimodel] = None,
         beam_size: int = 4,
         max_tokens: int = 50,
         agg_strategy: str = "sum",  # Options: "sum", "mean", "max"
