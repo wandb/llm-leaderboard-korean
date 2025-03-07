@@ -68,8 +68,8 @@ class BeamSearch(BaseScalingMethod):
         model: Union[BaseModel, MultiModel] = None,
         beam_size: int = 4,
         max_tokens: int = 50,
-        agg_strategy: str = "sum",  
-        batch_size: int = 1,       
+        agg_strategy: str = "sum",
+        batch_size: int = 1,
         **kwargs
     ):
         """
@@ -121,29 +121,21 @@ class BeamSearch(BaseScalingMethod):
                 sample_beams.append(beams)
                 sample_finished_beams.append([])
 
-      
             for _ in range(self.max_tokens):
-                global_active_beams = []  
-                
+                global_active_beams = []
                 for s_idx, beams in enumerate(sample_beams):
-                    
                     active = [beam for beam in beams if not beam.pruned and not beam.completed]
                     if not active:
                         continue
-                    
                     if len(active) < self.beam_size:
                         repeats = (self.beam_size // len(active)) + 1
                         active = (active * repeats)[: self.beam_size]
-
                         active = [copy.deepcopy(b) for b in active]
-                 
                     for beam in active:
                         global_active_beams.append((s_idx, beam))
-              
                 if not global_active_beams:
                     break
 
-             
                 batch_inputs = [
                     {"input": beam.prompt + beam.current_text} for (_, beam) in global_active_beams
                 ]
@@ -165,7 +157,6 @@ class BeamSearch(BaseScalingMethod):
                         token_log_probs = out["logits"].get("token_log_probs", [])
                         if token_log_probs:
                             beam.score_history.append(token_log_probs[0])
-            
                     if token_text.strip() == "" or beam.completion_tokens >= self.max_tokens:
                         beam.completed = True
                         sample_finished_beams[s_idx].append(beam)
