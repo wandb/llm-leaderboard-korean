@@ -17,13 +17,14 @@ from llm_eval.utils.logging import get_logger
 
 logger = get_logger(name="openai_backend", level=logging.INFO)
 
+
 @register_model("openai")
 class OpenAIModel(BaseModel):
     """
     A production-grade OpenAI API backend model that supports multimodal input,
     chain-of-thought (CoT) prompting, and concurrent batch processing using multi-threading.
     
-    This implementation handles both Chat and Completions API calls based on the use_chat_api flag.
+    This implementation handles both Chat and Completions API calls based on the `use_chat_api` flag.
     It appends a CoT trigger if enabled and uses a CoT parser to extract a chain-of-thought and final answer.
     
     Key Features:
@@ -58,6 +59,7 @@ class OpenAIModel(BaseModel):
         cot_parser: Optional[Callable[[str], Tuple[str, str]]] = None,
         batch_size: int = 8,
         max_retries: int = 3,
+        cot: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -79,8 +81,10 @@ class OpenAIModel(BaseModel):
         # Chain-of-thought settings
         self.cot_trigger = cot_trigger
         self.cot_parser = cot_parser
+        # Store default chain-of-thought flag from initialization
+        self.cot = cot
         
-        # Batch and retry settings
+        # Batch processing and retry settings
         self.batch_size = batch_size
         self.max_retries = max_retries
         
@@ -139,13 +143,14 @@ class OpenAIModel(BaseModel):
         return_logits: bool = False,
         use_chat_api: Optional[bool] = None,
         until: Optional[Union[str, List[str]]] = None,
+        cot: bool = False,
         **kwargs,
     ) -> Dict[str, Any]:
         """
         Constructs the payload for an API call.
         
-        Supports both Chat and Completions APIs. If chain-of-thought (CoT) is enabled,
-        the CoT trigger is appended to the prompt.
+        Supports both Chat and Completions APIs. If chain-of-thought (CoT) is enabled
+        (determined by the explicit parameter 'cot'), the CoT trigger is appended to the prompt.
         """
         params = self.default_params.copy()
         params.update(kwargs)
@@ -163,10 +168,10 @@ class OpenAIModel(BaseModel):
             messages = []
             if self.system_message:
                 messages.append({"role": "system", "content": self.system_message})
-            # Process input: append CoT trigger if enabled
+            # Process input: append CoT trigger if CoT is enabled via the explicit 'cot' parameter
             if isinstance(inputs, str):
                 prompt_text = inputs
-                if self.cot and self.cot_trigger:
+                if cot and self.cot_trigger:
                     prompt_text = f"{inputs}\n{self.cot_trigger}\n"
                 messages.append({"role": "user", "content": prompt_text})
             elif isinstance(inputs, list):
@@ -194,7 +199,7 @@ class OpenAIModel(BaseModel):
             payload["messages"] = messages
         else:
             # For the Completions API, use the prompt field.
-            prompt_text = inputs if not (self.cot and self.cot_trigger) else f"{inputs}\n{self.cot_trigger}\n"
+            prompt_text = inputs if not (cot and self.cot_trigger) else f"{inputs}\n{self.cot_trigger}\n"
             payload["prompt"] = prompt_text
             payload["logprobs"] = params.get("logprobs") if return_logits else None
         
@@ -203,7 +208,7 @@ class OpenAIModel(BaseModel):
             if param in params:
                 payload[param] = params[param]
         
-        # Remove keys with None values
+        # Remove any keys with None values.
         return {k: v for k, v in payload.items() if v is not None}
     
     def _generate_single(
@@ -211,15 +216,17 @@ class OpenAIModel(BaseModel):
         input_item: Dict[str, Any],
         return_logits: bool,
         until: Optional[Union[str, List[str]]],
+        cot: bool,
         **kwargs,
     ) -> Dict[str, Any]:
         """
         Generates text for a single input item with retry logic and exponential backoff.
         
         Args:
-            input_item (Dict[str, Any]): An input item containing at least "input".
+            input_item (Dict[str, Any]): An input item containing at least the "input" key.
             return_logits (bool): Whether to return logits.
-            until (Optional[Union[str, List[str]]]): Optional stopping criteria.
+            until (Optional[Union[str, List[str]]]): Optional stop criteria.
+            cot (bool): Whether to enable chain-of-thought prompting.
             **kwargs: Additional parameters to pass to the API.
         
         Returns:
@@ -228,15 +235,16 @@ class OpenAIModel(BaseModel):
         result = None
         for attempt in range(self.max_retries):
             try:
+                # Explicitly pass the 'cot' parameter to _create_payload.
                 payload = self._create_payload(
                     input_item["input"],
                     return_logits=return_logits,
                     until=until,
-                    cot=kwargs.get("cot", False),
+                    cot=cot,
                     **kwargs,
                 )
                 if not self.use_chat_api:
-                    # Call the traditional completions API
+                    # Call the traditional completions API.
                     response = openai.Completion.create(**payload)
                     result = {
                         "prediction": response.choices[0].text,
@@ -248,7 +256,7 @@ class OpenAIModel(BaseModel):
                             "tokens": response.choices[0].logprobs.tokens,
                         })
                 else:
-                    # Call the Chat API
+                    # Call the Chat API.
                     response = openai.ChatCompletion.create(**payload)
                     result = {
                         "prediction": response.choices[0].message.content,
@@ -256,13 +264,13 @@ class OpenAIModel(BaseModel):
                     }
                     if return_logits and hasattr(response.choices[0], "logprobs"):
                         result["logprobs"] = response.choices[0].logprobs
-                break  # Exit retry loop if successful
+                break  # Exit the retry loop if successful.
             except Exception as e:
                 if attempt == self.max_retries - 1:
                     error_msg = f"Error after {self.max_retries} attempts: {str(e)}"
                     raise RuntimeError(error_msg) from e
                 else:
-                    # Exponential backoff
+                    # Exponential backoff before retrying.
                     time.sleep(min(2 ** attempt, 32))
         return result
     
@@ -285,32 +293,33 @@ class OpenAIModel(BaseModel):
         each call is retried with exponential backoff.
         
         Args:
-            inputs (List[Dict[str, Any]]): List of input items. Each item must include "input" and optionally "reference".
-            return_logits (bool): If True, include logits in the output (if supported).
+            inputs (List[Dict[str, Any]]): A list of input items. Each item must include at least the "input" key,
+                                           and optionally a "reference" key.
+            return_logits (bool): If True, includes logits in the output (if supported).
             use_chat_api (Optional[bool]): Overrides the instance's use_chat_api flag if provided.
             until (Optional[Union[str, List[str]]]): Stop sequence(s) for generation.
-            cot (bool): If True, enable chain-of-thought processing.
+            cot (bool): If True, enables chain-of-thought processing.
             max_retries (int | None): Maximum retry attempts for each API call (defaults to self.max_retries).
-            show_progress (bool): If True, display a progress bar.
+            show_progress (bool): If True, displays a progress bar.
             **kwargs: Additional API parameters.
         
         Returns:
-            List[Dict[str, Any]]: The list of input items updated with generation results.
-                Each item will have "prediction" and "finish_reason" keys, and if CoT is enabled,
-                "chain_of_thought" will be added.
+            List[Dict[str, Any]]: A list of input items updated with generation results.
+                                  Each item will have "prediction" and "finish_reason" keys,
+                                  and if CoT is enabled, "chain_of_thought" will also be added.
         """
         if max_retries is None:
             max_retries = self.max_retries
 
         results = []
-        # Use the batch_size as the number of worker threads.
+        # Use the instance's batch_size as the number of worker threads.
         max_workers = self.batch_size
 
         def process_item(item: Dict[str, Any]) -> Dict[str, Any]:
-            # Create a deep copy to preserve original input
+            # Create a deep copy of the input to preserve the original data.
             input_copy = deepcopy(item)
             result = self._generate_single(input_copy, return_logits, until, cot=cot, **kwargs)
-            # If chain-of-thought is enabled and a parser is provided, parse the generated text.
+            # If CoT is enabled and a parser is provided, apply CoT parsing to the generated text.
             if result and result.get("prediction") is not None and cot and self.cot_parser:
                 generated_text = result["prediction"]
                 cot_text, final_answer = self.cot_parser(generated_text)
