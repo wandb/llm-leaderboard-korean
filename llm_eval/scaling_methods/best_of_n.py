@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from llm_eval.models.base import BaseModel
+from llm_eval.models.multi import MultiModel
 from .base import BaseScalingMethod
 from . import register_scaling_method
 from llm_eval.utils.logging import get_logger
@@ -24,10 +24,10 @@ class BestOfN(BaseScalingMethod):
       - We select the candidate with the highest score for each sample.
     """
 
-    def __init__(self, model: BaseModel = None, n: int = 5, batch_size: int = 1, **kwargs):
+    def __init__(self, model: MultiModel = None, n: int = 5, batch_size: int = 1, **kwargs):
         """
         Args:
-            model (BaseModel): The model backend (could be MultiModel).
+            model (MultiModel): The model backend (could be MultiModel).
             n (int): Number of sampling iterations per sample.
             batch_size (int): Number of samples to process in one batch.
             kwargs: Additional parameters that may be passed from BaseScalingMethod.

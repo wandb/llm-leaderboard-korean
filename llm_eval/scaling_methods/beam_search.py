@@ -1,32 +1,50 @@
 import copy
+import logging
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable, Union
 
 import numpy as np
+import torch
+import torch.nn.functional as F
 from tqdm import tqdm
 
 from .base import BaseScalingMethod
 from . import register_scaling_method
 from llm_eval.models.base import BaseModel
+from llm_eval.models.multi import MultiModel
+from llm_eval.utils.logging import get_logger
+
+logger = get_logger(name="beam_search", level=logging.INFO)
 
 
 @dataclass
 class Beam:
     """
-    Beam(빔 서치) 하나를 나타내는 보조 Class.
+    Data class representing a single beam candidate.
+    Attributes:
+        prompt: The original prompt (e.g., the question).
+        index: Beam index identifier.
+        current_text: The generated text accumulated so far.
+        completed: Flag indicating if generation is finished (e.g., EOS encountered or max_tokens reached).
+        pruned: Flag indicating if the beam has been pruned due to low score or duplicate text.
+        score_history: List of log probability scores (or any score) recorded at each generation step.
+        completion_tokens: Number of tokens generated.
     """
-    prompt: str               # 원본 프롬프트(질문)
-    index: int                # 빔 식별자(0, 1, 2, ...)
-    current_text: str = ""    # 현재까지 생성된 텍스트
-    completed: bool = False   # EOS 등으로 생성이 끝났는지 여부
-    pruned: bool = False      # 점수가 낮아 제거(prune)되었는지
-    score_history: List[float] = field(default_factory=list)  # 매 스텝에서의 점수(혹은 logprob) 기록
-    completion_tokens: int = 0  # 생성에 사용된 토큰 수 (옵션)
+    prompt: str
+    index: int
+    current_text: str = ""
+    completed: bool = False
+    pruned: bool = False
+    score_history: List[float] = field(default_factory=list)
+    completion_tokens: int = 0
 
-    def aggregate_score(self, agg_fn) -> float:
+    def aggregate_score(self, agg_fn: Callable[[List[float]], float]) -> float:
         """
-        매 스텝 기록한 점수(혹은 로그확률)를 agg_fn으로 합산해 최종 점수화.
-        예: sum, mean, max 등.
+        Aggregate the recorded scores using the provided aggregation function.
+        Args:
+            agg_fn: A callable function such as sum, mean, or max.
+        Returns:
+            A single float representing the aggregated score.
         """
         if not self.score_history:
             return 0.0
@@ -36,163 +54,135 @@ class Beam:
 @register_scaling_method("beam_search")
 class BeamSearch(BaseScalingMethod):
     """
-    간단한 Beam Search (25.1.1 동작 확인 아직 안함함)
+    Production-level Beam Search scaling method.
+    
+    For each sample, an initial set of beams is created (based on beam_size). 
+    Then, for up to max_tokens iterations, the model generates one token per beam.
+    The log probabilities (if available) for each token are recorded, and beams are 
+    updated accordingly. Duplicate beams are pruned, and once a beam meets a termination
+    condition (empty token generated or reaching max_tokens), it is marked as completed.
+    Finally, the beam with the highest aggregated score is selected as the final prediction.
     """
 
     def __init__(
         self,
-        model: BaseModel = None,
+        model: Union[BaseModel, Multimodel] = None,
         beam_size: int = 4,
-        num_iterations: int = 3,
-        n: int = 1,
-        agg_strategy: str = "mean",
         max_tokens: int = 50,
-        filter_duplicates: bool = True,
+        agg_strategy: str = "sum",  # Options: "sum", "mean", "max"
         **kwargs
     ):
         """
         Args:
-            model (BaseModel): 토큰 생성 메서드(generate_batch)를 제공하는 모델.
-            beam_size (int): 각 iteration 당 유지할 빔의 개수.
-            num_iterations (int): 몇 번의 iteration을 돌면서 빔을 확장할지.
-            n (int): 초기 빔 생성 시, prompt별로 몇 개나 복제할지(또는 탐색 후보).
-            agg_strategy (str): 점수를 합산/평균 등 어떻게 aggregate할지 결정.
-            max_tokens (int): 모델 호출 시 생성할 최대 토큰 길이.
-            filter_duplicates (bool): 동일한 current_text를 갖는 빔을 중복 제거할지 여부.
-            kwargs: 그 외 BaseScalingMethod에서 공통적으로 사용하는 파라미터들.
+            model: An instance of BaseModel providing generate_batch().
+            beam_size: Number of beams to maintain per sample.
+            max_tokens: Maximum number of tokens to generate per sample.
+            agg_strategy: Aggregation strategy to combine scores (e.g., sum, mean, max).
+            kwargs: Additional parameters.
         """
         super().__init__(model=model, **kwargs)
         self.beam_size = beam_size
-        self.num_iterations = num_iterations
-        self.n = n
-        self.agg_strategy = agg_strategy
         self.max_tokens = max_tokens
-        self.filter_duplicates = filter_duplicates
+        self.agg_strategy = agg_strategy
+
+        # Determine aggregation function based on strategy.
+        if agg_strategy == "sum":
+            self.agg_fn = sum
+        elif agg_strategy == "max":
+            self.agg_fn = max
+        elif agg_strategy == "mean":
+            self.agg_fn = lambda scores: sum(scores) / len(scores)
+        else:
+            raise ValueError(f"Unknown aggregation strategy: {agg_strategy}")
 
     def _aggregate_scores(self, scores: List[float]) -> float:
-        """
-        점수 리스트를 self.agg_strategy에 따라 합산/평균 등으로 스칼라화.
-        """
-        if not scores:
-            return 0.0
-        if self.agg_strategy == "sum":
-            return sum(scores)
-        elif self.agg_strategy == "max":
-            return max(scores)
-        else:
-            # default: mean
-            return sum(scores) / len(scores)
+        """Aggregate the list of scores using the chosen aggregation function."""
+        return self.agg_fn(scores) if scores else 0.0
 
     def apply(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        data: [{"input":"...", "reference":"..."}, ...] 형태.
-        최종적으로 각 샘플에 "prediction" 필드를 채워서 반환.
+        Performs beam search on each sample and updates the "prediction" field.
+        Args:
+            data: A list of samples, each a dictionary containing at least {"input": str, "reference": str, ...}.
+        Returns:
+            The list with updated "prediction" field for each sample.
         """
         if self.model is None:
             raise ValueError("BeamSearch requires a 'model' instance.")
 
-        # 최종 결과 저장용
-        results = []
+        logger.info("Starting Beam Search scaling method.")
+        for sample in tqdm(data, desc="Beam Search", leave=False):
+            original_prompt = sample["input"]
+            # Create initial beams with an empty generated text and zero score.
+            beams = [Beam(prompt=original_prompt, index=i) for i in range(self.beam_size)]
+            finished_beams = []
 
-        for sample in data:
-            prompt = sample["input"]
-            
-            # 1) 초기 빔 생성
-            beams = []
-            for i in range(self.beam_size):
-                beam = Beam(
-                    prompt=prompt,
-                    index=i,
-                    current_text="", 
-                )
-                beams.append(beam)
-
-            completed_beams = []
-
-            # 2) iteration 반복
-            for it in range(self.num_iterations):
-                # 아직 pruned/complete 아닌 active beam만 추출
-                active_beams = [b for b in beams if not b.pruned and not b.completed]
-
-                # 만약 active_beams가 0개면 종료
-                if len(active_beams) == 0:
+            # Generate tokens until reaching max_tokens or all beams are completed.
+            for _ in range(self.max_tokens):
+                # Select active beams that are neither pruned nor completed.
+                active_beams = [beam for beam in beams if not beam.pruned and not beam.completed]
+                if not active_beams:
                     break
 
-                # 만약 active_beams가 beam_size 미만이면, beam_size까지 복제 (예시 로직)
-                # pseudo-code에서 n과 beam_size 개념이 혼재할 수 있음. 
-                # 필요에 따라 조정 가능.
+                # If the number of active beams is less than beam_size, duplicate beams to maintain count.
                 if len(active_beams) < self.beam_size:
                     repeats = (self.beam_size // len(active_beams)) + 1
                     extended = (active_beams * repeats)[: self.beam_size]
                     active_beams = [copy.deepcopy(b) for b in extended]
 
-                # 모델 호출을 위해 batch로 준비
-                # 여기서는 "한 번에 한 토큰만" 추가한다고 가정(실제론 여러 토큰이 생성될 수 있음)
-                batch_inputs = []
-                for b in active_beams:
-                    # prompt + 현재 텍스트를 합쳐 모델에 전달
-                    # (실제론 system_prompt나 special tokens 등을 추가할 수 있음)
-                    combined_input = b.prompt + b.current_text
-                    batch_inputs.append({"input": combined_input})
+                # Prepare a batch of inputs: for each active beam, combine prompt with current_text.
+                batch_inputs = [{"input": beam.prompt + beam.current_text} for beam in active_beams]
 
-                # 3) 모델 호출
-                # generate_batch: 
-                #   [{"input":"...", "prediction":"생성된 토큰(또는 문자열)", ...}, ...]
-                #   여기서는 pseudo-code로 "한 토큰 또는 짧은 문구"만 반환한다고 가정
-                generation_outputs = self.model.generate_batch(
-                    batch_inputs,
-                    return_logits=False  # logprob 계산할거면 True
-                )
+                # Generate one token for each beam using the model.
+                try:
+                    generation_outputs = self.model.generate_batch(
+                        batch_inputs,
+                        return_logits=True,
+                        max_new_tokens=1  # Generate one token per call.
+                    )
+                except Exception as e:
+                    logger.error("Error during model generation.", exc_info=True)
+                    raise e
 
-                # 4) beam 업데이트
-                for b, gen_out in zip(active_beams, generation_outputs):
-                    # 여기선 단일 토큰(혹은 짧은 스텝)을 b.current_text에 이어붙임
-                    token_or_text = gen_out.get("prediction", "")
-                    b.current_text += token_or_text  
-                    
-                    # 점수(예: logprob) 등 추가 처리 가능
-                    # b.score_history.append(...)
-                    
-                    # 만약 EOS 조건(빈 문자열, 특정 stop token 등)이면 completed = True
-                    if token_or_text == "" or len(b.current_text) >= self.max_tokens:
-                        b.completed = True
-                        completed_beams.append(b)
+                # Update each active beam with the generated token and its log probability.
+                for beam, out in zip(active_beams, generation_outputs):
+                    token_text = out.get("prediction", "")
+                    beam.current_text += token_text
+                    beam.completion_tokens += 1
 
-                # 중복 제거 (filter_duplicates=True 시)
-                if self.filter_duplicates:
-                    unique_dict = {}
-                    for b in active_beams:
-                        if b.current_text not in unique_dict:
-                            unique_dict[b.current_text] = b
-                        else:
-                            b.pruned = True  # 이미 같은 text를 갖는 빔이 존재하면 prune
-                    active_beams = [b for b in active_beams if not b.pruned]
+                    # If logits are provided, compute the log probability for the generated token.
+                    if "logits" in out and out["logits"] is not None:
+                        token_log_probs = out["logits"].get("token_log_probs", [])
+                        if token_log_probs:
+                            beam.score_history.append(token_log_probs[0])
+                    # Check termination conditions: if token is empty or max tokens reached.
+                    if token_text.strip() == "" or beam.completion_tokens >= self.max_tokens:
+                        beam.completed = True
+                        finished_beams.append(beam)
 
-                # beam score 계산 & 상위 beam_size만 남기기 (가장 간단한 예: 길이가 긴 것 선호)
-                # 실제로는 logprob 등으로 정렬하는 게 일반적
+                # Remove duplicate beams based on current_text if filter is enabled.
+                unique_beams = {}
+                for beam in active_beams:
+                    if beam.current_text not in unique_beams:
+                        unique_beams[beam.current_text] = beam
+                    else:
+                        beam.pruned = True
+                active_beams = [beam for beam in active_beams if not beam.pruned]
+
+                # Sort active beams by aggregated score and keep only the top beam_size beams.
                 sorted_beams = sorted(
                     active_beams,
-                    key=lambda x: self._aggregate_scores(x.score_history),
+                    key=lambda b: self._aggregate_scores(b.score_history),
                     reverse=True
                 )
                 beams = sorted_beams[: self.beam_size]
 
-            # 3) 모든 iteration 종료 후, completed_beams + 남은 beams 중 top beam_size 추려서 최종 완성
-            # 실제로는 logprob, aggregator 사용
-            final_candidates = [b for b in beams if not b.pruned]
-            final_candidates += completed_beams
-            final_candidates = list(set(final_candidates))  # set()은 같은 객체인지 판별 (데이터클래스 해싱 주의)
-            
-            # 정렬
-            final_candidates = sorted(
-                final_candidates,
-                key=lambda x: self._aggregate_scores(x.score_history),
-                reverse=True
-            )[: self.beam_size]
+            # After iterations, select the best candidate from finished beams or the remaining active beams.
+            if finished_beams:
+                best_beam = max(finished_beams, key=lambda b: b.aggregate_score(self.agg_fn))
+            else:
+                best_beam = max(beams, key=lambda b: b.aggregate_score(self.agg_fn))
+            sample["prediction"] = best_beam.current_text
 
-            # 최상위 빔을 최종 prediction으로
-            best_beam = final_candidates[0] if final_candidates else None
-            sample["prediction"] = best_beam.current_text if best_beam else ""
-            results.append(sample)
-
-        return results
+        logger.info("Beam Search scaling completed.")
+        return data
