@@ -143,7 +143,8 @@ class BeamSearch(BaseScalingMethod):
                     generation_outputs = self.model.generate_batch(
                         batch_inputs,
                         return_logits=True,
-                        max_new_tokens=1
+                        max_new_tokens=1,
+                        show_progress = False,
                     )
                 except Exception as e:
                     logger.error("Error during model generation.", exc_info=True)
