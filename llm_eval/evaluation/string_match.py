@@ -34,7 +34,7 @@ class StringMatchEvaluator(BaseEvaluator):
         ignore_numbers: bool = False,
         regexes_to_ignore: Optional[List[str]] = None,
         extract_final_answer: bool = True,
-        mcqa: bool = False,  # Use options-based matching for MCQA tasks if True.
+        mcqa: bool = True,  # Use options-based matching for MCQA tasks if True.
         *args,
         **kwargs
     ):
@@ -110,7 +110,8 @@ class StringMatchEvaluator(BaseEvaluator):
         """
         total = len(samples)
         correct = 0
-        logger.info(f"Evaluating outputs using string match with mcqa={self.mcqa}")
+        if self.mcqa and "options" in sample[0] and isinstance(sample[0]["options"], list) and sample[0]["options"]:
+            logger.info(f"Evaluating outputs using string match with mcqa={self.mcqa}")
 
         for sample in tqdm(samples, desc="String-Match Evaluation"):
             pred_norm = self.parse_prediction(sample["prediction"])
