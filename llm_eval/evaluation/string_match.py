@@ -110,7 +110,7 @@ class StringMatchEvaluator(BaseEvaluator):
         """
         total = len(samples)
         correct = 0
-        if self.mcqa and "options" in sample[0] and isinstance(sample[0]["options"], list) and sample[0]["options"]:
+        if self.mcqa and "options" in samples[0] and isinstance(samples[0]["options"], list) and samples[0]["options"]:
             logger.info(f"Evaluating outputs using string match with mcqa={self.mcqa}")
 
         for sample in tqdm(samples, desc="String-Match Evaluation"):
