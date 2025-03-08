@@ -14,10 +14,10 @@ logger = get_logger(name="partial_match", level=logging.INFO)
 @register_evaluator("partial_match")
 class PartialMatchEvaluator(BaseEvaluator):
     """
-    Evaluator that checks if the normalized reference is contained within the normalized prediction.
+    Evaluator that checks if the normalized prediction is contained within the normalized reference.
     
     Instead of using an exact equality comparison, this evaluator considers a prediction correct if 
-    the normalized reference string is found as a substring within the normalized prediction.
+    the normalized prediction string is found as a substring within the normalized reference.
     
     It supports options to ignore case, punctuation, numbers, and apply regex-based filtering, similar 
     to the StringMatchEvaluator.
@@ -111,10 +111,10 @@ class PartialMatchEvaluator(BaseEvaluator):
 
     def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
         """
-        Computes accuracy based on whether the normalized reference is a substring of the normalized prediction.
+        Computes accuracy based on whether the normalized prediction is contained within the normalized reference.
         
         When mcqa is enabled and an "options" field is provided, the evaluation instead checks if the normalized
-        prediction partially matches any of the candidate options.
+        prediction is contained within any of the candidate options.
         
         Additionally, each sample is augmented with an "evaluation" dict containing normalized texts and correctness.
         """
@@ -129,11 +129,11 @@ class PartialMatchEvaluator(BaseEvaluator):
             # If mcqa enabled and options are provided, compare prediction with options using partial match.
             if self.mcqa and "options" in sample and isinstance(sample["options"], list) and sample["options"]:
                 normalized_options = [self._normalize_text(opt) for opt in sample["options"]]
-                # Consider correct if any option is a substring of pred_norm or vice versa.
-                is_correct = any(opt in pred_norm or pred_norm in opt for opt in normalized_options)
+                # Correct if the prediction is contained within any of the candidate options.
+                is_correct = any(pred_norm in opt for opt in normalized_options)
             else:
-                # Otherwise, check if the normalized reference is a substring of the normalized prediction.
-                is_correct = (ref_norm in pred_norm)
+                # Otherwise, check if the normalized prediction is a substring of the normalized reference.
+                is_correct = (pred_norm in ref_norm)
 
             if is_correct:
                 correct += 1
