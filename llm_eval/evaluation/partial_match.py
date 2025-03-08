@@ -130,10 +130,10 @@ class PartialMatchEvaluator(BaseEvaluator):
             if self.mcqa and "options" in sample and isinstance(sample["options"], list) and sample["options"]:
                 normalized_options = [self._normalize_text(opt) for opt in sample["options"]]
                 # Correct if the prediction is contained within any of the candidate options.
-                is_correct = any(pred_norm in opt for opt in normalized_options)
+                is_correct = any(opt in pred_norm for opt in normalized_options)
             else:
                 # Otherwise, check if the normalized prediction is a substring of the normalized reference.
-                is_correct = (pred_norm in ref_norm)
+                is_correct = (ref_norm in pred_norm)
 
             if is_correct:
                 correct += 1
