@@ -24,28 +24,29 @@ class OpenAIModel(BaseModel):
     A production-grade backend model that supports both the official OpenAI API (used for vision models)
     and an httpx-based asynchronous call (used for plain text generation via vLLM OpenAI-compatible servers).
 
-    When 'is_vision_model' is True, the OpenAI SDK client is used, otherwise asynchronous httpx calls
-    are used for text generation. This allows using the API key optionally for text generation via vLLM.
+    When 'is_vision_model' is True, the official OpenAI SDK client is used; otherwise, asynchronous
+    httpx calls are used for text generation. This design allows the API key to be optional for text
+    generation via vLLM-compatible servers.
 
     Key Features:
-      - Uses an object-oriented client for the official OpenAI API when needed.
-      - Uses asynchronous httpx calls for text generation (if not a vision model).
-      - Supports chain-of-thought (CoT) prompting and parsing.
+      - Constructs payloads for both Chat and Completions API calls.
+      - Processes image inputs by converting URLs or base64-encoded images.
       - Implements robust retry logic with exponential backoff.
-      - Supports concurrent batch processing.
+      - Executes API calls concurrently using multi-threading (httpx) or ThreadPoolExecutor (SDK).
+      - Supports chain-of-thought (CoT) prompting and parsing.
 
     Args:
-        api_key (Optional[str]): OpenAI API key (optional for vLLM-compatible servers).
+        api_key (Optional[str]): OpenAI API key (optional if using an OpenAI-compatible server).
         api_base (str): Base URL for the API.
         model_name (str): Model identifier (e.g., "gpt-4", "gpt-3.5-turbo").
         system_message (Optional[str]): System message for chat completions.
         use_chat_api (bool): Whether to use the Chat API; if False, uses the Completions API.
-        is_vision_model (bool): Flag indicating if the model supports vision inputs. If True, the OpenAI SDK is used.
+        is_vision_model (bool): Flag indicating if the model supports vision inputs.
         cot_trigger (Optional[str]): A trigger phrase for chain-of-thought prompting.
-        cot_parser (Optional[Callable[[str], Tuple[str, str]]]): Function to parse CoT output into (chain_of_thought, final_answer).
-        batch_size (int): Number of concurrent API calls (worker threads) for batch processing.
+        cot_parser (Optional[Callable[[str], Tuple[str, str]]]): Function to parse generated text into (chain_of_thought, final_answer).
+        batch_size (int): Number of concurrent API calls for batch processing.
         max_retries (int): Maximum number of retry attempts for API calls.
-        timeout (Optional[float]): Timeout in seconds for httpx requests.
+        timeout (Optional[float]): Timeout (in seconds) for httpx requests.
         cot (bool): Flag to enable chain-of-thought prompting.
         **kwargs: Additional API parameters (e.g., temperature, max_tokens, top_p, etc.).
     """
@@ -82,20 +83,20 @@ class OpenAIModel(BaseModel):
         self.cot_parser = cot_parser
         self.default_params = kwargs
 
-        # For vision models, use the OpenAI SDK client; for text generation, use httpx-based calls.
+        # For vision models, use the OpenAI SDK client
         if self.is_vision_model:
-            # Create an OpenAI client (object-oriented)
             if api_key:
                 openai.api_key = api_key
             openai.api_base = api_base
             self.client = openai.OpenAI(api_key=api_key, base_url=api_base)
         else:
-            # For text generation, store the base URL and use httpx.
-            self.api_base = api_base  # URL for vLLM-compatible server
+            # For plain text generation, use httpx-based calls via the vLLM-compatible server.
+            self.api_base = api_base
 
     def _process_image_content(self, content: Union[str, Dict, List]) -> Dict[str, Any]:
         """
         Processes image content into the format expected by the OpenAI Vision API.
+
         Supports URLs, base64 strings, or dictionaries with detailed specifications.
         """
         VALID_DETAILS = {"high", "low", "auto"}
@@ -187,10 +188,9 @@ class OpenAIModel(BaseModel):
 
     def _execute_tool_calls(self, tool_calls: List[dict]) -> str:
         """
-        Executes tool calls if provided in the response. This method should look up
-        registered tool functions and execute them with the provided arguments.
+        Executes tool calls if present in the response.
+        Placeholder: In production, implement actual tool function invocation.
         """
-        # Placeholder implementation; in production, implement actual tool invocation.
         return "\n".join([f"Executed tool: {tc.get('function', {}).get('name', 'unknown')}" for tc in tool_calls])
 
     def _parse_normal_response(self, resp_data: dict) -> str:
@@ -231,7 +231,6 @@ class OpenAIModel(BaseModel):
                     raise RuntimeError(f"HTTP {response.status_code} Error: {response.text}")
                 resp_data = response.json()
                 result = {"prediction": self._parse_normal_response(resp_data)}
-                # Note: If return_logits is True, additional processing is required.
                 if cot and self.cot_parser:
                     generated_text = result["prediction"]
                     cot_text, final_answer = self.cot_parser(generated_text)
@@ -256,17 +255,14 @@ class OpenAIModel(BaseModel):
         """
         Asynchronously generates outputs for a batch of input items using httpx.
         """
-        results = []
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            tasks = []
-            for item in inputs:
-                tasks.append(
-                    self._send_single_request_httpx(
-                        client, item, return_logits, until, cot=cot, max_retries=max_retries, **kwargs
-                    )
+            tasks = [
+                self._send_single_request_httpx(
+                    client, item, return_logits, until, cot=cot, max_retries=max_retries, **kwargs
                 )
+                for item in inputs
+            ]
             results = await asyncio.gather(*tasks, return_exceptions=False)
-        # Merge each result with its original input
         merged_results = []
         for orig, res in zip(inputs, results):
             merged = deepcopy(orig)
@@ -335,23 +331,31 @@ class OpenAIModel(BaseModel):
         Generates text for a batch of input items.
 
         If the model is not a vision model, uses asynchronous httpx calls.
-        Otherwise, uses the OpenAI SDK client synchronously.
+        Otherwise, uses the OpenAI SDK client via a ThreadPoolExecutor.
         """
         if not self.is_vision_model:
-            # Use httpx-based asynchronous generation for text models
-            return asyncio.run(
-                self._generate_batch_httpx(inputs, return_logits, until, cot, max_retries, **kwargs)
-            )
+            # Use httpx-based asynchronous generation for text models.
+            try:
+                return asyncio.run(
+                    self._generate_batch_httpx(inputs, return_logits, until, cot, max_retries, **kwargs)
+                )
+            except RuntimeError as e:
+                if "asyncio.run() cannot be called from a running event loop" in str(e):
+                    import nest_asyncio
+                    nest_asyncio.apply()
+                    return asyncio.run(
+                        self._generate_batch_httpx(inputs, return_logits, until, cot, max_retries, **kwargs)
+                    )
+                else:
+                    raise
         else:
-            # Use the OpenAI SDK client for vision models
+            # Use the OpenAI SDK client (synchronous) for vision models.
             results = []
             max_workers = self.batch_size
             future_to_item = {}
-
             def process_item(item: Dict[str, Any]) -> Dict[str, Any]:
                 input_copy = deepcopy(item)
                 return self._generate_single_sdk(input_copy, return_logits, until, cot=cot, max_retries=max_retries, **kwargs)
-            
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 for item in inputs:
                     future = executor.submit(process_item, item)
