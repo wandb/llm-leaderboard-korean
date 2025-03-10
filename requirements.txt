@@ -9,3 +9,4 @@ math-verify
 pandas
 tqdm
 langdetect
+httpx
