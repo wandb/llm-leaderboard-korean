@@ -89,9 +89,11 @@ class OpenAIModel(BaseModel):
                 openai.api_key = api_key
             openai.api_base = api_base
             self.client = openai.OpenAI(api_key=api_key, base_url=api_base)
+            logger.info("Using OpenAI SDK client for vision model.")
         else:
             # For plain text generation, use httpx-based calls via the vLLM-compatible server.
             self.api_base = api_base
+            logger.info("Using httpx-based asynchronous calls for text generation.")
 
     def _process_image_content(self, content: Union[str, Dict, List]) -> Dict[str, Any]:
         """
@@ -224,6 +226,7 @@ class OpenAIModel(BaseModel):
         effective_retries = max_retries if max_retries is not None else self.max_retries
         payload = self._create_payload(item["input"], cot=cot, until=until, **kwargs)
         attempt = 0
+        logger.info(f"Starting HTTP request for input: {item['input']}")
         while attempt <= effective_retries:
             try:
                 response = await client.post(self.api_base, json=payload, timeout=self.timeout)
@@ -236,6 +239,7 @@ class OpenAIModel(BaseModel):
                     cot_text, final_answer = self.cot_parser(generated_text)
                     result["chain_of_thought"] = cot_text
                     result["prediction"] = final_answer
+                logger.info("HTTP request succeeded.")
                 return result
             except Exception as e:
                 logger.error(f"HTTP attempt {attempt + 1}/{effective_retries} failed: {e}")
@@ -255,6 +259,7 @@ class OpenAIModel(BaseModel):
         """
         Asynchronously generates outputs for a batch of input items using httpx.
         """
+        logger.info(f"Starting asynchronous HTTP batch generation for {len(inputs)} items.")
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             tasks = [
                 self._send_single_request_httpx(
@@ -268,6 +273,7 @@ class OpenAIModel(BaseModel):
             merged = deepcopy(orig)
             merged.update(res)
             merged_results.append(merged)
+        logger.info("Asynchronous HTTP batch generation completed.")
         return merged_results
 
     def _generate_single_sdk(
@@ -284,6 +290,7 @@ class OpenAIModel(BaseModel):
         Implements retry logic with exponential backoff.
         """
         effective_retries = max_retries if max_retries is not None else self.max_retries
+        logger.info(f"Starting SDK request for input: {item['input']}")
         for attempt in range(effective_retries):
             try:
                 payload = self._create_payload(item["input"], cot=cot, until=until, **kwargs)
@@ -311,6 +318,7 @@ class OpenAIModel(BaseModel):
                     cot_text, final_answer = self.cot_parser(generated_text)
                     result["chain_of_thought"] = cot_text
                     result["prediction"] = final_answer
+                logger.info("SDK request succeeded.")
                 return result
             except Exception as e:
                 logger.error(f"SDK attempt {attempt + 1}/{effective_retries} failed: {e}")
@@ -333,17 +341,18 @@ class OpenAIModel(BaseModel):
         If the model is not a vision model, uses asynchronous httpx calls.
         Otherwise, uses the OpenAI SDK client via a ThreadPoolExecutor.
         """
+        logger.info(f"Starting batch generation for {len(inputs)} items.")
         if not self.is_vision_model:
             # Use httpx-based asynchronous generation for text models.
             try:
-                return asyncio.run(
+                results = asyncio.run(
                     self._generate_batch_httpx(inputs, return_logits, until, cot, max_retries, **kwargs)
                 )
             except RuntimeError as e:
                 if "asyncio.run() cannot be called from a running event loop" in str(e):
                     import nest_asyncio
                     nest_asyncio.apply()
-                    return asyncio.run(
+                    results = asyncio.run(
                         self._generate_batch_httpx(inputs, return_logits, until, cot, max_retries, **kwargs)
                     )
                 else:
@@ -376,4 +385,5 @@ class OpenAIModel(BaseModel):
                             "finish_reason": "error"
                         })
                         results.append(error_item)
-            return results
+        logger.info("Batch generation completed.")
+        return results
