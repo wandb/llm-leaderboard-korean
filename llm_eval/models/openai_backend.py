@@ -226,7 +226,6 @@ class OpenAIModel(BaseModel):
         effective_retries = max_retries if max_retries is not None else self.max_retries
         payload = self._create_payload(item["input"], cot=cot, until=until, **kwargs)
         attempt = 0
-        logger.info(f"Starting HTTP request for input: {item['input']}")
         while attempt <= effective_retries:
             try:
                 response = await client.post(self.api_base, json=payload, timeout=self.timeout)
@@ -239,7 +238,6 @@ class OpenAIModel(BaseModel):
                     cot_text, final_answer = self.cot_parser(generated_text)
                     result["chain_of_thought"] = cot_text
                     result["prediction"] = final_answer
-                logger.info("HTTP request succeeded.")
                 return result
             except Exception as e:
                 logger.error(f"HTTP attempt {attempt + 1}/{effective_retries} failed: {e}")
