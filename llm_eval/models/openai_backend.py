@@ -24,9 +24,8 @@ class OpenAIModel(BaseModel):
     A production-grade OpenAI API backend model that supports multimodal inputs,
     chain-of-thought (CoT) prompting, and concurrent batch processing using multi-threading.
 
-    This implementation has been updated to use the OpenAI SDK client, which provides a 
-    more explicit client instance for API calls. It is compatible with both the official 
-    OpenAI API and OpenAI-compatible servers (e.g., vLLM) by making the API key optional.
+    This implementation uses the latest OpenAI SDK client, which requires explicit instantiation.
+    The API key is optional (set to None) for use with OpenAI-compatible servers (e.g., vLLM).
 
     Key Features:
       - Constructs payloads for both Chat and Completions API calls.
@@ -69,8 +68,8 @@ class OpenAIModel(BaseModel):
         if not model_name or not api_base:
             raise ValueError("model_name and api_base are required")
         
-        # Set up the OpenAI API client using the latest SDK. If api_key is None, this allows for usage
-        # with OpenAI-compatible servers such as vLLM.
+        # Create the OpenAI API client using the latest SDK.
+        # If api_key is None, this allows usage with OpenAI-compatible servers (e.g., vLLM).
         self.client = openai.OpenAI(api_key=api_key, base_url=api_base)
         
         self.model_name = model_name
@@ -166,7 +165,6 @@ class OpenAIModel(BaseModel):
                 messages.append({"role": "user", "content": str(inputs)})
             payload = {"model": self.model_name, "messages": messages}
             if until is not None:
-                # Ensure 'until' is a list of strings
                 if isinstance(until, str):
                     until = [until]
                 payload["stop"] = until
@@ -185,7 +183,6 @@ class OpenAIModel(BaseModel):
             if param in params:
                 payload[param] = params[param]
         
-        # Remove any keys with None values.
         return {k: v for k, v in payload.items() if v is not None}
 
     def _generate_single(
