@@ -3,7 +3,8 @@ from typing import List, Dict, Any, Optional, Callable, Tuple, Union
 
 import torch
 import torch.nn.functional as F
-from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria, StoppingCriteriaList
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import StoppingCriteria, StoppingCriteriaList
 from tqdm import tqdm
 
 from .base import BaseModel
@@ -13,6 +14,7 @@ from llm_eval.utils.prompt_template import default_cot_parser
 
 logger = get_logger(name="huggingface", level=logging.INFO)
 
+
 @register_model("huggingface")
 class HuggingFaceModel(BaseModel):
     """
@@ -21,24 +23,24 @@ class HuggingFaceModel(BaseModel):
     Main points:
       - If `return_logits=True`, we call `model.generate(..., return_dict_in_generate=True, output_scores=True)`
         so that "scores" (logits per step) are included in the output, allowing us to compute log probabilities.
-      - If CoT is enabled (`cot=True`), the `cot_trigger` is appended to the prompt and the generated text
-        can be parsed using `cot_parser` to separate the chain-of-thought from the final answer.
-      - MCQA mode: If an input item contains an "options" field (list), each option's log likelihood is computed,
-        and the option with the highest log probability is selected as the final prediction.
-
+      - If a `cot_parser` function is provided, we can separate chain-of-thought (CoT) text from the final answer.
+      - If an input contains an "options" field (MCQA mode), the log likelihood for each option is computed.
+        The option with the highest log probability is selected as the final prediction.
+    
     Args:
         model_name_or_path (str): HF Hub model ID or local path.
         device (str): 'cpu', 'cuda', 'cuda:0', etc.
         max_new_tokens (int): Maximum new tokens to generate in one call.
+        cot_trigger (str|None): Optional CoT (Chain-of-Thought) trigger appended to the prompt. If None, no CoT trigger.
         temperature (float): Sampling temperature.
         top_p (float): Nucleus sampling probability.
         do_sample (bool): If True, sampling mode; if False, greedy generation.
-        batch_size (int): Batch size for generation.
-        cot (bool): Whether to use chain-of-thought prompting.
-        cot_trigger (str|None): Optional CoT trigger string. If None, CoT is not triggered.
-        cot_parser (callable|None): A function that takes a generated text string and returns a tuple 
-                                    (chain_of_thought, final_answer). If None, no CoT parsing is applied.
-        **kwargs: Additional parameters.
+        batch_size (int): Batch size to use for generation.
+        cot (bool): Whether to use chain-of-thought prompting. If True and `cot_trigger` is provided,
+                    the trigger is appended to the prompt.
+        cot_parser (callable|None): A function that takes a string (generated text) and returns a tuple 
+                    (chain_of_thought, final_answer). If None, no CoT parsing is applied.
+        **kwargs: Additional parameters as needed.
     """
 
     def __init__(
@@ -99,7 +101,6 @@ class HuggingFaceModel(BaseModel):
         option_ids = input_ids[0, prompt_len:]
         total_log_prob = 0.0
         for t, token_id in enumerate(option_ids):
-            # Adjust index if necessary; here we use a simple approach.
             index = prompt_len + t - 1 if prompt_len + t - 1 < logits.shape[1] else -1
             token_log_prob = log_probs[0, index, token_id].item()
             total_log_prob += token_log_prob
@@ -118,36 +119,39 @@ class HuggingFaceModel(BaseModel):
         Processes a batch of inputs to generate text outputs and updates each item with the final prediction.
 
         MCQA mode:
-            If an input item contains an "options" field (list), compute the log likelihood for each option,
-            store the scores in item["logits"]["option_log_probs"], and select the option with the highest score
-            as the final prediction. Chain-of-thought (CoT) processing is applied if enabled.
+            If an input item contains an "options" field (list), for each option the log likelihood is computed.
+            If `return_logits` is True, the computed log probabilities are stored in item["logits"]["option_log_probs"].
+            The option with the highest log likelihood is then chosen as the final prediction.
 
         Args:
-            inputs (List[Dict[str, Any]]): List of items, each with at least {"input": str, "reference": str, ...}.
-            return_logits (bool): If True, compute and store log probabilities in item["logits"].
-            batch_size (int|str): The batch size to use. If "auto", starts with a default size and reduces on OOM.
-            until (str|List[str]|None): Optional stopping condition(s).
+            inputs (List[Dict[str, Any]]): 
+                A list of items, each containing at least {"input": str, "reference": str, ...}.
+            return_logits (bool): 
+                If True, compute log probabilities for the generated tokens and store them in item["logits"].
+            batch_size (int | str): 
+                The batch size to use. If "auto", starts with a default and reduces if OOM occurs.
+            until (str | List[str] | None): Optional stopping condition(s).
             show_progress (bool): Whether to display a progress bar.
             **kwargs: Additional arguments.
 
         Returns:
-            List[Dict[str, Any]]: The updated list of items, with added fields:
-                - "prediction": the final generated answer (or selected option in MCQA mode)
-                - "chain_of_thought": (optional) parsed CoT text if applicable
-                - "logits": (optional) dictionary containing log probability details if return_logits is True.
+            List[Dict[str, Any]]:
+                An updated list where each item has new fields:
+                  - "prediction": the generated final answer (or selected option in MCQA mode)
+                  - "chain_of_thought": optional CoT text if parsed
+                  - "logits": optional dict containing log probabilities if `return_logits` is True.
         """
         if batch_size is None:
             batch_size = self.batch_size
         if isinstance(batch_size, str) and batch_size.lower() == "auto":
             auto_mode = True
             current_bs = 128  # Default starting batch size in auto mode
-            logger.info(f"[HuggingFaceModel] Batch size set to 'auto'. Starting with {current_bs}.")
+            logger.info(f"[HuggingFaceModel] Batch size set to 'auto'. Starting with batch size {current_bs}.")
         else:
             auto_mode = False
             current_bs = batch_size if batch_size is not None else len(inputs)
             logger.info(f"[HuggingFaceModel] Batch size set to {current_bs}.")
 
-        # Setup stopping criteria if provided
         stopping_criteria = None
         if until is not None:
             if isinstance(until, str):
@@ -164,14 +168,15 @@ class HuggingFaceModel(BaseModel):
                     return any(stop in decoded for stop in self.stops)
 
             stopping_criteria = StoppingCriteriaList([StoppingCriteriaSub(self.tokenizer, stops=until)])
-
+        
         while True:
             try:
                 results = []
+                # Process inputs in chunks.
                 for start in tqdm(range(0, len(inputs), current_bs), disable=not show_progress):
                     batch_items = inputs[start:start + current_bs]
-                    
-                    # Check for MCQA mode: if any item contains an "options" field as a list.
+
+                    # Check if any item is in MCQA mode (contains "options" as a list).
                     mcqa_flags = [("options" in item and isinstance(item["options"], list)) for item in batch_items]
                     
                     if any(mcqa_flags):
@@ -183,10 +188,12 @@ class HuggingFaceModel(BaseModel):
                                 for opt in item["options"]:
                                     lp = self._score_option(prompt, opt)
                                     option_log_probs.append(lp)
-                                item["logits"] = {"option_log_probs": option_log_probs}
+                                # Only store option log probabilities if return_logits flag is True.
+                                if return_logits:
+                                    item.setdefault("logits", {})["option_log_probs"] = option_log_probs
                                 best_idx = option_log_probs.index(max(option_log_probs))
                                 item["prediction"] = item["options"][best_idx]
-                                # Optionally process chain-of-thought if enabled
+                                # Optionally process chain-of-thought if enabled.
                                 if self.cot and self.cot_trigger:
                                     generated_text = f"{prompt}\n{self.cot_trigger}\n{item['prediction']}"
                                     cot, final_answer = self.cot_parser(generated_text)
@@ -195,14 +202,13 @@ class HuggingFaceModel(BaseModel):
                                 results.append(item)
                             else:
                                 # For items without options, fall back to normal generation.
-                                results.extend(self._generate_normal(batch_items, **kwargs))
-                        return results
+                                results.extend(self._generate_normal([item], **kwargs))
                     else:
                         # Normal generation mode.
-                        results = self._generate_normal(batch_items, **kwargs)
+                        results.extend(self._generate_normal(batch_items, **kwargs))
                 return results
             except RuntimeError as e:
-                # Handle out-of-memory (OOM) errors by reducing batch size in auto mode.
+                # Handle out-of-memory by reducing batch size in auto mode.
                 if "out of memory" in str(e).lower():
                     torch.cuda.empty_cache()
                     if auto_mode:
@@ -210,11 +216,11 @@ class HuggingFaceModel(BaseModel):
                             current_bs = max(1, current_bs // 2)
                             logger.warning(f"[HuggingFaceModel] OOM detected: reducing batch size to {current_bs}.")
                         else:
-                            logger.error("[HuggingFaceModel] Batch size is 1 but OOM persists.")
+                            logger.error("[HuggingFaceModel] Batch size is 1 but OOM still occurs.")
                             raise RuntimeError("Out of memory even with batch size=1.") from e
                     else:
-                        logger.error("[HuggingFaceModel] OOM with specified batch size.")
-                        raise RuntimeError("Out of memory with specified batch size.") from e
+                        logger.error("[HuggingFaceModel] OOM with the specified batch size.")
+                        raise RuntimeError("Out of memory with the specified batch size.") from e
                 else:
                     logger.error("[HuggingFaceModel] RuntimeError occurred:", exc_info=True)
                     raise
@@ -224,7 +230,7 @@ class HuggingFaceModel(BaseModel):
         Handles normal text generation (non-MCQA mode) for a batch of items.
         """
         results = []
-        # Build prompts; append the CoT trigger if enabled.
+        # Build prompts; append CoT trigger if enabled.
         prompts = [
             f"{item['input']}\n{self.cot_trigger}\n" if (self.cot and self.cot_trigger) else item["input"]
             for item in batch_items
@@ -248,7 +254,7 @@ class HuggingFaceModel(BaseModel):
         if "stopping_criteria" in kwargs:
             gen_kwargs["stopping_criteria"] = kwargs["stopping_criteria"]
         # Ensure logits are returned if needed.
-        if gen_kwargs.get("output_scores", False):
+        if return_logits := gen_kwargs.get("output_scores", False):
             gen_kwargs.update({
                 "return_dict_in_generate": True,
                 "output_scores": True,
@@ -267,7 +273,7 @@ class HuggingFaceModel(BaseModel):
         for i in range(batch_size_actual):
             item = batch_items[i]
             input_len = input_lens[i]
-            gen_ids = sequences[i][input_len:]  # Extract the generated tokens.
+            gen_ids = sequences[i][input_len:]  # Extract generated tokens.
             generated_text = self.tokenizer.decode(gen_ids, skip_special_tokens=True)
             final_answer = generated_text
             chain_of_thought = None
@@ -276,7 +282,7 @@ class HuggingFaceModel(BaseModel):
             item["prediction"] = final_answer
             if chain_of_thought is not None:
                 item["chain_of_thought"] = chain_of_thought
-            if gen_kwargs.get("output_scores", False) and scores_list is not None:
+            if return_logits and scores_list is not None:
                 log_probs_per_token = []
                 sum_log_prob = 0.0
                 token_ids = gen_ids.tolist()
