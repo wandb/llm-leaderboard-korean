@@ -7,8 +7,8 @@ HRET 프레임워크는 기존 한국어 LLM 평가 방식이 일관되지 않�
 - HRET는 주요 한국어 벤치마크(HAE-RAE Bench, KMMLU, KUDGE, HRM8K 등)를 통합합니다.
 - 평가 기법(문자열 일치, 언어 불일치 패널티, 로그 확률 기반 평가, LLM-as-judge)을 지원합니다. 
   로짓 기반으로 토큰 수준의 확률을 제공하기 때문에 모델 신뢰도 평가까지 가능하며, 한글으로 요청한 사항에 대해 그외 언어가 발생했을 때 검출하여 패널티를 부여할 수 있습니다.
-- 고급 디코딩 기법(빔 서치, Best-of-N 샘플링, 다수결)을 제공하여 평가의 신뢰성을 높입니다.
-- HuggingFace, OpenAI API와 연동 가능하도록 설계되었습니다. 
+- Test-time-scale(Beam Search, Best-of-N, Self-Consistency Voting)을 제공하여 언어 모델의 성능을 여러 각도로 평가할 수 있습니다.
+- HuggingFace를 통한 on-premise 사용 뿐만 아니라, litellm, openai-compatible api를 통해 100+개의 online inference와 연동 가능하도록 설계되었습니다. 
 - HRET는 한국어 NLP 연구의 재현성과 투명성을 향상시키고, 일관된 대규모 실험 환경을 제공하는 것을 목표로 합니다.
 
 ---
@@ -48,7 +48,7 @@ pip install -r requirements.txt
 ---
 # 활용 (Usage)
 
-활용할 모델 선정 및 필요시 Access 권한 요청
+활용할 모델 선정 및 필요시 Access 권한 요청(Optional)
 https://huggingface.co/models
 
 ---
@@ -81,15 +81,8 @@ python -m llm_eval.evaluator \
 ```python
 from llm_eval.evaluator import Evaluator
 
-# 1) Initialize an Evaluator with default parameters (optional).
-evaluator = Evaluator(
-    default_model_backend="huggingface",     # e.g., "vllm", "openai", ...
-    default_judge_backend=None,              # e.g., "huggingface_judge"
-    default_reward_backend=None,             # e.g., "huggingface_reward"
-    default_scaling_method=None,             # e.g., "beam_search", "best_of_n"
-    default_evaluation_method="string_match",
-    default_split="test"
-)
+# 1) Initialize an Evaluator.
+evaluator = Evaluator()
 
 # 2) Run the evaluation pipeline
 results = evaluator.run(
@@ -99,26 +92,30 @@ results = evaluator.run(
     dataset="haerae_bench",                     # or "kmmlu", "qarv", ...
     subset=["csat_geo", "csat_law"],            # optional subset(s)
     split="test",                               # "train"/"validation"/"test"
-    dataset_params={"revision":"main"},         # example HF config
-    model_params={"model_name_or_path":"gpt2"}, # example HF Transformers param
+    dataset_params={},         # example HF config
+    model_params={"model_name_or_path":"kakaocorp/kanana-nano-2.1b-instruct", "device":"cuda:0", "batch_size": 2, "max_new_tokens": 128}, # example HF Transformers param
     judge_params={},                            # params for judge model (if judge_model is not None)
     reward_params={},                           # params for reward model (if reward_model is not None)
     scaling_method=None,                        # or "beam_search", "best_of_n"
-    scaling_params={"beam_size":3},             # e.g., {"beam_size":3, "num_iterations":5}
+    scaling_params={},             # e.g., {"beam_size":3, "num_iterations":5}
     evaluator_params={}                         # e.g., custom evaluation settings
 )
 
-print("Metrics:", results["metrics"])
-# e.g. {"accuracy": 0.85, ...}
-print("Sample #0:", results["samples"][0])
-# e.g. {"input":"...", "reference":"...", "prediction":"..."}
+print(results)
+# e.g. EvaluationResult(metrics={'accuracy': 0.0, 'language_penalizer_average': 0.8733333333333333}, info={'dataset_name': 'haerae_bench', 'subset': ['csat_geo'], 'split': 'test', 'model_backend_name': 'huggingface', 'scaling_method_name': None, 'evaluation_method_name': 'string_match', 'elapsed_time_sec': 1119.5369288921356}, samples=[...]
+
+
+df = results.to_dataframe()
+print(df) # input, reference, prediction, options, chain-of-thought, logits, 등 확인 가능
+
+
 
 ```
 
 - 데이터셋은 레지스트리에서 로드됩니다 (예: haerae_bench는 여러 데이터셋 중 하나입니다).
 - 모델도 레지스트리를 통해 로드됩니다 (huggingface, vllm 등).
 - LLM-as-a-Judge 또는 reward model 로직을 원하는 경우 judge_model 및 reward_model을 제공할 수 있습니다. 둘 다 None인 경우 시스템은 단일 모델 백엔드를 사용합니다.
-- 특수 디코딩을 수행하려면 ScalingMethod를 선택적으로 사용할 수 있습니다.
+- test-time-scaling을 수행하려면 ScalingMethod를 선택적으로 사용할 수 있습니다.
 - EvaluationMethod(예: string_match, logit_based 또는 llm_judge)는 성능을 측정합니다.
 
 ---
@@ -244,7 +241,7 @@ print(results)
 
 
 ### 참조문헌 (References)
-- 'vLLm', https://github.com/vllm-project/vllm
+- 'vLLM', https://github.com/vllm-project/vllm
 - 'Respond in my Language: Mitigating Language Inconsistency in Response Generation based on Large Language Models', https://aclanthology.org/2024.acl-long.229.pdf
 
 ---
