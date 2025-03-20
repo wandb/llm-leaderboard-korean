@@ -151,7 +151,13 @@ class PipelineRunner:
                 )
 
         if evaluation_only is not None:
-            if self.evaluation_method_name not in evaluation_only:
+            if isinstance(evaluation_only, bool):
+                if evaluation_only:
+                    raise ValueError(
+                        f"Dataset '{self.dataset_name}' requires a specific evaluation method, "
+                        f"but no specific methods were provided."
+                    )
+            elif self.evaluation_method_name not in evaluation_only:
                 raise ValueError(
                     f"Dataset '{self.dataset_name}' only allows evaluation methods {evaluation_only}, "
                     f"but got '{self.evaluation_method_name}'."

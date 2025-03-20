@@ -1,5 +1,12 @@
 import re
 from typing import List, Dict, Any, Optional, Callable, Tuple, Union
+from enum import Enum
+
+# 대신 직접 정의
+class JudgeType(Enum):
+    RUBRIC_AND_RESPONSE = "rubric_and_response"
+    RUBRIC_RESPONSE_AND_GOLD = "rubric_response_and_gold"
+    RESPONSE_COMPARISON = "response_comparison"
 
 def extract_final_answer(raw_output: str) -> str:
     """
@@ -78,10 +85,7 @@ MULTILINGUAL_ANSWER_PATTERN = (
 )
 
 JUDGE_PROMPTS = {
-    "RUBRIC_AND_RESPONSE": """You are an expert evaluator. Your task is to evaluate the given response based on the rubric and provide a score.
-
-IMPORTANT: You must format your response exactly like this example:
-Based on the rubric, this response deserves [[score: 7]].
+    JudgeType.RUBRIC_AND_RESPONSE: """You are an expert evaluator. Evaluate the following response based on the rubric.
 
 Rubric:
 {rubric}
@@ -89,34 +93,30 @@ Rubric:
 Response to evaluate:
 {response}
 
-Provide your evaluation with the score in the specified format:""",
+Provide a detailed feedback based on the rubric, then end with your verdict in this EXACT format:
+[RESULT] X where X is an integer between 1 and 5.""",
 
-    "RUBRIC_RESPONSE_AND_GOLD": """You are an expert evaluator. Please evaluate if the following response matches the gold standard answer.
-Compare step by step and provide your verdict as [[true]] if correct or [[false]] step: [X] if incorrect.
+    JudgeType.RUBRIC_RESPONSE_AND_GOLD: """You are an expert evaluator. Compare the response with the reference answer.
 
-Rubric:
-{rubric}
+Reference Answer:
+{gold}
 
-Gold Response:
-{gold_response}
-
-Model Response:
+Response to evaluate:
 {response}
 
-Provide your evaluation in the specified format:""",
+IMPORTANT: Your response MUST be in this EXACT format:
+[[true]] if the response is correct, or [[false]] if it is incorrect.""",
 
-    "RESPONSE_COMPARISON": """You are an expert evaluator. Your task is to compare two responses and choose the better one.
-
-IMPORTANT: You must format your verdict exactly like this:
-- Use [[A]] to choose the first response
-- Use [[B]] to choose the second response
-- Use [[C]] if they are equally good
+    JudgeType.RESPONSE_COMPARISON: """You are an expert evaluator. Compare the two responses and determine which one is better.
 
 Response A:
-{response_a}
+{response}
 
 Response B:
 {response_b}
 
-Provide your verdict in the specified format:"""
+IMPORTANT: Your response MUST be in this EXACT format:
+[[A]] if Response A is better, or [[B]] if Response B is better.
+
+First provide your detailed comparison, then end with your verdict in the specified format."""
 }

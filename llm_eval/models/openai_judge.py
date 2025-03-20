@@ -48,7 +48,7 @@ class OpenAIJudge(BaseJudge):
         system_message: Optional[str] = None,
         use_chat_api: bool = True,
         max_tokens: int = 64,
-        temperature: float = 1.0,
+        temperature: float = 0.1,
         top_p: float = 0.95,
         do_sample: bool = True,
         batch_size: int = 8,
