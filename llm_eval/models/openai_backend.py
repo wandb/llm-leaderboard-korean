@@ -1,5 +1,4 @@
 import openai
-import asyncio
 import time
 import base64
 import logging
@@ -8,7 +7,8 @@ from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Optional, Union, Callable, Tuple
 
-import httpx
+import torch
+import torch.nn.functional as F
 from tqdm import tqdm
 
 from .base import BaseModel
@@ -21,40 +21,37 @@ logger = get_logger(name="openai_backend", level=logging.INFO)
 @register_model("openai")
 class OpenAIModel(BaseModel):
     """
-    A production-grade backend model that supports both the official OpenAI API (used for vision models)
-    and an httpx-based asynchronous call (used for plain text generation via vLLM OpenAI-compatible servers).
-
-    When 'is_vision_model' is True, the official OpenAI SDK client is used; otherwise, asynchronous
-    httpx calls are used for text generation. This design allows the API key to be optional for text
-    generation via vLLM-compatible servers.
-
+    A production-grade OpenAI API backend model that supports multimodal input,
+    chain-of-thought (CoT) prompting, and concurrent batch processing using multi-threading.
+    
+    This implementation handles both Chat and Completions API calls based on the `use_chat_api` flag.
+    It appends a CoT trigger if enabled and uses a CoT parser to extract a chain-of-thought and final answer.
+    
     Key Features:
-      - Constructs payloads for both Chat and Completions API calls.
-      - Processes image inputs by converting URLs or base64-encoded images.
+      - Constructs payloads for both Chat and traditional Completion API calls.
+      - Processes image inputs by converting URLs or base64-encoded images to the required format.
       - Implements robust retry logic with exponential backoff.
-      - Executes API calls concurrently using multi-threading (httpx) or ThreadPoolExecutor (SDK).
-      - Supports chain-of-thought (CoT) prompting and parsing.
-
+      - Executes API calls concurrently using a ThreadPoolExecutor; the number of worker threads is set based on the batch_size.
+      - Rich error handling and detailed logging for production monitoring.
+    
     Args:
-        api_key (Optional[str]): OpenAI API key (optional if using an OpenAI-compatible server).
-        api_base (str): Base URL for the API.
-        model_name (str): Model identifier (e.g., "gpt-4", "gpt-3.5-turbo").
+        api_key (str): OpenAI API key.
+        api_base (str): OpenAI API base URL.
+        model_name (str): Model identifier (e.g., "gpt-4", "gpt-4-vision-preview").
         system_message (Optional[str]): System message for chat completions.
         use_chat_api (bool): Whether to use the Chat API; if False, uses the Completions API.
         is_vision_model (bool): Flag indicating if the model supports vision inputs.
-        cot_trigger (Optional[str]): A trigger phrase for chain-of-thought prompting.
-        cot_parser (Optional[Callable[[str], Tuple[str, str]]]): Function to parse generated text into (chain_of_thought, final_answer).
-        batch_size (int): Number of concurrent API calls for batch processing.
+        cot_trigger (Optional[str]): A trigger phrase to induce chain-of-thought; if provided, appended to the prompt.
+        cot_parser (Optional[Callable[[str], Tuple[str, str]]]): Function that parses generated text into (chain_of_thought, final_answer).
+        batch_size (int): Number of concurrent API calls (worker threads) for batch processing.
         max_retries (int): Maximum number of retry attempts for API calls.
-        timeout (Optional[float]): Timeout (in seconds) for httpx requests.
-        cot (bool): Flag to enable chain-of-thought prompting.
-        **kwargs: Additional API parameters (e.g., temperature, max_tokens, top_p, etc.).
+        **kwargs: Additional API parameters (e.g., temperature, top_p, max_tokens, etc.).
     """
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        api_base: str = None,
-        model_name: str = None,
+        api_key: str,
+        api_base: str,
+        model_name: str,
         system_message: Optional[str] = None,
         use_chat_api: bool = True,
         is_vision_model: bool = False,
@@ -62,49 +59,50 @@ class OpenAIModel(BaseModel):
         cot_parser: Optional[Callable[[str], Tuple[str, str]]] = None,
         batch_size: int = 8,
         max_retries: int = 3,
-        timeout: Optional[float] = 30.0,
         cot: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        if not model_name or not api_base:
-            raise ValueError("model_name and api_base are required")
+        if not model_name:
+            raise ValueError("model_name is required")
+        if not api_base:
+            raise ValueError("api_base is required")
         
-        self.is_vision_model = is_vision_model
-        self.use_chat_api = use_chat_api
-        self.batch_size = batch_size
-        self.max_retries = max_retries
-        self.timeout = timeout
-        self.cot = cot
+        # Set up OpenAI API credentials
+        if api_key:
+            openai.api_key = api_key
+        openai.api_base = api_base
         
         self.model_name = model_name
         self.system_message = system_message
+        self.use_chat_api = use_chat_api
+        self.is_vision_model = is_vision_model
+        
+        # Chain-of-thought settings
         self.cot_trigger = cot_trigger
         self.cot_parser = cot_parser
+        # Store default chain-of-thought flag from initialization
+        self.cot = cot
+        
+        # Batch processing and retry settings
+        self.batch_size = batch_size
+        self.max_retries = max_retries
+        
+        # Default API parameters (e.g., temperature, max_tokens, top_p, etc.)
         self.default_params = kwargs
-
-        # For vision models, use the OpenAI SDK client
-        if self.is_vision_model:
-            if api_key:
-                openai.api_key = api_key
-            openai.api_base = api_base
-            self.client = openai.OpenAI(api_key=api_key, base_url=api_base)
-            logger.info("Using OpenAI SDK client for vision model.")
-        else:
-            # For plain text generation, use httpx-based calls via the vLLM-compatible server.
-            self.api_base = api_base
-            logger.info("Using httpx-based asynchronous calls for text generation.")
 
     def _process_image_content(self, content: Union[str, Dict, List]) -> Dict[str, Any]:
         """
         Processes image content into the format expected by the OpenAI Vision API.
-
+        
         Supports URLs, base64 strings, or dictionaries with detailed specifications.
         """
         VALID_DETAILS = {"high", "low", "auto"}
+        
         def validate_detail(detail: str) -> str:
             detail = detail.lower() if detail else "auto"
             return detail if detail in VALID_DETAILS else "auto"
+        
         def process_base64(b64_str: str, mime_type: str = "image/jpeg") -> str:
             try:
                 b64_bytes = base64.b64decode(b64_str)
@@ -113,11 +111,13 @@ class OpenAIModel(BaseModel):
                 return f"data:{mime_type};base64,{b64_str}"
             except Exception as e:
                 raise ValueError(f"Invalid base64 image: {str(e)}")
+        
         if isinstance(content, list):
             max_images = self.default_params.get("max_images", float("inf"))
             if len(content) > max_images:
                 raise ValueError(f"Number of images exceeds limit ({max_images})")
             return [self._process_image_content(item) for item in content]
+        
         if isinstance(content, str):
             if content.startswith(("http://", "https://")):
                 return {"type": "image_url", "image_url": {"url": content, "detail": "auto"}}
@@ -125,6 +125,7 @@ class OpenAIModel(BaseModel):
                 return {"type": "image_url", "image_url": {"url": process_base64(content), "detail": "auto"}}
             except:
                 return {"type": "text", "text": content}
+        
         elif isinstance(content, dict):
             detail = validate_detail(content.get("detail", "auto"))
             if "image_url" in content:
@@ -139,161 +140,112 @@ class OpenAIModel(BaseModel):
     def _create_payload(
         self,
         inputs: Union[str, List[Dict], Dict],
-        cot: bool = False,
+        return_logits: bool = False,
+        use_chat_api: Optional[bool] = None,
         until: Optional[Union[str, List[str]]] = None,
+        cot: bool = False,
         **kwargs,
     ) -> Dict[str, Any]:
         """
         Constructs the payload for an API call.
-
-        Supports both Chat and Completions API calls. If chain-of-thought (CoT) is enabled
-        (via the 'cot' parameter), the CoT trigger is appended to the prompt.
-        Additionally, if 'until' is provided, it is added as a stop sequence.
+        
+        Supports both Chat and Completions APIs. If chain-of-thought (CoT) is enabled
+        (determined by the explicit parameter 'cot'), the CoT trigger is appended to the prompt.
         """
-        params = deepcopy(self.default_params)
+        params = self.default_params.copy()
         params.update(kwargs)
-
-        payload = {}
-        if self.use_chat_api:
+        use_chat_api = self.use_chat_api if use_chat_api is None else use_chat_api
+        
+        payload = {"model": self.model_name}
+        
+        # Add stop sequences if provided
+        if until is not None:
+            if isinstance(until, str):
+                until = [until]
+            payload["stop"] = until
+        
+        if use_chat_api:
             messages = []
             if self.system_message:
                 messages.append({"role": "system", "content": self.system_message})
+            # Process input: append CoT trigger if CoT is enabled via the explicit 'cot' parameter
             if isinstance(inputs, str):
                 prompt_text = inputs
                 if cot and self.cot_trigger:
-                    prompt_text += f"\n{self.cot_trigger}\n"
+                    prompt_text = f"{inputs}\n{self.cot_trigger}\n"
                 messages.append({"role": "user", "content": prompt_text})
             elif isinstance(inputs, list):
-                messages.extend(inputs)
+                for msg in inputs:
+                    if isinstance(msg, dict):
+                        if "role" not in msg:
+                            msg = {"role": "user", **msg}
+                        messages.append(msg)
+                    else:
+                        messages.append({"role": "user", "content": str(msg)})
+            elif isinstance(inputs, dict):
+                if self.is_vision_model:
+                    content = inputs.get("content", [])
+                    processed_content = []
+                    for item in content:
+                        if isinstance(item, dict) and ("image_url" in item or "base64" in item):
+                            processed_content.append(self._process_image_content(item))
+                        else:
+                            processed_content.append({"type": "text", "text": str(item)})
+                    messages.append({"role": "user", "content": json.dumps(processed_content)})
+                else:
+                    messages.append({"role": "user", "content": str(inputs)})
             else:
                 messages.append({"role": "user", "content": str(inputs)})
-            payload = {"model": self.model_name, "messages": messages}
-            if until is not None:
-                if isinstance(until, str):
-                    until = [until]
-                payload["stop"] = until
+            payload["messages"] = messages
         else:
+            # For the Completions API, use the prompt field.
             prompt_text = inputs if not (cot and self.cot_trigger) else f"{inputs}\n{self.cot_trigger}\n"
-            payload = {"model": self.model_name, "prompt": prompt_text}
-            if params.get("logprobs") is not None:
-                payload["logprobs"] = params["logprobs"]
-            if until is not None:
-                if isinstance(until, str):
-                    until = [until]
-                payload["stop"] = until
-
+            payload["prompt"] = prompt_text
+            payload["logprobs"] = params.get("logprobs") if return_logits else None
+        
+        # Set additional API parameters (e.g., max_tokens, temperature, top_p, etc.)
         for param in ["max_tokens", "temperature", "top_p", "frequency_penalty", "presence_penalty"]:
             if param in params:
                 payload[param] = params[param]
         
+        # Remove any keys with None values.
         return {k: v for k, v in payload.items() if v is not None}
-
-    def _execute_tool_calls(self, tool_calls: List[dict]) -> str:
-        """
-        Executes tool calls if present in the response.
-        Placeholder: In production, implement actual tool function invocation.
-        """
-        return "\n".join([f"Executed tool: {tc.get('function', {}).get('name', 'unknown')}" for tc in tool_calls])
-
-    def _parse_normal_response(self, resp_data: dict) -> str:
-        """
-        Parses a non-streaming response.
-        Expected OpenAI ChatCompletion format: choices[0]["message"]["content"].
-        If tool_calls are present, executes them.
-        """
-        try:
-            message = resp_data["choices"][0]["message"]
-            if "tool_calls" in message and message["tool_calls"]:
-                return self._execute_tool_calls(message["tool_calls"])
-            return message.get("content", json.dumps(resp_data, indent=2))
-        except (KeyError, IndexError):
-            return json.dumps(resp_data, indent=2)
-
-    async def _send_single_request_httpx(
+    
+    def _generate_single(
         self,
-        client: httpx.AsyncClient,
-        item: Dict[str, Any],
-        return_logits: bool,
-        until: Optional[Union[str, List[str]]],
-        cot: bool = False,
-        max_retries: int = None,
-        **kwargs,
-    ) -> Dict[str, Any]:
-        """
-        Sends a single HTTP POST request to the vLLM-compatible server using httpx.
-        Implements retry logic with exponential backoff.
-        """
-        effective_retries = max_retries if max_retries is not None else self.max_retries
-        payload = self._create_payload(item["input"], cot=cot, until=until, **kwargs)
-        attempt = 0
-        while attempt <= effective_retries:
-            try:
-                response = await client.post(self.api_base, json=payload, timeout=self.timeout)
-                if response.status_code != 200:
-                    raise RuntimeError(f"HTTP {response.status_code} Error: {response.text}")
-                resp_data = response.json()
-                result = {"prediction": self._parse_normal_response(resp_data)}
-                if cot and self.cot_parser:
-                    generated_text = result["prediction"]
-                    cot_text, final_answer = self.cot_parser(generated_text)
-                    result["chain_of_thought"] = cot_text
-                    result["prediction"] = final_answer
-                return result
-            except Exception as e:
-                logger.error(f"HTTP attempt {attempt + 1}/{effective_retries} failed: {e}")
-                attempt += 1
-                await asyncio.sleep(min(2 ** attempt, 32))
-        raise RuntimeError(f"Failed after {effective_retries} retries via httpx.")
-
-    async def _generate_batch_httpx(
-        self,
-        inputs: List[Dict[str, Any]],
+        input_item: Dict[str, Any],
         return_logits: bool,
         until: Optional[Union[str, List[str]]],
         cot: bool,
-        max_retries: Optional[int],
-        **kwargs,
-    ) -> List[Dict[str, Any]]:
-        """
-        Asynchronously generates outputs for a batch of input items using httpx.
-        """
-        logger.info(f"Starting asynchronous HTTP batch generation for {len(inputs)} items.")
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            tasks = [
-                self._send_single_request_httpx(
-                    client, item, return_logits, until, cot=cot, max_retries=max_retries, **kwargs
-                )
-                for item in inputs
-            ]
-            results = await asyncio.gather(*tasks, return_exceptions=False)
-        merged_results = []
-        for orig, res in zip(inputs, results):
-            merged = deepcopy(orig)
-            merged.update(res)
-            merged_results.append(merged)
-        logger.info("Asynchronous HTTP batch generation completed.")
-        return merged_results
-
-    def _generate_single_sdk(
-        self,
-        item: Dict[str, Any],
-        return_logits: bool,
-        until: Optional[Union[str, List[str]]],
-        cot: bool = False,
-        max_retries: Optional[int] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         """
-        Generates text for a single input item using the OpenAI SDK client.
-        Implements retry logic with exponential backoff.
+        Generates text for a single input item with retry logic and exponential backoff.
+        
+        Args:
+            input_item (Dict[str, Any]): An input item containing at least the "input" key.
+            return_logits (bool): Whether to return logits.
+            until (Optional[Union[str, List[str]]]): Optional stop criteria.
+            cot (bool): Whether to enable chain-of-thought prompting.
+            **kwargs: Additional parameters to pass to the API.
+        
+        Returns:
+            Dict[str, Any]: A dictionary with keys "prediction", "finish_reason", and optionally "logprobs".
         """
-        effective_retries = max_retries if max_retries is not None else self.max_retries
-        logger.info(f"Starting SDK request for input: {item['input']}")
-        for attempt in range(effective_retries):
+        result = None
+        for attempt in range(self.max_retries):
             try:
-                payload = self._create_payload(item["input"], cot=cot, until=until, **kwargs)
+                # Explicitly pass the 'cot' parameter to _create_payload.
+                payload = self._create_payload(
+                    input_item["input"],
+                    return_logits=return_logits,
+                    until=until,
+                    cot=cot,
+                    **kwargs,
+                )
                 if not self.use_chat_api:
-                    response = self.client.completions.create(**payload)
+                    # Call the traditional completions API.
+                    response = openai.Completion.create(**payload)
                     result = {
                         "prediction": response.choices[0].text,
                         "finish_reason": response.choices[0].finish_reason,
@@ -304,29 +256,29 @@ class OpenAIModel(BaseModel):
                             "tokens": response.choices[0].logprobs.tokens,
                         })
                 else:
-                    response = self.client.chat.completions.create(**payload)
+                    # Call the Chat API.
+                    response = openai.ChatCompletion.create(**payload)
                     result = {
                         "prediction": response.choices[0].message.content,
                         "finish_reason": response.choices[0].finish_reason,
                     }
                     if return_logits and hasattr(response.choices[0], "logprobs"):
                         result["logprobs"] = response.choices[0].logprobs
-                if cot and self.cot_parser:
-                    generated_text = result["prediction"]
-                    cot_text, final_answer = self.cot_parser(generated_text)
-                    result["chain_of_thought"] = cot_text
-                    result["prediction"] = final_answer
-                logger.info("SDK request succeeded.")
-                return result
+                break  # Exit the retry loop if successful.
             except Exception as e:
-                logger.error(f"SDK attempt {attempt + 1}/{effective_retries} failed: {e}")
-                time.sleep(min(2 ** attempt, 32))
-        raise RuntimeError(f"Failed after {effective_retries} SDK retries.")
-
+                if attempt == self.max_retries - 1:
+                    error_msg = f"Error after {self.max_retries} attempts: {str(e)}"
+                    raise RuntimeError(error_msg) from e
+                else:
+                    # Exponential backoff before retrying.
+                    time.sleep(min(2 ** attempt, 32))
+        return result
+    
     def generate_batch(
         self,
         inputs: List[Dict[str, Any]],
         return_logits: bool = False,
+        use_chat_api: Optional[bool] = None,
         until: Optional[Union[str, List[str]]] = None,
         cot: bool = False,
         max_retries: Optional[int] = None,
@@ -334,40 +286,55 @@ class OpenAIModel(BaseModel):
         **kwargs,
     ) -> List[Dict[str, Any]]:
         """
-        Generates text for a batch of input items.
-
-        If the model is not a vision model, uses asynchronous httpx calls.
-        Otherwise, uses the OpenAI SDK client via a ThreadPoolExecutor.
+        Generates text for a batch of input items using multi-threading.
+        
+        This method processes each input item concurrently using a ThreadPoolExecutor.
+        It supports chain-of-thought prompting and parsing. In case of API failures,
+        each call is retried with exponential backoff.
+        
+        Args:
+            inputs (List[Dict[str, Any]]): A list of input items. Each item must include at least the "input" key,
+                                           and optionally a "reference" key.
+            return_logits (bool): If True, includes logits in the output (if supported).
+            use_chat_api (Optional[bool]): Overrides the instance's use_chat_api flag if provided.
+            until (Optional[Union[str, List[str]]]): Stop sequence(s) for generation.
+            cot (bool): If True, enables chain-of-thought processing.
+            max_retries (int | None): Maximum retry attempts for each API call (defaults to self.max_retries).
+            show_progress (bool): If True, displays a progress bar.
+            **kwargs: Additional API parameters.
+        
+        Returns:
+            List[Dict[str, Any]]: A list of input items updated with generation results.
+                                  Each item will have "prediction" and "finish_reason" keys,
+                                  and if CoT is enabled, "chain_of_thought" will also be added.
         """
-        logger.info(f"Starting batch generation for {len(inputs)} items.")
-        if not self.is_vision_model:
-            # Use httpx-based asynchronous generation for text models.
-            try:
-                results = asyncio.run(
-                    self._generate_batch_httpx(inputs, return_logits, until, cot, max_retries, **kwargs)
-                )
-            except RuntimeError as e:
-                if "asyncio.run() cannot be called from a running event loop" in str(e):
-                    import nest_asyncio
-                    nest_asyncio.apply()
-                    results = asyncio.run(
-                        self._generate_batch_httpx(inputs, return_logits, until, cot, max_retries, **kwargs)
-                    )
-                else:
-                    raise
-        else:
-            # Use the OpenAI SDK client (synchronous) for vision models.
-            results = []
-            max_workers = self.batch_size
-            future_to_item = {}
-            def process_item(item: Dict[str, Any]) -> Dict[str, Any]:
-                input_copy = deepcopy(item)
-                return self._generate_single_sdk(input_copy, return_logits, until, cot=cot, max_retries=max_retries, **kwargs)
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                for item in inputs:
-                    future = executor.submit(process_item, item)
-                    future_to_item[future] = deepcopy(item)
-                for future in tqdm(as_completed(future_to_item), total=len(inputs), desc="Generating SDK outputs", disable=not show_progress):
+        if max_retries is None:
+            max_retries = self.max_retries
+
+        results = []
+        # Use the instance's batch_size as the number of worker threads.
+        max_workers = self.batch_size
+
+        def process_item(item: Dict[str, Any]) -> Dict[str, Any]:
+            # Create a deep copy of the input to preserve the original data.
+            input_copy = deepcopy(item)
+            result = self._generate_single(input_copy, return_logits, until, cot=cot, **kwargs)
+            # If CoT is enabled and a parser is provided, apply CoT parsing to the generated text.
+            if result and result.get("prediction") is not None and cot and self.cot_parser:
+                generated_text = result["prediction"]
+                cot_text, final_answer = self.cot_parser(generated_text)
+                result["chain_of_thought"] = cot_text
+                result["prediction"] = final_answer
+            return result or {
+                "error": "Failed to generate",
+                "prediction": None,
+                "finish_reason": "error",
+            }
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_item = {executor.submit(process_item, item): item for item in inputs}
+            if show_progress:
+                for future in tqdm(as_completed(future_to_item), total=len(future_to_item), desc="Generating OpenAI outputs"):
                     orig_item = future_to_item[future]
                     try:
                         res = future.result()
@@ -375,13 +342,29 @@ class OpenAIModel(BaseModel):
                         merged.update(res)
                         results.append(merged)
                     except Exception as e:
-                        logger.error(f"SDK error: {str(e)}")
-                        error_item = deepcopy(orig_item)
-                        error_item.update({
+                        logger.error(f"Error in API call: {str(e)}")
+                        merged = deepcopy(orig_item)
+                        merged.update({
                             "error": str(e),
                             "prediction": None,
                             "finish_reason": "error"
                         })
-                        results.append(error_item)
-        logger.info("Batch generation completed.")
+                        results.append(merged)
+            else:
+                for future in as_completed(future_to_item):
+                    orig_item = future_to_item[future]
+                    try:
+                        res = future.result()
+                        merged = deepcopy(orig_item)
+                        merged.update(res)
+                        results.append(merged)
+                    except Exception as e:
+                        logger.error(f"Error in API call: {str(e)}")
+                        merged = deepcopy(orig_item)
+                        merged.update({
+                            "error": str(e),
+                            "prediction": None,
+                            "finish_reason": "error"
+                        })
+                        results.append(merged)
         return results
