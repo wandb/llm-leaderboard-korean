@@ -354,9 +354,10 @@ Compare these responses and provide your verdict in this exact format:
                 
                 # Pointwise 평가(RUBRIC_AND_RESPONSE)인 경우 간소화
                 if j_type == JudgeType.RUBRIC_AND_RESPONSE:
-                    # OpenAI 모델에서 score 추출 시도
+                    # 원본 prediction에서 직접 점수 파싱
+                    original_prediction = sample.get("prediction", "")
                     score_pattern = r"\[RESULT\]\s*(\d+(?:\.\d+)?)"
-                    score_match = re.search(score_pattern, judge_response)
+                    score_match = re.search(score_pattern, original_prediction)
                     if score_match:
                         score = float(score_match.group(1))
                         sample["judge_score"] = score

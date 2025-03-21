@@ -30,6 +30,7 @@ class OpenAIJudge(BaseJudge):
         api_key (str): OpenAI API key.
         api_base (str, optional): OpenAI API base URL. Defaults to "https://api.openai.com/v1".
         model_name (str): OpenAI model name (e.g., "gpt-4o", "gpt-4", "gpt-3.5-turbo").
+        model_name_or_path (str, optional): Huggingface model name or path.
         system_message (Optional[str]): A system message to include in chat completions.
         use_chat_api (bool): If True, uses the Chat API; otherwise, uses the Completions API.
         max_tokens (int): Maximum tokens to generate for each judge response.
@@ -47,6 +48,7 @@ class OpenAIJudge(BaseJudge):
         api_key: str,
         api_base: str = "https://api.openai.com/v1",
         model_name: str = "gpt-4o",
+        model_name_or_path: str = None,
         system_message: Optional[str] = None,
         use_chat_api: bool = True,
         max_tokens: int = 64,
@@ -61,7 +63,7 @@ class OpenAIJudge(BaseJudge):
         super().__init__(**kwargs)
         logger.info(f"[OpenAIJudge] Initializing with model: {model_name}")
         
-        self.model_name = model_name
+        self.model_name = model_name_or_path if model_name_or_path else model_name
         self.system_message = system_message
         self.use_chat_api = use_chat_api
         self.max_tokens = max_tokens

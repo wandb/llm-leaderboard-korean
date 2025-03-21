@@ -38,6 +38,7 @@ class OpenAIModel(BaseModel):
         api_key (str): OpenAI API key.
         api_base (str): OpenAI API base URL.
         model_name (str): Model identifier (e.g., "gpt-4", "gpt-4-vision-preview").
+        model_name_or_path (str): Model identifier or path (e.g., "gpt-4", "gpt-4-vision-preview").
         system_message (Optional[str]): System message for chat completions.
         use_chat_api (bool): Whether to use the Chat API; if False, uses the Completions API.
         is_vision_model (bool): Flag indicating if the model supports vision inputs.
@@ -49,9 +50,10 @@ class OpenAIModel(BaseModel):
     """
     def __init__(
         self,
-        api_key: str,
-        api_base: str,
-        model_name: str,
+        api_key: Optional[str] = None,
+        api_base: str = "https://api.openai.com/v1",
+        model_name: str = "gpt-4o",
+        model_name_or_path: str = None,
         system_message: Optional[str] = None,
         use_chat_api: bool = True,
         is_vision_model: bool = False,
@@ -73,7 +75,8 @@ class OpenAIModel(BaseModel):
             openai.api_key = api_key
         openai.api_base = api_base
         
-        self.model_name = model_name
+        # model_name_or_path가 제공되면 model_name 대신 사용
+        self.model_name = model_name_or_path if model_name_or_path else model_name
         self.system_message = system_message
         self.use_chat_api = use_chat_api
         self.is_vision_model = is_vision_model
