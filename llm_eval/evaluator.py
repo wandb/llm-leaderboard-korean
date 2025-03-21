@@ -10,14 +10,13 @@ evaluation, and additional post-processing such as language penalization.
 import argparse
 import json
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Callable
 
 from llm_eval.runner import PipelineRunner
 from llm_eval.utils.logging import get_logger
-from llm_eval.utils.util import EvaluationResult
+from llm_eval.utils.util import EvaluationResult, _load_function
 
 logger = get_logger(name="evaluator", level=logging.INFO)
-
 
 def _parse_json_str(json_str: Optional[str]) -> Dict[str, Any]:
     """
@@ -34,13 +33,17 @@ def _parse_json_str(json_str: Optional[str]) -> Dict[str, Any]:
         logger.warning(f"Failed to parse JSON string: {json_str}, error: {e}")
         return {}
 
-
 class Evaluator:
     """
     High-level interface for running the full LLM evaluation pipeline.
     This class leverages PipelineRunner internally to connect dataset, model,
     scaling method, and evaluator components. It supports judge/reward backends
     via MultiModel if specified.
+
+    Additionally, it accepts a custom cot_parser which can be provided either
+    as a callable or as a string path (e.g., "my_pkg.my_module.my_cot_parser").
+    If provided, this custom cot_parser will be used in the pipeline for parsing
+    chain-of-thought outputs.
     """
 
     def __init__(
@@ -51,6 +54,7 @@ class Evaluator:
         default_scaling_method: Optional[str] = None,
         default_evaluation_method: str = "string_match",
         default_split: str = "test",
+        default_cot_parser: Optional[Union[Callable[[str], Tuple[str, str]], str]] = None,
     ):
         """
         Initializes the Evaluator with default backend configurations.
@@ -62,6 +66,8 @@ class Evaluator:
             default_scaling_method (Optional[str]): Default scaling method (e.g., "beam_search").
             default_evaluation_method (str): Default evaluation method (e.g., "string_match").
             default_split (str): Default dataset split (e.g., "test").
+            default_cot_parser (callable or str, optional): Default custom chain-of-thought parser.
+                Can be provided as a callable or as a full function path string.
         """
         self.default_model_backend = default_model_backend
         self.default_judge_backend = default_judge_backend
@@ -69,6 +75,12 @@ class Evaluator:
         self.default_scaling_method = default_scaling_method
         self.default_evaluation_method = default_evaluation_method
         self.default_split = default_split
+
+        # Process default_cot_parser: if it's a string, dynamically load the function.
+        if isinstance(default_cot_parser, str):
+            self.default_cot_parser = _load_function(default_cot_parser)
+        else:
+            self.default_cot_parser = default_cot_parser
 
     def run(
         self,
@@ -87,6 +99,7 @@ class Evaluator:
         scaling_params: Optional[Dict[str, Any]] = None,
         evaluator_params: Optional[Dict[str, Any]] = None,
         language_penalize: bool = True,
+        custom_cot_parser: Optional[Union[Callable[[str], Tuple[str, str]], str]] = None,
     ) -> EvaluationResult:
         """
         Runs the full LLM evaluation pipeline, which involves:
@@ -113,12 +126,12 @@ class Evaluator:
             scaling_params (Optional[Dict[str, Any]]): Additional parameters for the scaling method.
             evaluator_params (Optional[Dict[str, Any]]): Additional parameters for the evaluator.
             language_penalize (bool): If True, apply the language penalizer to predictions.
-
+            custom_cot_parser (callable or str, optional): A custom chain-of-thought parser function.
+                If provided, this function overrides the default cot_parser in the model backend.
+                It can be provided as a callable or as a string path.
         Returns:
             EvaluationResult: Object containing evaluation metrics, sample outputs, and run info.
         """
-        from llm_eval.utils.util import EvaluationResult
-
         model_backend_name = model or self.default_model_backend
         judge_backend_name = judge_model or self.default_judge_backend
         reward_backend_name = reward_model or self.default_reward_backend
@@ -127,9 +140,20 @@ class Evaluator:
         final_scaling = scaling_method or self.default_scaling_method
         final_eval = evaluation_method or self.default_evaluation_method
 
-        # Determine if MultiModel is needed
-        use_multi = (judge_backend_name is not None) or (reward_backend_name is not None)
+        # Determine custom cot_parser: prioritize the one passed in run(), otherwise default.
+        if custom_cot_parser is None:
+            custom_cot_parser = self.default_cot_parser
+        elif isinstance(custom_cot_parser, str):
+            custom_cot_parser = _load_function(custom_cot_parser)
 
+        # Pass custom cot_parser to PipelineRunner via model_params.
+        if model_params is None:
+            model_params = {}
+        if custom_cot_parser is not None:
+            model_params["cot_parser"] = custom_cot_parser
+
+        # Determine if MultiModel is needed.
+        use_multi = (judge_backend_name is not None) or (reward_backend_name is not None)
         if use_multi:
             multi_config = {
                 "generate_model": None,
@@ -189,7 +213,7 @@ def main():
     Supports configuration via JSON parameters for dataset, model, scaling, and evaluator.
     The final evaluation results are output as JSON, either to stdout or to a specified file.
     """
-    parser = argparse.ArgumentParser(description="LLM Evaluator CLI (Supports Judge/Reward)")
+    parser = argparse.ArgumentParser(description="LLM Evaluator CLI (Supports Judge/Reward and Custom CoT Parser)")
     parser.add_argument("--model", type=str, default=None, help="Main model backend name")
     parser.add_argument("--judge_model", type=str, default=None, help="Judge model backend name")
     parser.add_argument("--reward_model", type=str, default=None, help="Reward model backend name")
@@ -199,7 +223,8 @@ def main():
     parser.add_argument("--scaling_method", type=str, default=None, help="Scaling method (registry key)")
     parser.add_argument("--evaluation_method", type=str, default="string_match", help="Evaluation method (registry key)")
     parser.add_argument("--output_file", type=str, default=None, help="File path to save JSON results")
-
+    parser.add_argument("--cot_parser", type=str, default=None, help="Full path to a custom CoT parser function (e.g., 'my_pkg.my_mod.my_cot_parser')")
+    
     # Additional parameters passed as JSON strings
     parser.add_argument("--dataset_params", type=str, default=None, help="JSON string for dataset parameters")
     parser.add_argument("--model_params", type=str, default=None, help="JSON string for main model parameters")
@@ -207,12 +232,11 @@ def main():
     parser.add_argument("--reward_params", type=str, default=None, help="JSON string for reward model parameters")
     parser.add_argument("--scaling_params", type=str, default=None, help="JSON string for scaling method parameters")
     parser.add_argument("--evaluator_params", type=str, default=None, help="JSON string for evaluator parameters")
-
-    # Language penalizer flags and target language parameter
+    
     parser.add_argument("--language_penalize", action="store_true", help="Enable language penalizer")
     parser.add_argument("--no_language_penalize", action="store_true", help="Disable language penalizer")
     parser.add_argument("--target_lang", type=str, default="ko", help="Target language code for penalizer (e.g., 'ko')")
-
+    
     args = parser.parse_args()
 
     # Determine language penalize flag based on arguments
@@ -222,24 +246,27 @@ def main():
     elif args.language_penalize:
         language_penalize_flag = True
 
-
     dataset_params = _parse_json_str(args.dataset_params)
     model_params = _parse_json_str(args.model_params)
     judge_params = _parse_json_str(args.judge_params)
     reward_params = _parse_json_str(args.reward_params)
     scaling_params = _parse_json_str(args.scaling_params)
     evaluator_params = _parse_json_str(args.evaluator_params)
+    
+    # Process custom cot_parser parameter; if provided, it is a string path.
+    custom_cot_parser = args.cot_parser if args.cot_parser else None
 
-    evaluator = Evaluator(
+    evaluator_instance = Evaluator(
         default_model_backend="huggingface",
         default_judge_backend=None,
         default_reward_backend=None,
         default_scaling_method=None,
         default_evaluation_method="string_match",
         default_split="test",
+        default_cot_parser=custom_cot_parser,  # Custom CoT parser is passed as default if provided.
     )
-
-    eval_result = evaluator.run(
+    
+    eval_result = evaluator_instance.run(
         model=args.model,
         judge_model=args.judge_model,
         reward_model=args.reward_model,
@@ -254,11 +281,11 @@ def main():
         reward_params=reward_params,
         scaling_params=scaling_params,
         evaluator_params=evaluator_params,
-        language_penalize=language_penalize_flag,
+        language_penalize=not args.no_language_penalize,
     )
-
+    
     result_dict = eval_result.to_dict()
-
+    
     if args.output_file:
         with open(args.output_file, "w", encoding="utf-8") as f:
             json.dump(result_dict, f, ensure_ascii=False, indent=2)
