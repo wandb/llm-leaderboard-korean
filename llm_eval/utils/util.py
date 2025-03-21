@@ -1,6 +1,7 @@
 import json
 import pandas as pd
 from typing import Any, Dict, List
+import importlib
 
 class EvaluationResult:
     """
@@ -89,3 +90,19 @@ class EvaluationResult:
             return self.__getitem__(key)
         except KeyError:
             return default
+
+def _load_function(func_path: str) -> Callable:
+    """
+    Dynamically load a function given its full path as a string.
+    For example: "my_package.my_module.my_function"
+    """
+    try:
+        module_path, func_name = func_path.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        func = getattr(module, func_name)
+        if not callable(func):
+            raise ValueError(f"'{func_path}' is not callable.")
+        return func
+    except Exception as e:
+        logger.error(f"Failed to load function from path '{func_path}': {e}")
+        raise e
