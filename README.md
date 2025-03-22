@@ -113,7 +113,7 @@ results = evaluator.run(
 - Model is likewise loaded via the registry (`huggingface`, `vllm`, etc.).
 - judge_model and reward_model can be provided if you want LLM-as-a-Judge or reward-model logic. If both are None, the system uses a single model backend.
 - `ScalingMethod` is optional if you want to do specialized decoding.
-- `EvaluationMethod` (e.g., `string_match`, `logit_based`, or `llm_judge`) measures performance.
+- `EvaluationMethod` (e.g., `string_match`, `log_likelihood`, `partial_match` or `llm_judge`) measures performance.
 
 ### CLI Usage
 
