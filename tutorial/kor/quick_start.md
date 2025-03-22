@@ -73,6 +73,12 @@ python -m llm_eval.evaluator \
 ---
 
 ## Evaluator API 사용법
+- 백엔드 모델: 레지스트리를 통해 로드됩니다 (huggingface, vllm 등).
+- 데이터셋: 레지스트리에서 로드됩니다 (예: haerae_bench는 여러 데이터셋 중 하나입니다).
+- LLM-as-a-Judge 또는 reward model 로직을 원하는 경우 judge_model 및 reward_model을 제공할 수 있습니다. 둘 다 None인 경우 시스템은 단일 모델 백엔드를 사용합니다.
+- test-time-scaling을 수행하려면 ScalingMethod를 선택적으로 사용할 수 있습니다.
+- EvaluationMethod(예: string_match, logit_based 또는 llm_judge)는 성능을 측정합니다.
+
 다음은 Evaluator 인터페이스를 사용하여 데이터셋을 로드하고, 모델과 (선택적으로) 스케일링 방법을 적용한 다음, 평가하는 방법에 대한 최소한의 예시입니다.
 
 ### Python Usage
@@ -86,36 +92,54 @@ evaluator = Evaluator()
 # 2) Run the evaluation pipeline
 results = evaluator.run(
     model="huggingface",                        # or "vllm", "openai", etc.
+    model_params={"model_name_or_path":"kakaocorp/kanana-nano-2.1b-instruct", "device":"cuda:0", "batch_size": 2, "max_new_tokens": 128}, # example HF Transformers param
+
     dataset="haerae_bench",                     # or "kmmlu", "qarv", ...
     subset=["standard_nomenclature"],            # optional subset(s)
     split="test",                               # "train"/"validation"/"test"
     dataset_params={},         # example HF config
-    model_params={"model_name_or_path":"kakaocorp/kanana-nano-2.1b-instruct", "device":"cuda:0", "batch_size": 2, "max_new_tokens": 128}, # example HF Transformers param
+
     judge_model=None,                           # specify e.g. "huggingface_judge" if needed
     judge_params={},                            # params for judge model (if judge_model is not None)
+
     reward_model=None,                          # specify e.g. "huggingface_reward" if needed
     reward_params={},                           # params for reward model (if reward_model is not None)
+
     scaling_method=None,                        # or "beam_search", "best_of_n"
     scaling_params={},             # e.g., {"beam_size":3, "num_iterations":5}
+
     evaluator_params={}                         # e.g., custom evaluation settings
 )
 
 print(results)
 # e.g. EvaluationResult(metrics={'accuracy': 0.0, 'language_penalizer_average': 0.8733333333333333}, info={'dataset_name': 'haerae_bench', 'subset': ['csat_geo'], 'split': 'test', 'model_backend_name': 'huggingface', 'scaling_method_name': None, 'evaluation_method_name': 'string_match', 'elapsed_time_sec': 1119.5369288921356}, samples=[...]
 
-
 df = results.to_dataframe()
 print(df) # input, reference, prediction, options, chain-of-thought, logits, 등 확인 가능
-
-
-
 ```
 
-- 데이터셋은 레지스트리에서 로드됩니다 (예: haerae_bench는 여러 데이터셋 중 하나입니다).
-- 모델도 레지스트리를 통해 로드됩니다 (huggingface, vllm 등).
-- LLM-as-a-Judge 또는 reward model 로직을 원하는 경우 judge_model 및 reward_model을 제공할 수 있습니다. 둘 다 None인 경우 시스템은 단일 모델 백엔드를 사용합니다.
-- test-time-scaling을 수행하려면 ScalingMethod를 선택적으로 사용할 수 있습니다.
-- EvaluationMethod(예: string_match, logit_based 또는 llm_judge)는 성능을 측정합니다.
+### 백엔드 모델 변경 - vllm (Backend model changed)
+```python
+from llm_eval.evaluator import Evaluator
+
+# 1) Initialize an Evaluator.
+evaluator = Evaluator()
+
+# 2) Run the evaluation pipeline
+results = evaluator.run(
+model="openai",
+model_params={"api_base": "http://0.0.0.0:8000/v1/chat/completions", "model_name": "Qwen/Qwen2.5-7B-Instruct", "batch_size" : 1},
+
+dataset="haerae_bench",
+split="test",
+subset=["csat_geo"],
+
+evaluation_method='string_match',
+)
+
+print(results)
+# e.g. EvaluationResult(metrics={'accuracy': 0.34, 'language_penalizer_average': 0.4533333333333333}, info={'dataset_name': 'haerae_bench', 'subset': ['csat_geo'], 'split': 'test', 'model_backend_name': 'openai', 'scaling_method_name': None, 'evaluation_method_name': 'string_match', 'elapsed_time_sec': 49.80667734146118}, samples=[...])
+```
 
 ---
 
@@ -128,11 +152,13 @@ print(df) # input, reference, prediction, options, chain-of-thought, logits, 등
 ```python
 results = evaluator.run(
 model="huggingface",
+model_params={"model_name_or_path":"Qwen/Qwen2.5-3B-Instruct", "device":"cuda:0", "batch_size": 2, "cot":True, "max_new_tokens": 1024},
+
 dataset="haerae_bench",
 split="test",
-evaluation_method='partial_match',
 subset=["csat_geo"],
-model_params={"model_name_or_path":"Qwen/Qwen2.5-3B-Instruct", "device":"cuda:0", "batch_size": 2, "cot":True, "max_new_tokens": 1024},
+
+evaluation_method='partial_match',
 )
 
 print(results)
@@ -143,11 +169,13 @@ print(results)
 ```python
 results = evaluator.run(
 model="huggingface",
+model_params={"model_name_or_path":"Qwen/Qwen2.5-3B-Instruct", "device":"cuda:0", "batch_size": 2, "cot":True, "max_new_tokens": 1024},
+
 dataset="haerae_bench",
 split="test",
-evaluation_method='string_match',
 subset=["csat_geo"],
-model_params={"model_name_or_path":"Qwen/Qwen2.5-3B-Instruct", "device":"cuda:0", "batch_size": 2, "cot":True, "max_new_tokens": 1024},
+
+evaluation_method='string_match',
 )
 ```
 
@@ -159,12 +187,13 @@ model_params={"model_name_or_path":"Qwen/Qwen2.5-3B-Instruct", "device":"cuda:0"
 answer_template = "{query} ### 답:"
 results = evaluator.run(
 model="huggingface",
+model_params={"model_name_or_path":"kakaocorp/kanana-nano-2.1b-instruct", "device":"cuda:0", "batch_size": 4, "max_new_tokens": 128},
+
 dataset="haerae_bench",
 split="test",
 evaluation_method='log_likelihood',
 subset=["csat_geo"],
 dataset_params = {"base_prompt_template" : answer_template},
-model_params={"model_name_or_path":"kakaocorp/kanana-nano-2.1b-instruct", "device":"cuda:0", "batch_size": 4, "max_new_tokens": 128},
 )
 
 print(results)
@@ -184,10 +213,12 @@ print(results)
 ```python
 results = evaluator.run(
 model="huggingface",
+model_params={"model_name_or_path":"Qwen/Qwen2.5-0.5B-Instruct", "device":"cuda", "batch_size": 1}, # example HF Transformers param
+
 dataset="haerae_bench",
 split="test",
+
 scaling_method='self_consistency',
-model_params={"model_name_or_path":"Qwen/Qwen2.5-0.5B-Instruct", "device":"cuda", "batch_size": 1}, # example HF Transformers param
 )
 print(results)
 # e.g. results['metrics'] : {'accuracy': 0.00040816326530612246}
