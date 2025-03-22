@@ -28,16 +28,17 @@ class HuggingFaceModel(BaseModel):
         The option with the highest log probability is selected as the final prediction.
     
     Args:
-        model_name_or_path (str): HF Hub model ID or local path.
-        device (str): 'cpu', 'cuda', 'cuda:0', etc.
+        model_id_or_path (str): HF Hub model ID or local path.
+        tokenizer_id_or_path (str|None): Optional tokenizer ID or local path. If None, uses model_id_or_path.
+        dtype (str): 'auto', 'fp16', 'fp32', etc. If 'auto', uses the model's native precision.
         max_new_tokens (int): Maximum new tokens to generate in one call.
-        cot_trigger (str|None): Optional CoT (Chain-of-Thought) trigger appended to the prompt. If None, no CoT trigger.
+        max_input_tokens (int|None): Optional maximum input tokens. If None, no truncation.
         temperature (float): Sampling temperature.
         top_p (float): Nucleus sampling probability.
-        do_sample (bool): If True, sampling mode; if False, greedy generation.
-        batch_size (int): Batch size to use for generation.
-        cot (bool): Whether to use chain-of-thought prompting. If True and `cot_trigger` is provided,
-                    the trigger is appended to the prompt.
+        stop_token (str|None): Optional stop token. If None, no stopping.
+        device (str|None): 'cpu', 'cuda', 'cuda:0', etc. If None, uses the model's device.
+        cot (bool): Whether to use chain-of-thought prompting.
+        cot_trigger (str|None): Optional CoT (Chain-of-Thought) trigger appended to the prompt. If None, no CoT trigger.
         cot_parser (callable|None): A function that takes a string (generated text) and returns a tuple 
                     (chain_of_thought, final_answer). If None, no CoT parsing is applied.
         **kwargs: Additional parameters as needed.
@@ -45,24 +46,30 @@ class HuggingFaceModel(BaseModel):
 
     def __init__(
         self,
-        model_name_or_path: str,
-        device: str = "cpu",
-        max_new_tokens: int = 128,
-        temperature: float = 1.0,
-        top_p: float = 0.95,
-        do_sample: bool = True,
-        batch_size: int = 1,
+        model_id_or_path: str,
+        tokenizer_id_or_path: Optional[str] = None,
+        dtype: str = "auto",
+        max_new_tokens: int = 512,
+        max_input_tokens: Optional[int] = None,
+        temperature: float = 0.0,
+        top_p: float = 1.0,
+        stop_token: Optional[str] = None,
+        device: Optional[str] = None,
         cot: bool = False,
         cot_trigger: Optional[str] = "Let's think step by step.",
         cot_parser: Optional[Callable[[str], Tuple[str, str]]] = default_cot_parser,
         **kwargs
     ):
+        # 기본 속성들을 초기화하기 위해 부모 클래스 생성자 호출
         super().__init__(**kwargs)
-        logger.info(f"[HuggingFaceModel] Loading tokenizer/model from {model_name_or_path}")
+        
+        # 모델 이름을 모델 ID에서 추출
+        self.model_name = f"huggingface:{model_id_or_path}"
+        logger.info(f"[HuggingFaceModel] Loading tokenizer/model from {model_id_or_path}")
 
         # Load tokenizer and model
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, padding_side="left")
-        self.model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path, padding_side="left")
+        self.model = AutoModelForCausalLM.from_pretrained(model_id_or_path)
         self.model.eval()
 
         # Device setup
@@ -75,8 +82,6 @@ class HuggingFaceModel(BaseModel):
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.top_p = top_p
-        self.do_sample = do_sample
-        self.batch_size = batch_size
         self.cot = cot
         self.cot_trigger = cot_trigger
         self.cot_parser = cot_parser

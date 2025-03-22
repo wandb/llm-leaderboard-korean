@@ -1,6 +1,9 @@
 from typing import List, Dict, Any, Union
 from llm_eval.models.base import BaseModel
 from llm_eval.models.multi import MultiModel # for llm as a judge
+import logging
+
+logger = logging.getLogger(__name__)
 
 class BaseEvaluator:
     """
@@ -94,10 +97,34 @@ class BaseEvaluator:
             sample["prediction"] = self.parse_prediction(raw_pred)
 
         # 2) (Optional) If MultiModel + Judge exists, call judge_batch
-        if isinstance(model, MultiModel):
-            # If multi_model is present and has a Judge model as a sub-item,
+        # 자체 judge 로직을 갖고 있는 evaluator인 경우 건너뛰기 (LLMJudgeEvaluator 등)
+        has_custom_judge = hasattr(self, 'has_custom_judge') and getattr(self, 'has_custom_judge', False)
+        
+        if isinstance(model, MultiModel) and model.judge_model is not None and not has_custom_judge:
             # judge_batch() is called → each sample may be updated with {"judge_score": float, ...}.
+            logger.info(f"BaseEvaluator: Calling judge_batch via MultiModel for {len(data)} samples")
             data = model.judge_batch(data)
+            
+            # 판단이 완료되었음을 표시하는 플래그 추가
+            judged_count = 0
+            for sample in data:
+                # 판단 결과가 있는지 확인하고 플래그 추가
+                has_judge_result = False
+                if "judge_score" in sample:
+                    has_judge_result = True
+                    # None 값 검사 및 경고 로그 추가
+                    if sample["judge_score"] is None:
+                        logger.warning(f"Received None judge_score from judge_batch for sample: {sample.get('id', 'unknown')}")
+                elif "evaluation" in sample:
+                    has_judge_result = True
+                
+                if has_judge_result:
+                    # _judged_by_evaluator 플래그는 내부적으로만 사용하도록 설정
+                    # 이후 프로세스에서 참조할 수 있도록 유지하나, 삭제 가능하게 '_'로 시작하는 이름 사용
+                    sample["_judged_by_evaluator"] = True
+                    judged_count += 1
+                    
+            logger.info(f"BaseEvaluator: Marked {judged_count}/{len(data)} samples as judged")
 
         # 3) compute_metrics
         metrics = self.evaluate_predictions(data)

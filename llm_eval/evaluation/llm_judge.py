@@ -136,8 +136,7 @@ class ResponseComparisonParser(ResponseParser):
             raise ValueError(f"No valid verdict [[A]] or [[B]] found in response: {response}")
         winner = match.group(1)
         return {
-            "winner": winner,
-            "raw_response": response
+            "winner": winner
         }
 
 
@@ -258,6 +257,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
     Evaluator that uses an LLM-as-a-Judge approach to assess the quality of model responses.
     """
     name = "llm_judge"
+    has_custom_judge = True  # 자체 판단 로직을 가지고 있음을 나타내는 플래그
 
     def __init__(
         self,
@@ -290,16 +290,50 @@ class LLMJudgeEvaluator(BaseEvaluator):
         score_count = 0
         total_correct = 0
         total_items = len(samples)
+        
+        # 이미 BaseEvaluator에서 판단이 완료된 데이터인지 확인
+        already_judged = all("_judged_by_evaluator" in sample for sample in samples)
+        
+        if already_judged:
+            logger.info("LLMJudgeEvaluator: Using already judged data")
+            for sample in samples:
+                if "judge_score" in sample:
+                    # None 값 처리를 위한 안전 장치 추가
+                    score = sample["judge_score"]
+                    if score is not None:
+                        total_score += score
+                        score_count += 1
+                    else:
+                        logger.warning(f"Encountered None judge_score in sample: {sample.get('id', 'unknown')}")
+                elif "judge_correct" in sample:
+                    # Response comparison 유형의 경우 judge_correct 필드 확인
+                    if sample.get("judge_correct") == True:
+                        total_correct += 1
+                elif "evaluation" in sample and "is_correct" in sample.get("evaluation", {}):
+                    # 이전 버전과의 호환성
+                    if sample["evaluation"]["is_correct"] == True:
+                        total_correct += 1
+                elif "evaluation" in sample and "parsed" in sample["evaluation"] and "winner" in sample["evaluation"]["parsed"]:
+                    # 마지막 대안으로 winner 값 확인
+                    winner = sample["evaluation"]["parsed"]["winner"]
+                    if winner == "A" and sample.get("reference") == "A":
+                        total_correct += 1
+        else:
+            # 모든 샘플의 프롬프트를 한번에 준비
+            batch_inputs = []
+            batch_indices = []  # 원래 인덱스 추적
+            
+            for i, sample in enumerate(samples):
+                # 이미 판단된 샘플은 건너뛰기
+                if "_judged_by_evaluator" in sample:
+                    continue
+                    
+                try:
+                    judge_type_str = sample.get("judge_type", self.default_judge_type.value)
+                    j_type = JudgeType(judge_type_str)
 
-        # 모든 샘플의 프롬프트를 한번에 준비
-        batch_inputs = []
-        for sample in samples:
-            try:
-                judge_type_str = sample.get("judge_type", self.default_judge_type.value)
-                j_type = JudgeType(judge_type_str)
-
-                if j_type == JudgeType.RESPONSE_COMPARISON:
-                    filled_prompt = f"""Please act as an impartial judge and evaluate the quality of the responses provided by two AI assistants. Choose the assistant that follows the instructions and answers the question better.
+                    if j_type == JudgeType.RESPONSE_COMPARISON:
+                        filled_prompt = f"""Please act as an impartial judge and evaluate the quality of the responses provided by two AI assistants. Choose the assistant that follows the instructions and answers the question better.
 
 ### Instruction:
 {sample.get('input', '').strip()}
@@ -312,107 +346,100 @@ class LLMJudgeEvaluator(BaseEvaluator):
 
 Compare these responses and provide your verdict in this exact format:
 [[A]] if Response A is better, or [[B]] if Response B is better."""
-                else:
-                    template = self.prompt_templates.get(j_type)
-                    if template is None:
-                        raise ValueError(f"No template found for judge_type: {j_type}")
-                    filled_prompt = template.format(
-                        rubric=sample.get("rubric", "").strip(),
-                        response=sample.get("prediction", "").strip(),
-                        gold=sample.get("reference", "").strip(),
-                        response_b=sample.get("model_response_b", "").strip()
-                    )
+                    else:
+                        template = self.prompt_templates.get(j_type)
+                        if template is None:
+                            raise ValueError(f"No template found for judge_type: {j_type}")
+                        filled_prompt = template.format(
+                            rubric=sample.get("rubric", "").strip(),
+                            response=sample.get("prediction", "").strip(),
+                            gold=sample.get("reference", "").strip(),
+                            response_b=sample.get("model_response_b", "").strip()
+                        )
 
-                batch_inputs.append({
-                    "system": "You are an expert evaluator. Always provide your verdict in the exact format specified in the prompt.",
-                    "input": filled_prompt
-                })
-            except Exception as e:
-                logger.error(f"Error preparing prompt: {e}")
-                batch_inputs.append(None)
-
-        # 한번에 judge_batch 호출
-        try:
-            judge_responses = self.multi_judge_model.judge_batch(
-                [inp for inp in batch_inputs if inp is not None]
-            )
-        except Exception as e:
-            logger.error(f"Error in judge_batch: {e}")
-            return {"error": str(e)}
-
-        # 결과 처리
-        response_idx = 0
-        for i, sample in enumerate(samples):
-            if batch_inputs[i] is None:
-                continue
-
-            try:
-                judge_response = judge_responses[response_idx]["prediction"]
-                response_idx += 1
-
-                j_type = JudgeType(sample.get("judge_type", self.default_judge_type.value))
-                
-                # Pointwise 평가(RUBRIC_AND_RESPONSE)인 경우 간소화
-                if j_type == JudgeType.RUBRIC_AND_RESPONSE:
-                    # 원본 prediction에서 직접 점수 파싱
-                    original_prediction = sample.get("prediction", "")
-                    score_pattern = r"\[RESULT\]\s*(\d+(?:\.\d+)?)"
-                    score_match = re.search(score_pattern, original_prediction)
-                    if score_match:
-                        score = float(score_match.group(1))
-                        sample["judge_score"] = score
-                        total_score += score
-                        score_count += 1
-                    # 아무 필드도 추가하지 않음
-                
-                # Pairwise 평가(RESPONSE_COMPARISON)인 경우 기존 로직 유지
-                elif j_type == JudgeType.RESPONSE_COMPARISON:
-                    parser = ResponseComparisonParser()  # PairwiseComparisonParser 대신 사용
-                    try:
-                        parsed = parser.parse(judge_response)
-                        sample["evaluation"] = {
-                            "raw_output": judge_response,
-                            "parsed": parsed,
-                        }
+                    batch_inputs.append({
+                        "input": filled_prompt
+                    })
+                    batch_indices.append(i)
+                except Exception as e:
+                    logger.error(f"Error preparing prompt: {e}")
+                    
+            # 판단이 필요한 샘플이 있는 경우에만 judge_batch 호출
+            if batch_inputs:
+                try:
+                    logger.info(f"LLMJudgeEvaluator: Calling judge_batch for {len(batch_inputs)} samples")
+                    judge_responses = self.multi_judge_model.judge_batch(batch_inputs)
+                    
+                    # 결과 처리 - 원래 인덱스 사용
+                    for response_idx, sample_idx in enumerate(batch_indices):
+                        sample = samples[sample_idx]
+                        judge_response = judge_responses[response_idx]["prediction"]
                         
-                        if "winner" in parsed:
-                            winner = parsed["winner"]
-                            sample["judge_winner"] = winner
-                            sample["evaluation"]["winner"] = winner
-                            
-                            # 여기서 model_name을 설정해야 함
-                            if winner == "A":
-                                model_name = sample.get("model_a", "unknown")
-                            else:  # winner == "B"
-                                model_name = sample.get("model_b", "unknown")
+                        # 원래 응답을 original_prediction 필드에 저장
+                        original_prediction = sample.get("prediction", "")
+                        sample["original_prediction"] = original_prediction
+                        
+                        # 평가자 응답을 prediction 필드에 저장
+                        sample["prediction"] = judge_response
+                        
+                        j_type = JudgeType(sample.get("judge_type", self.default_judge_type.value))
+                        
+                        # Pointwise 평가(RUBRIC_AND_RESPONSE)인 경우 간소화
+                        if j_type == JudgeType.RUBRIC_AND_RESPONSE:
+                            # 원본 prediction에서 직접 점수 파싱
+                            score_pattern = r"\[RESULT\]\s*(\d+(?:\.\d+)?)"
+                            score_match = re.search(score_pattern, judge_response)
+                            if score_match:
+                                score = float(score_match.group(1))
+                                sample["judge_score"] = score
+                                # _judged_by_evaluator는 내부 상태 관리용으로만 사용하고 출력에는 포함하지 않음  
+                                sample["_judged_by_evaluator"] = True
+                                total_score += score
+                                score_count += 1
+                        
+                        # Pairwise 평가(RESPONSE_COMPARISON)인 경우 기존 로직 유지
+                        elif j_type == JudgeType.RESPONSE_COMPARISON:
+                            parser = ResponseComparisonParser()  # PairwiseComparisonParser 대신 사용
+                            try:
+                                parsed = parser.parse(judge_response)
                                 
-                            sample["evaluation"]["parsed"]["model_name"] = model_name
-                            
-                            is_correct = sample.get("reference") == winner
-                            sample["evaluation"]["is_correct"] = is_correct
-                            sample["judge_correct"] = is_correct
-                            if is_correct:
-                                total_correct += 1
-                    except ValueError as e:
-                        sample["evaluation"] = {
-                            "raw_output": judge_response,
-                            "parsed": {"error": str(e)},
-                        }
-                
-            except Exception as e:
-                # Pointwise일 때는 에러 정보도 추가하지 않고 그냥 무시
-                if j_type != JudgeType.RUBRIC_AND_RESPONSE:
-                    logger.error(f"Error processing result for sample {i}: {e}")
-                    sample["evaluation"] = {
-                        "raw_output": str(e),
-                        "parsed": {"error": str(e)},
-                    }
+                                # _judged_by_evaluator는 내부 상태 관리용으로만 사용하고 출력에는 포함하지 않음  
+                                sample["_judged_by_evaluator"] = True
+                                
+                                sample["evaluation"] = {
+                                    "raw_output": judge_response,
+                                    "parsed": parsed,
+                                }
+                                
+                                if "winner" in parsed:
+                                    winner = parsed["winner"]
+                                    sample["judge_winner"] = winner
+                                    sample["evaluation"]["winner"] = winner
+                                    
+                                    # 여기서 model_name을 설정해야 함
+                                    if winner == "A":
+                                        model_name = sample.get("model_a", "unknown")
+                                    else:  # winner == "B"
+                                        model_name = sample.get("model_b", "unknown")
+                                        
+                                    sample["evaluation"]["parsed"]["model_name"] = model_name
+                                    
+                                    is_correct = sample.get("reference") == winner
+                                    sample["evaluation"]["is_correct"] = is_correct
+                                    sample["judge_correct"] = is_correct
+                                    if is_correct:
+                                        total_correct += 1
+                            except ValueError as e:
+                                logger.error(f"Error parsing judge response: {e}")
+                except Exception as e:
+                    logger.error(f"Error in judge_batch: {e}")
+                    return {"error": str(e)}
 
         # 최종 메트릭 계산
         metrics = {}
-        if total_items > 0:
-            metrics["accuracy"] = total_correct / total_items
         if score_count > 0:
             metrics["average_score"] = total_score / score_count
+        if total_items > 0 and JudgeType.RESPONSE_COMPARISON.value in [sample.get("judge_type", self.default_judge_type.value) for sample in samples]:
+            metrics["accuracy"] = total_correct / total_items
 
         return metrics

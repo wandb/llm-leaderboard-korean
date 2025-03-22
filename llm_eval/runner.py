@@ -219,7 +219,8 @@ class PipelineRunner:
             target_lang = self.target_lang
             language_scores = []
             for sample in eval_dict.get("samples", []):
-                pred_text = sample.get("prediction", "")
+                # original_prediction이 있으면 그것을 사용하고, 없으면 prediction 사용
+                pred_text = sample.get("original_prediction", sample.get("prediction", ""))
                 lp_score = language_penalizer(pred_text, target_lang=target_lang)
                 sample["language_penalizer"] = lp_score
                 language_scores.append(lp_score)
@@ -246,6 +247,12 @@ class PipelineRunner:
 
         metrics = eval_dict.get("metrics", {})
         samples = eval_dict.get("samples", [])
+        
+        # 내부 상태 필드 제거
+        for sample in samples:
+            if "_judged_by_evaluator" in sample:
+                del sample["_judged_by_evaluator"]
+                
         existing_info = eval_dict.get("info", {})
         merged_info = {**existing_info, **pipeline_info}
 
