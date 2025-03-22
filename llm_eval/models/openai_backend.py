@@ -16,6 +16,8 @@ from .base import BaseModel
 from . import register_model
 from llm_eval.utils.logging import get_logger
 
+import nest_asyncio
+
 logger = get_logger(name="openai_backend", level=logging.INFO)
 
 
@@ -353,7 +355,6 @@ class OpenAIModel(BaseModel):
             
             # Apply nest_asyncio preemptively to avoid nested event loop issues
             try:
-                import nest_asyncio
                 nest_asyncio.apply()
             except ImportError:
                 pass

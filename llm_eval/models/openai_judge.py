@@ -13,6 +13,11 @@ from .base import BaseJudge
 from . import register_model
 from llm_eval.utils.logging import get_logger
 
+import re
+import random
+
+import nest_asyncio
+
 logger = get_logger(name="openai_judge", level=logging.INFO)
 
 
@@ -171,8 +176,6 @@ class OpenAIJudge(BaseJudge):
                     api_url += 'v1/' if 'v1/' not in api_url else ''
                 api_url += 'completions'
             
-        logger.info(f"Using API URL: {api_url}")
-        
         # Prepare headers
         headers = {}
         if self.api_key:
@@ -207,7 +210,6 @@ class OpenAIJudge(BaseJudge):
                 score_pattern = r"\[RESULT\]\s*(\d+(?:\.\d+)?)"
                 score_match = None
                 try:
-                    import re
                     score_match = re.search(score_pattern, content)
                 except:
                     pass
@@ -227,7 +229,7 @@ class OpenAIJudge(BaseJudge):
                 logger.error(f"HTTP attempt {attempt + 1}/{effective_retries} failed: {e}")
                 attempt += 1
                 # Add random jitter to backoff time to prevent thundering herd problem
-                import random
+                
                 jitter = random.uniform(0, 1)
                 backoff_time = min(2 ** attempt + jitter, 32)
                 logger.info(f"Retrying in {backoff_time:.2f} seconds...")
@@ -244,30 +246,14 @@ class OpenAIJudge(BaseJudge):
         Asynchronously processes a batch of judge prompts using httpx.
         """
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            # 이미 판단된 항목 확인 (prediction, finish_reason 등이 있는 경우)
-            need_judgment = []
-            already_judged = []
-            
-            for i, item in enumerate(inputs):
-                if "prediction" in item and "finish_reason" in item:
-                    already_judged.append(item)
-                    logger.info(f"Item {i} already has prediction, reusing existing judgment")
-                else:
-                    need_judgment.append(item)
-            
-            # 판단이 필요한 항목이 없으면 바로 반환
-            if not need_judgment:
-                logger.info("All items already judged, returning existing results")
-                return inputs
-                
             # 배치 크기 증가 - 더 많은 요청을 병렬로 처리
             batch_size = min(self.batch_size, 32)  # 16에서 32로 증가
-            logger.info(f"Processing {len(need_judgment)} items in batches of {batch_size}")
+            logger.info(f"Processing {len(inputs)} items in batches of {batch_size}")
             
             all_results = []
-            for i in range(0, len(need_judgment), batch_size):
-                batch = need_judgment[i:i+batch_size]
-                logger.info(f"Processing batch {i//batch_size + 1}/{(len(need_judgment) + batch_size - 1)//batch_size}")
+            for i in range(0, len(inputs), batch_size):
+                batch = inputs[i:i+batch_size]
+                logger.info(f"Processing batch {i//batch_size + 1}/{(len(inputs) + batch_size - 1)//batch_size}")
                 
                 # Process current batch
                 tasks = []
@@ -292,12 +278,10 @@ class OpenAIJudge(BaseJudge):
                     all_results.append(merged)
                 
                 # 배치 간 대기 시간 최소화
-                if i + batch_size < len(need_judgment):
-                    logger.info("Waiting 0.2 seconds before next batch...")
+                if i + batch_size < len(inputs):
                     await asyncio.sleep(0.2)  # 0.5초에서 0.2초로 감소
             
-            # 이미 판단된 결과와 새로 판단된 결과 합치기
-            return already_judged + all_results
+            return all_results
 
     def judge_batch(
         self,
@@ -322,7 +306,6 @@ class OpenAIJudge(BaseJudge):
         """
         # Apply nest_asyncio preemptively to avoid nested event loop issues
         try:
-            import nest_asyncio
             nest_asyncio.apply()
         except ImportError:
             pass

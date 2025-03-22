@@ -24,6 +24,8 @@ from llm_eval.evaluation import get_evaluator, BaseEvaluator
 from llm_eval.utils.logging import get_logger
 from llm_eval.utils.util import EvaluationResult
 
+from llm_eval.utils.metrics import language_penalizer
+
 logger = get_logger(name="runner", level=logging.INFO)
 
 
@@ -214,7 +216,6 @@ class PipelineRunner:
 
         # Step 4: Optionally apply language penalizer if enabled
         if self.language_penalize:
-            from llm_eval.utils.metrics import language_penalizer
             # Use the parameterized target language instead of a hardcoded value
             target_lang = self.target_lang
             language_scores = []
@@ -248,11 +249,6 @@ class PipelineRunner:
         metrics = eval_dict.get("metrics", {})
         samples = eval_dict.get("samples", [])
         
-        # 내부 상태 필드 제거
-        for sample in samples:
-            if "_judged_by_evaluator" in sample:
-                del sample["_judged_by_evaluator"]
-                
         existing_info = eval_dict.get("info", {})
         merged_info = {**existing_info, **pipeline_info}
 
