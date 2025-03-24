@@ -38,6 +38,7 @@ results = evaluator.run(
 print(results)
 df = results.to_dataframe()
 print(df)
+```
 
 # 2. Beam Search 기법
 
@@ -80,8 +81,8 @@ results = evaluator.run(
 print(results)
 df = results.to_dataframe()
 print(df)
+```
 
-```markdown
 # 3. 주의 사항 및 팁
 
 1. **시간 및 리소스 사용**  
