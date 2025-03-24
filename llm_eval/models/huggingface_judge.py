@@ -119,17 +119,9 @@ class HuggingFaceJudge(BaseJudge):
             prompts = []
             for item in batch:
                 input_text = item["input"]
-                # Task Description과 불필요한 부분 제거
-                if "###Response to evaluate:" in input_text:
-                    parts = input_text.split("###")
-                    relevant_parts = []
-                    for part in parts:
-                        if part.startswith("Response to evaluate:") or \
-                           part.startswith("Reference Answer") or \
-                           part.startswith("Score Rubrics:"):
-                            relevant_parts.append(part.strip())
-                    input_text = "\n###".join(relevant_parts)
-                prompts.append(input_text)
+                # Add a clear instruction to generate evaluation
+                prompt = f"{input_text}\n\nPlease provide your evaluation in the following format:\nFeedback: [your detailed feedback] [RESULT] [score between 1-5]"
+                prompts.append(prompt)
 
             # Tokenize
             encoded = self.tokenizer(
@@ -154,11 +146,9 @@ class HuggingFaceJudge(BaseJudge):
             with torch.no_grad():
                 outputs = self.model.generate(**encoded, **gen_kwargs)
 
-            # If outputs is a dict, we might have 'sequences' key (newer HF versions)
             if isinstance(outputs, dict):
                 sequences = outputs.get("sequences", None)
                 if sequences is None:
-                    logger.warning("No 'sequences' in generation output. Using default key.")
                     sequences = outputs
             else:
                 sequences = outputs
@@ -174,31 +164,35 @@ class HuggingFaceJudge(BaseJudge):
                 if match:
                     feedback = match.group(1).strip()
                     score = float(match.group(2))
-                    formatted_output = f"Feedback: {feedback} [RESULT] {score}"
-                    
-                    batch[i].update({
-                        "prediction": formatted_output,
-                        "judge_score": score,
-                        "finish_reason": "stop"
-                    })
+                    # Format the output as expected
+                    batch[i]["prediction"] = f"Feedback: {feedback} [RESULT] {score}"
+                    batch[i]["judge_score"] = score
+                    batch[i]["language_penalizer"] = 1.0
+                    # Add fields to match OpenAI output format
+                    batch[i]["reference"] = batch[i].get("reference", "")
+                    batch[i]["_subset_name"] = "Pointwise"
+                    batch[i]["judge_type"] = "rubric_and_response"
                 else:
-                    # 2. Feedback: 없이 [RESULT] 숫자 형식만 있는지 확인
                     result_match = re.search(result_only_pattern, decoded)
                     if result_match:
                         score = float(result_match.group(1))
-                        batch[i].update({
-                            "prediction": decoded,
-                            "judge_score": score,
-                            "finish_reason": "stop"
-                        })
+                        batch[i]["prediction"] = f"Feedback: {decoded} [RESULT] {score}"
+                        batch[i]["judge_score"] = score
+                        batch[i]["language_penalizer"] = 1.0
+                        # Add fields to match OpenAI output format
+                        batch[i]["reference"] = batch[i].get("reference", "")
+                        batch[i]["_subset_name"] = "Pointwise"
+                        batch[i]["judge_type"] = "rubric_and_response"
                     else:
-                        # 3. 매칭 실패 시에도 judge_score 필드는 추가 (None으로)
-                        logger.warning(f"Failed to parse feedback and score from: {decoded}")
-                        batch[i].update({
-                            "prediction": decoded,
-                            "judge_score": None,  # OpenAI와 일관성 유지를 위해 None 설정
-                            "finish_reason": "error"
-                        })
+                        error_msg = f"Failed to extract score from model output: {decoded}"
+                        logger.error(error_msg)
+                        batch[i]["prediction"] = decoded
+                        batch[i]["judge_score"] = "error"
+                        batch[i]["language_penalizer"] = 1.0
+                        # Add fields to match OpenAI output format
+                        batch[i]["reference"] = batch[i].get("reference", "")
+                        batch[i]["_subset_name"] = "Pointwise"
+                        batch[i]["judge_type"] = "rubric_and_response"
 
             results.extend(batch)
 

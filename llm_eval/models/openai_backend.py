@@ -70,7 +70,7 @@ class OpenAIModel(BaseModel):
         """
         super().__init__(**kwargs)
         
-        # 모델 이름 설정
+        # Set model name
         self.model_name = f"openai:{model_name}"
         
         # Set up OpenAI API credentials
@@ -470,8 +470,8 @@ class OpenAIModel(BaseModel):
         logger.info(f"Starting asynchronous HTTP batch generation for {len(inputs)} items.")
         
         async with httpx.AsyncClient(timeout=60.0) as client:
-            # 배치 크기 증가 - 더 많은 요청을 병렬로 처리
-            batch_size = min(self.batch_size, 32)  # 16에서 32로 증가
+            # Increase batch size - process more requests in parallel
+            batch_size = min(self.batch_size, 32)  
             logger.info(f"Processing {len(inputs)} items in batches of {batch_size}")
             
             all_results = []
@@ -503,10 +503,10 @@ class OpenAIModel(BaseModel):
                         merged.update(res)
                     all_results.append(merged)
                 
-                # 배치 간 대기 시간 최소화
+                # Minimize wait time between batches
                 if i + batch_size < len(inputs):
                     logger.info("Waiting 0.2 seconds before next batch...")
-                    await asyncio.sleep(0.2)  # 0.5초에서 0.2초로 감소
+                    await asyncio.sleep(0.2) 
             
             logger.info("Asynchronous HTTP batch generation completed.")
             return all_results

@@ -33,7 +33,7 @@ class OpenAIJudge(BaseJudge):
       - Robust retry logic with exponential backoff on API errors.
     
     Args:
-        api_base (str): The base URL of the judge API endpoint.
+        api_base (Optional[str]): The base URL of the judge API endpoint. Defaults to OpenAI's API URL.
         model_name (str): Judge model identifier (e.g., "gpt-4").
         api_key (Optional[str]): API key for authentication.
         system_message (Optional[str]): A system message to include in chat completions.
@@ -49,22 +49,22 @@ class OpenAIJudge(BaseJudge):
         
     Examples:
         ```python
-        # 1. OpenAI API 사용 예시
+        # 1. Example using OpenAI API
         judge = OpenAIJudge(
-            api_base="https://api.openai.com/v1",  # 기본 URL만 지정 (엔드포인트는 자동 추가됨)
+            api_base="https://api.openai.com/v1",  # Only specify base URL (endpoint is auto-appended)
             model_name="gpt-4",
-            api_key="sk-...",  # OpenAI API 키 지정
+            api_key="sk-...",  # Specify OpenAI API key
             system_message="You are a helpful judge that evaluates model outputs."
         )
         
-        # 2. 자체 호스팅 API 서버 사용 예시
+        # 2. Example using self-hosted API server
         judge = OpenAIJudge(
-            api_base="http://localhost:8000",  # vLLM 또는 다른 OpenAI 호환 서버
+            api_base="http://localhost:8000",  # vLLM or other OpenAI-compatible server
             model_name="llama-3-8b",
             use_chat_api=True
         )
         
-        # 3. 평가 실행
+        # 3. Run evaluation
         results = judge.judge_batch([
             {"input": "Judge the following response: ..."},
             {"input": "Evaluate this answer: ..."}
@@ -73,8 +73,8 @@ class OpenAIJudge(BaseJudge):
     """
     def __init__(
         self,
-        api_base: str,
         model_name: str,
+        api_base: Optional[str] = "https://api.openai.com/v1",
         api_key: Optional[str] = None,
         system_message: Optional[str] = None,
         use_chat_api: bool = True,
@@ -90,8 +90,6 @@ class OpenAIJudge(BaseJudge):
         super().__init__(**kwargs)
         if not model_name:
             raise ValueError("model_name is required for OpenAIJudge.")
-        if not api_base:
-            raise ValueError("api_base is required for OpenAIJudge.")
         
         # Judge API endpoint is specified via api_base; API key is optional.
         self.api_base = api_base
@@ -246,8 +244,8 @@ class OpenAIJudge(BaseJudge):
         Asynchronously processes a batch of judge prompts using httpx.
         """
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            # 배치 크기 증가 - 더 많은 요청을 병렬로 처리
-            batch_size = min(self.batch_size, 32)  # 16에서 32로 증가
+            # Increase batch size - process more requests in parallel
+            batch_size = min(self.batch_size, 32)  
             logger.info(f"Processing {len(inputs)} items in batches of {batch_size}")
             
             all_results = []
@@ -277,9 +275,9 @@ class OpenAIJudge(BaseJudge):
                         merged.update(res)
                     all_results.append(merged)
                 
-                # 배치 간 대기 시간 최소화
+                # Minimize wait time between batches
                 if i + batch_size < len(inputs):
-                    await asyncio.sleep(0.2)  # 0.5초에서 0.2초로 감소
+                    await asyncio.sleep(0.2)  
             
             return all_results
 

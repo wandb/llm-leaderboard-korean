@@ -28,8 +28,8 @@ class HuggingFaceModel(BaseModel):
         The option with the highest log probability is selected as the final prediction.
     
     Args:
-        model_id_or_path (str): HF Hub model ID or local path.
-        tokenizer_id_or_path (str|None): Optional tokenizer ID or local path. If None, uses model_id_or_path.
+        model_name_or_path (str): HF Hub model ID or local path.
+        tokenizer_id_or_path (str|None): Optional tokenizer ID or local path. If None, uses model_name_or_path.
         dtype (str): 'auto', 'fp16', 'fp32', etc. If 'auto', uses the model's native precision.
         max_new_tokens (int): Maximum new tokens to generate in one call.
         max_input_tokens (int|None): Optional maximum input tokens. If None, no truncation.
@@ -46,7 +46,7 @@ class HuggingFaceModel(BaseModel):
 
     def __init__(
         self,
-        model_id_or_path: str,
+        model_name_or_path: str,
         tokenizer_id_or_path: Optional[str] = None,
         dtype: str = "auto",
         max_new_tokens: int = 512,
@@ -60,16 +60,16 @@ class HuggingFaceModel(BaseModel):
         cot_parser: Optional[Callable[[str], Tuple[str, str]]] = default_cot_parser,
         **kwargs
     ):
-        # 기본 속성들을 초기화하기 위해 부모 클래스 생성자 호출
+        # Call parent class constructor to initialize base attributes
         super().__init__(**kwargs)
         
-        # 모델 이름을 모델 ID에서 추출
-        self.model_name = f"huggingface:{model_id_or_path}"
-        logger.info(f"[HuggingFaceModel] Loading tokenizer/model from {model_id_or_path}")
+        # Extract model name from model ID
+        self.model_name = f"huggingface:{model_name_or_path}"
+        logger.info(f"[HuggingFaceModel] Loading tokenizer/model from {model_name_or_path}")
 
         # Load tokenizer and model
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id_or_path, padding_side="left")
-        self.model = AutoModelForCausalLM.from_pretrained(model_id_or_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, padding_side="left")
+        self.model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
         self.model.eval()
 
         # Device setup

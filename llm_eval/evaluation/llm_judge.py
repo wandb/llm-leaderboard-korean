@@ -257,7 +257,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
     Evaluator that uses an LLM-as-a-Judge approach to assess the quality of model responses.
     """
     name = "llm_judge"
-    has_custom_judge = True  # 자체 판단 로직을 가지고 있음을 나타내는 플래그
+    has_custom_judge = True  # Flag indicating that this evaluator has its own judging logic
 
     def __init__(
         self,
@@ -291,9 +291,9 @@ class LLMJudgeEvaluator(BaseEvaluator):
         total_correct = 0
         total_items = len(samples)
         
-        # 모든 샘플의 프롬프트를 한번에 준비
+        # Prepare prompts for all samples at once
         batch_inputs = []
-        batch_indices = []  # 원래 인덱스 추적
+        batch_indices = []  # Track original indices
         
         for i, sample in enumerate(samples):
             try:
@@ -332,40 +332,40 @@ Compare these responses and provide your verdict in this exact format:
             except Exception as e:
                 logger.error(f"Error preparing prompt: {e}")
                 
-        # 판단이 필요한 샘플이 있는 경우에만 judge_batch 호출
+        # Only call judge_batch if there are samples that need evaluation
         if batch_inputs:
             try:
                 logger.info(f"LLMJudgeEvaluator: Calling judge_batch for {len(batch_inputs)} samples")
                 judge_responses = self.multi_judge_model.judge_batch(batch_inputs)
                 
-                # 결과 처리 - 원래 인덱스 사용
+                # Process results using original indices
                 for response_idx, sample_idx in enumerate(batch_indices):
                     sample = samples[sample_idx]
                     judge_response = judge_responses[response_idx]["prediction"]
                     
-                    # 원래 응답을 original_prediction 필드에 저장
-                    original_prediction = sample.get("prediction", "")
-                    sample["original_prediction"] = original_prediction
-                    
-                    # 평가자 응답을 prediction 필드에 저장
+                    # Store judge response in prediction field
                     sample["prediction"] = judge_response
+                    
+                    # Get judge_score and language_penalizer from judge_responses
+                    if "judge_score" in judge_responses[response_idx]:
+                        sample["judge_score"] = judge_responses[response_idx]["judge_score"]
+                    if "language_penalizer" in judge_responses[response_idx]:
+                        sample["language_penalizer"] = judge_responses[response_idx]["language_penalizer"]
                     
                     j_type = JudgeType(sample.get("judge_type", self.default_judge_type.value))
                     
-                    # Pointwise 평가(RUBRIC_AND_RESPONSE)인 경우 간소화
+                    # Simplified for pointwise evaluation (RUBRIC_AND_RESPONSE)
                     if j_type == JudgeType.RUBRIC_AND_RESPONSE:
-                        # 원본 prediction에서 직접 점수 파싱
-                        score_pattern = r"\[RESULT\]\s*(\d+(?:\.\d+)?)"
-                        score_match = re.search(score_pattern, judge_response)
-                        if score_match:
-                            score = float(score_match.group(1))
-                            sample["judge_score"] = score
-                            total_score += score
-                            score_count += 1
+                        # Use judge_score if already set
+                        if "judge_score" in judge_responses[response_idx]:
+                            score = judge_responses[response_idx]["judge_score"]
+                            if isinstance(score, (int, float)):
+                                total_score += score
+                                score_count += 1
                     
-                    # Pairwise 평가(RESPONSE_COMPARISON)인 경우 기존 로직 유지
+                    # Keep existing logic for pairwise evaluation (RESPONSE_COMPARISON)
                     elif j_type == JudgeType.RESPONSE_COMPARISON:
-                        parser = ResponseComparisonParser()  # PairwiseComparisonParser 대신 사용
+                        parser = ResponseComparisonParser()  # Use instead of PairwiseComparisonParser
                         try:
                             parsed = parser.parse(judge_response)
                             
@@ -379,7 +379,7 @@ Compare these responses and provide your verdict in this exact format:
                                 sample["judge_winner"] = winner
                                 sample["evaluation"]["winner"] = winner
                                 
-                                # 여기서 model_name을 설정해야 함
+                                # Set model_name here
                                 if winner == "A":
                                     model_name = sample.get("model_a", "unknown")
                                 else:  # winner == "B"
@@ -398,7 +398,7 @@ Compare these responses and provide your verdict in this exact format:
                 logger.error(f"Error in judge_batch: {e}")
                 return {"error": str(e)}
 
-        # 최종 메트릭 계산
+        # Calculate final metrics
         metrics = {}
         if score_count > 0:
             metrics["average_score"] = total_score / score_count
