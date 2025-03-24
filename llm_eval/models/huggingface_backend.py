@@ -45,21 +45,21 @@ class HuggingFaceModel(BaseModel):
     """
 
     def __init__(
-        self,
-        model_name_or_path: str,
-        tokenizer_id_or_path: Optional[str] = None,
-        dtype: str = "auto",
-        max_new_tokens: int = 512,
-        max_input_tokens: Optional[int] = None,
-        temperature: float = 0.0,
-        top_p: float = 1.0,
-        stop_token: Optional[str] = None,
-        device: Optional[str] = None,
-        cot: bool = False,
-        cot_trigger: Optional[str] = "Let's think step by step.",
-        cot_parser: Optional[Callable[[str], Tuple[str, str]]] = default_cot_parser,
-        **kwargs
-    ):
+    self,
+    model_name_or_path: str,
+    tokenizer_id_or_path: Optional[str] = None,
+    dtype: str = "auto",
+    max_new_tokens: int = 512,
+    max_input_tokens: Optional[int] = None,
+    temperature: float = 0.0,
+    top_p: float = 1.0,
+    stop_token: Optional[str] = None,
+    device: Optional[str] = None,
+    cot: bool = False,
+    cot_trigger: Optional[str] = "Let's think step by step.",
+    cot_parser: Optional[Callable[[str], Tuple[str, str]]] = default_cot_parser,
+    **kwargs
+):
         # Call parent class constructor to initialize base attributes
         super().__init__(**kwargs)
         

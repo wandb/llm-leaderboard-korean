@@ -15,7 +15,7 @@ This runner can be used via CLI or integrated into an API.
 
 import logging
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Callable, Tuple
 
 from llm_eval.datasets import load_datasets, BaseDataset
 from llm_eval.models import load_model, BaseModel
@@ -63,6 +63,7 @@ class PipelineRunner:
         evaluator_params: Optional[Dict[str, Any]] = None,
         language_penalize: bool = True,
         target_lang: str = "ko",  # parameterized target language for penalizer
+        custom_cot_parser: Optional[Callable[[str], Tuple[str, str]]] = None,
     ):
         """
         Initialize the PipelineRunner with identifiers and parameters for each component.
@@ -72,14 +73,17 @@ class PipelineRunner:
             subset (str | list[str] | None): Optional sub-task or configuration (e.g., "csat_geo").
             split (str): Dataset split to load ("train", "valid", "test", etc.).
             model_backend_name (str): Model backend identifier (e.g., "huggingface", "openai", "multi").
-            scaling_method_name (str | None): Scaling (decoding) method identifier (e.g., "beam_search", "best_of_n").
-            evaluation_method_name (str): Evaluator identifier (e.g., "string_match", "llm_judge").
+            scaling_method_name (str | None): Scaling (decoding) method identifier.
+            evaluation_method_name (str): Evaluator identifier.
             dataset_params (dict): Additional parameters for the dataset loader.
             model_backend_params (dict): Additional parameters for the model backend.
             scaling_params (dict): Parameters for the scaling method.
             evaluator_params (dict): Parameters for the evaluator.
             language_penalize (bool): If True, apply language penalizer to predictions.
-            target_lang (str): Target language code for language penalization (e.g., "ko" for Korean).
+            target_lang (str): Target language code for penalization.
+            custom_cot_parser (callable | None): Optional custom chain-of-thought parser function.
+                If provided, this function will override the default cot_parser in the model backend.
+                (For example, a string path can be dynamically loaded to use a custom parser.)
         """
         self.dataset_name = dataset_name
         self.subset = subset
@@ -95,6 +99,14 @@ class PipelineRunner:
 
         self.language_penalize = language_penalize
         self.target_lang = target_lang  # 저장된 target language
+
+        # --- Custom CoT parser handling ---
+        # If a custom cot_parser is provided, we inject it into model_backend_params so that
+        # the model backend (e.g., HuggingFaceModel) can use it during initialization.
+        self.custom_cot_parser = custom_cot_parser
+        if self.custom_cot_parser is not None:
+            self.model_backend_params["cot_parser"] = self.custom_cot_parser
+        # ------------------------------------
 
         self.dataset: Optional[BaseDataset] = None
         self.model: Optional[BaseModel] = None
@@ -112,9 +124,7 @@ class PipelineRunner:
           3) Loads scaling method (if specified) using load_scaling_method(), verifying against dataset restrictions.
           4) Loads evaluator using get_evaluator(), verifying against dataset restrictions.
         """
-        logger.info(
-            f"[Pipeline] Loading dataset: {self.dataset_name}, subset={self.subset}, split={self.split}"
-        )
+        logger.info(f"[Pipeline] Loading dataset: {self.dataset_name}, subset={self.subset}, split={self.split}")
         self.dataset = load_datasets(
             name=self.dataset_name,
             subset=self.subset,
@@ -125,21 +135,16 @@ class PipelineRunner:
         scaling_only = ds_info.get("scaling_only", None)
         evaluation_only = ds_info.get("evaluation_only", None)
 
-        logger.info(
-            f"[Pipeline] Loading model backend: {self.model_backend_name} with params={self.model_backend_params}"
-        )
+        logger.info(f"[Pipeline] Loading model backend: {self.model_backend_name} with params={self.model_backend_params}")
         self.model = load_model(self.model_backend_name, **self.model_backend_params)
 
         if self.scaling_method_name:
             if scaling_only is not None:
                 if self.scaling_method_name not in scaling_only:
                     raise ValueError(
-                        f"Dataset '{self.dataset_name}' only allows scaling methods {scaling_only}, "
-                        f"but got '{self.scaling_method_name}'."
+                        f"Dataset '{self.dataset_name}' only allows scaling methods {scaling_only}, but got '{self.scaling_method_name}'."
                     )
-            logger.info(
-                f"[Pipeline] Loading scaling method: {self.scaling_method_name} with params={self.scaling_params}"
-            )
+            logger.info(f"[Pipeline] Loading scaling method: {self.scaling_method_name} with params={self.scaling_params}")
             self.scaler = load_scaling_method(
                 self.scaling_method_name,
                 model=self.model,
@@ -148,8 +153,7 @@ class PipelineRunner:
         else:
             if scaling_only is not None:
                 raise ValueError(
-                    f"Dataset '{self.dataset_name}' requires a scaling method from {scaling_only}, "
-                    f"but scaling_method_name is None."
+                    f"Dataset '{self.dataset_name}' requires a scaling method from {scaling_only}, but scaling_method_name is None."
                 )
 
         if evaluation_only is not None:
@@ -161,12 +165,9 @@ class PipelineRunner:
                     )
             elif self.evaluation_method_name not in evaluation_only:
                 raise ValueError(
-                    f"Dataset '{self.dataset_name}' only allows evaluation methods {evaluation_only}, "
-                    f"but got '{self.evaluation_method_name}'."
+                    f"Dataset '{self.dataset_name}' only allows evaluation methods {evaluation_only}, but got '{self.evaluation_method_name}'."
                 )
-        logger.info(
-            f"[Pipeline] Loading evaluator: {self.evaluation_method_name} with params={self.evaluator_params}"
-        )
+        logger.info(f"[Pipeline] Loading evaluator: {self.evaluation_method_name} with params={self.evaluator_params}")
         if self.evaluation_method_name == "llm_judge":
             self.evaluator = get_evaluator(self.evaluation_method_name, model=self.model, **self.evaluator_params)
         else:
@@ -175,11 +176,11 @@ class PipelineRunner:
     def run(self) -> EvaluationResult:
         """
         Executes the entire pipeline:
-          1) Dataset loading: Reads data from the dataset loader.
-          2) Inference: Either skips if predictions exist or performs model generation/scaling.
-          3) Evaluation: Evaluates predictions against references using the evaluator.
-          4) Optionally applies the language penalizer to each prediction based on target_lang.
-          5) Aggregates metrics, sample outputs, and pipeline info into an EvaluationResult.
+          1. Dataset loading: Reads data from the dataset loader.
+          2. Inference: Either skips if predictions exist or performs model generation/scaling.
+          3. Evaluation: Evaluates predictions against references using the evaluator.
+          4. Optionally applies the language penalizer to each prediction based on target_lang.
+          5. Aggregates metrics, sample outputs, and pipeline info into an EvaluationResult.
 
         Returns:
             EvaluationResult: An object encapsulating final metrics, samples, and additional pipeline info.
@@ -196,16 +197,14 @@ class PipelineRunner:
         # Step 2: Inference
         already_has_prediction = all("prediction" in item for item in data)
         if already_has_prediction:
-            logger.info(
-                "[Pipeline] Existing predictions found in dataset items; skipping model inference."
-            )
+            logger.info("[Pipeline] Existing predictions found; skipping model inference.")
             predictions = data
         else:
             if self.scaler:
                 logger.info(f"[Pipeline] Applying scaling method: {self.scaling_method_name}")
                 predictions = self.scaler.apply(data)
             else:
-                logger.info("[Pipeline] No scaling method provided; using direct model inference.")
+                logger.info("[Pipeline] Using direct model inference (no scaling method).")
                 predictions = self.model.generate_batch(data)
             logger.info(f"[Pipeline] Inference completed for {len(predictions)} items.")
 
@@ -225,10 +224,7 @@ class PipelineRunner:
                 lp_score = language_penalizer(pred_text, target_lang=target_lang)
                 sample["language_penalizer"] = lp_score
                 language_scores.append(lp_score)
-            if language_scores:
-                avg_lp = sum(language_scores) / len(language_scores)
-            else:
-                avg_lp = 0.0
+            avg_lp = sum(language_scores) / len(language_scores) if language_scores else 0.0
             eval_dict.setdefault("metrics", {})["language_penalizer_average"] = avg_lp
 
         # Step 5: Aggregate results into an EvaluationResult
