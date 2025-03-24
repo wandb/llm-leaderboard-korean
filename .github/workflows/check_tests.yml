@@ -32,7 +32,7 @@ jobs:
 
       - name: Install dependencies with uv
         run: |
-          uv pip install -e ".[dev]"
+          uv pip install --system -e ".[dev]"
 
       - name: Run dataset tests
         run: |
