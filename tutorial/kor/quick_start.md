@@ -150,6 +150,12 @@ print(results)
 
 #### Partial match
 ```python
+from llm_eval.evaluator import Evaluator
+
+# 1) Initialize an Evaluator.
+evaluator = Evaluator()
+
+# 2) Run the evaluation pipeline
 results = evaluator.run(
 model="huggingface",
 model_params={"model_name_or_path":"Qwen/Qwen2.5-3B-Instruct", "device":"cuda:0", "batch_size": 2, "cot":True, "max_new_tokens": 1024},
@@ -167,6 +173,12 @@ print(results)
 
 #### String match
 ```python
+from llm_eval.evaluator import Evaluator
+
+# 1) Initialize an Evaluator.
+evaluator = Evaluator()
+
+# 2) Run the evaluation pipeline
 results = evaluator.run(
 model="huggingface",
 model_params={"model_name_or_path":"Qwen/Qwen2.5-3B-Instruct", "device":"cuda:0", "batch_size": 2, "cot":True, "max_new_tokens": 1024},
@@ -211,6 +223,12 @@ print(results)
 ### Self_consistency
 <활용 코드>
 ```python
+from llm_eval.evaluator import Evaluator
+
+# 1) Initialize an Evaluator.
+evaluator = Evaluator()
+
+# 2) Run the evaluation pipeline
 results = evaluator.run(
 model="huggingface",
 model_params={"model_name_or_path":"Qwen/Qwen2.5-0.5B-Instruct", "device":"cuda", "batch_size": 1}, # example HF Transformers param
@@ -231,6 +249,12 @@ CoT는 복잡한 문제를 단계적으로 해결하는 프로세스를 모델�
 ### cot basic
 <활용 코드>
 ```python
+from llm_eval.evaluator import Evaluator
+
+# 1) Initialize an Evaluator.
+evaluator = Evaluator()
+
+# 2) Run the evaluation pipeline
 results = evaluator.run(
 model="huggingface",
 dataset="haerae_bench",
@@ -250,6 +274,12 @@ cot_trigger는 "Chain-of-Thought (CoT)" 방식의 텍스트 생성을 지원하�
 
 <활용 코드>
 ```python
+from llm_eval.evaluator import Evaluator
+
+# 1) Initialize an Evaluator.
+evaluator = Evaluator()
+
+# 2) Run the evaluation pipeline
 results = evaluator.run(
 model="huggingface",
 dataset="haerae_bench",
