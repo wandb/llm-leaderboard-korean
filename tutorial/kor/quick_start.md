@@ -223,16 +223,54 @@ scaling_method='self_consistency',
 print(results)
 # e.g. results['metrics'] : {'accuracy': 0.00040816326530612246}
 ```
+---
+
+## CoT (Chain of Thought, 생각의 연쇄)
+CoT는 복잡한 문제를 단계적으로 해결하는 프로세스를 모델이 따르도록 유도하는 기법입니다.
+
+### cot basic
+<활용 코드>
+```python
+results = evaluator.run(
+model="huggingface",
+dataset="haerae_bench",
+split="test",
+subset=["csat_geo"],
+model_params={"model_name_or_path":"Qwen/Qwen2.5-3B-Instruct", "device":"cuda:0", "batch_size": 2, "cot":True, "max_new_tokens": 512},
+)
+
+# e.g. EvaluationResult(metrics={'accuracy': 0.0}, info={'dataset_name': 'haerae_bench', 'subset': ['csat_geo'], 'split': 'test', 'model_backend_name': 'huggingface', 'scaling_method_name': None, 'evaluation_method_name': 'string_match', 'elapsed_time_sec': 1305.4367339611053}, samples=[...])
+
+```
+
+### cot_trigger (선택적)
+cot_trigger는 "Chain-of-Thought (CoT)" 방식의 텍스트 생성을 지원하기 위해 사용되는 문자열 트리거입니다. cot=True로 설정된 경우, cot_trigger가 프롬프트에 추가가능합니다. cot_trigger는 모델 프롬프트(prompt)에 추가되어 모델이 체계적으로 사고 과정을 표현하도록 유도합니다.
+
+예를 들어, cot_trigger가 "Let's think step by step."로 설정되면, 모델은 입력된 문제를 단계별로 분석하고 답을 생성하려고 시도합니다.
+
+<활용 코드>
+```python
+results = evaluator.run(
+model="huggingface",
+dataset="haerae_bench",
+split="test",
+subset=["csat_geo"],
+model_params={"model_name_or_path":"Qwen/Qwen2.5-3B-Instruct", "device":"cuda:0", "batch_size": 2, "cot":True, "cot_trigger": "Let's think step by step.", "max_new_tokens": 512},
+)
+
+print(results)
+```
+
+### cot_parser
+cot_parser는 pythonpath안에 함수가 위치한 곳 이름만 적어두면, 스스로 해당 모듈을 불러와서 parser로 쓸 수 있는 기능
 
 
-
+---
 
 
 ### 참조문헌 (References)
 - 'vLLM', https://github.com/vllm-project/vllm
 - 'Respond in my Language: Mitigating Language Inconsistency in Response Generation based on Large Language Models', https://aclanthology.org/2024.acl-long.229.pdf
-
----
 
 ## FAQ
 Q. 다음 에러 메시지가 출력됩니다: 'Make sure to have access to it at {model url} 403 Client Error. (Request ID: ~~ )'
