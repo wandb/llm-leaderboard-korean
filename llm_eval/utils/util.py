@@ -1,6 +1,6 @@
 import json
 import pandas as pd
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Callable
 
 class EvaluationResult:
     """

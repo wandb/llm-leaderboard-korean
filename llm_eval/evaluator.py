@@ -10,7 +10,7 @@ evaluation, and additional post-processing such as language penalization.
 import argparse
 import json
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Callable, Tuple
 
 from llm_eval.runner import PipelineRunner
 from llm_eval.utils.logging import get_logger
