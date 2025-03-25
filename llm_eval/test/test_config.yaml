@@ -5,6 +5,8 @@ datasets:
 models:
   - huggingface
 
+model_params: { "model_name_or_path": "gpt2" }
+
 evaluations:
   - string_match
 
