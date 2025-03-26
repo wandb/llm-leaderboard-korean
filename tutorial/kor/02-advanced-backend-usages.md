@@ -145,7 +145,7 @@ results = evaluator.run(
 )
 ```
 
-## 3. HRET Agents 활용하기
+## 3. HRET Agents 활용하기 (On Develop!)
 
 ### 3.1 HRET Agents란?
 - **HRET Agents**는 Haerae Evaluation Toolkit을 위한 데이터셋 준비를 자동화하는 도구입니다.
@@ -215,7 +215,7 @@ result = agent.process_dataset(
 )
 
 print(f"생성된 데이터셋 모듈: {result['module_path']}")
-```
+
 ```
 
 ### 3.4 데이터셋 변환 과정 상세 설명
@@ -268,7 +268,7 @@ module_code = module_generator.generate_module(
 
 print(module_code)
 ```
-```
+
 
 ## 4. HRET 데이터셋 모듈 구조 이해하기
 
@@ -348,7 +348,7 @@ class QARVDataset(BaseDataset):
         
         return is_correct, 1 if is_correct else 0
 ```
-```
+
 
 ## 5. 데이터셋 생성 및 사용 워크플로우
 
