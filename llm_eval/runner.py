@@ -24,6 +24,8 @@ from llm_eval.evaluation import get_evaluator, BaseEvaluator
 from llm_eval.utils.logging import get_logger
 from llm_eval.utils.util import EvaluationResult
 
+from llm_eval.utils.metrics import language_penalizer
+
 logger = get_logger(name="runner", level=logging.INFO)
 
 
@@ -155,7 +157,13 @@ class PipelineRunner:
                 )
 
         if evaluation_only is not None:
-            if self.evaluation_method_name not in evaluation_only:
+            if isinstance(evaluation_only, bool):
+                if evaluation_only:
+                    raise ValueError(
+                        f"Dataset '{self.dataset_name}' requires a specific evaluation method, "
+                        f"but no specific methods were provided."
+                    )
+            elif self.evaluation_method_name not in evaluation_only:
                 raise ValueError(
                     f"Dataset '{self.dataset_name}' only allows evaluation methods {evaluation_only}, but got '{self.evaluation_method_name}'."
                 )
@@ -207,11 +215,12 @@ class PipelineRunner:
 
         # Step 4: Optionally apply language penalizer if enabled
         if self.language_penalize:
-            from llm_eval.utils.metrics import language_penalizer
+            # Use the parameterized target language instead of a hardcoded value
             target_lang = self.target_lang
             language_scores = []
             for sample in eval_dict.get("samples", []):
-                pred_text = sample.get("prediction", "")
+                # original_prediction이 있으면 그것을 사용하고, 없으면 prediction 사용
+                pred_text = sample.get("original_prediction", sample.get("prediction", ""))
                 lp_score = language_penalizer(pred_text, target_lang=target_lang)
                 sample["language_penalizer"] = lp_score
                 language_scores.append(lp_score)
@@ -235,6 +244,7 @@ class PipelineRunner:
 
         metrics = eval_dict.get("metrics", {})
         samples = eval_dict.get("samples", [])
+        
         existing_info = eval_dict.get("info", {})
         merged_info = {**existing_info, **pipeline_info}
 

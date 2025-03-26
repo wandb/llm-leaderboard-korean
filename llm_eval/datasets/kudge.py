@@ -215,5 +215,5 @@ class KUDGEDataset(BaseDataset):
                 "subset=list -> load multiple subsets, "
                 "subset=str -> load a single subset."
             ),
-            "evaluation_only": self.split == "test"
+            "evaluation_only": ["llm_judge"]  # llm_judge 평가 방법만 허용
         }
