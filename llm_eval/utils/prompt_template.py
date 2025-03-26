@@ -138,7 +138,7 @@ Score: [Numeric score here]
 Below is the question and the model's response. Please evaluate the response based on the criteria provided.
 
 **Question:**
-{instruction}
+{input}
 
 **Model's Response:**
 {response}

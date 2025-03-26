@@ -26,12 +26,14 @@ class JudgeInput:
     Data structure representing the input necessary for the judge system.
 
     Attributes:
+        input: The full prompt to send to the judge model.
         judge_type: Type of evaluation to perform (rubric vs. comparison).
         model_response: The primary model's response to evaluate.
         rubric: Evaluation criteria (if any).
         gold_response: Gold standard answer for comparison-based evaluation.
         model_response_b: An additional model response for pairwise comparison.
     """
+    input: str
     judge_type: JudgeType
     model_response: str
     rubric: Optional[str] = None
@@ -342,6 +344,7 @@ Compare these responses and provide your verdict in this exact format:
                     if template is None:
                         raise ValueError(f"No template found for judge_type: {j_type}")
                     filled_prompt = template.format(
+                        input=sample.get("input", "").strip(),
                         rubric=sample.get("rubric", "").strip(),
                         response=sample.get("prediction", "").strip(),
                         gold=sample.get("reference", "").strip(),
