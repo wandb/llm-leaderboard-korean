@@ -2,13 +2,9 @@ datasets:
   - key: click # 예시, 구현되는 대로 추가하기
     split: train
 
-models:
-  - huggingface
-
-model_params: { "model_name_or_path": "gpt2" }
-
 evaluations:
   - string_match
+  - partial_match
 
 scalers:
   - self_consistency
