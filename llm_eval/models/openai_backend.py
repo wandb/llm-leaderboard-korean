@@ -353,12 +353,6 @@ class OpenAIModel(BaseModel):
         else:
             logger.info("Using httpx for asynchronous generation.")
             
-            # Apply nest_asyncio preemptively to avoid nested event loop issues
-            try:
-                nest_asyncio.apply()
-            except ImportError:
-                pass
-                
             # Now run the async function with the configured event loop
             results = asyncio.run(
                 self._generate_batch_httpx(inputs, return_logits, until, cot, **kwargs)
