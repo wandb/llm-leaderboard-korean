@@ -100,6 +100,27 @@ class PairwiseComparisonParser(ResponseParser):
             "model_name": model_name or "unknown"
         }
 
+class K2EvalResponseParser(ResponseParser):
+    """
+     K2EvalResponseParser is a parser that extracts the number after “Score:” from the LLM-as-a-Judge's response.
+    
+    Example Judge response:
+        Evaluation: [Your evaluation here].
+        Score: [Numeric score here]
+        
+    This class extracts the number from the above format, and returns a {“score”: <score>, “model_name”: <model_name>} and returns it in the form {“score”: <score>, “model_name”: <model_name>}.
+    """
+    def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
+        # Regex pattern to extract the number (integer or decimal) that follows “Score:”
+        pattern = r"Score:\s*(\d+(?:\.\d+)?)"
+        match = re.search(pattern, response)
+        if not match:
+            raise ValueError(f"No valid score found in K2-Eval response: {response}")
+        score = float(match.group(1))
+        return {
+            "score": score,
+            "model_name": model_name or "unknown"
+        }
 
 class GoldComparisonParser(ResponseParser):
     """
@@ -187,7 +208,8 @@ class MultiLLMJudge:
         self.parsers = {
             JudgeType.RUBRIC_AND_RESPONSE: RubricScoreParser(),
             JudgeType.RUBRIC_RESPONSE_AND_GOLD: GoldComparisonParser(),
-            JudgeType.RESPONSE_COMPARISON: PairwiseComparisonParser()
+            JudgeType.RESPONSE_COMPARISON: PairwiseComparisonParser(),
+            JudgeType.K2_EVAL: K2EvalResponseParser()
         }
         # The prompt templates used for generating a judge prompt
         self.prompt_templates = JUDGE_PROMPTS  # e.g. {JudgeType.RUBRIC_AND_RESPONSE: "Rubric: {rubric}\n...", ...}
@@ -272,6 +294,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
             JudgeType.RUBRIC_AND_RESPONSE: RubricScoreParser(),
             JudgeType.RUBRIC_RESPONSE_AND_GOLD: GoldComparisonParser(),
             JudgeType.RESPONSE_COMPARISON: PairwiseComparisonParser(),
+            JudgeType.K2_EVAL: K2EvalResponseParser()
         }
         self.prompt_templates = JUDGE_PROMPTS
 
