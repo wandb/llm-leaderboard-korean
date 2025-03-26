@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any, List, Union
 from llm_eval.models.multi import MultiModel
 from .base import BaseEvaluator
 from . import register_evaluator
-from llm_eval.utils.prompt_template import JUDGE_PROMPTS
+from llm_eval.utils.prompt_template import JUDGE_PROMPTS, JudgeType
 from llm_eval.utils.logging import get_logger
 import logging
 from tqdm import tqdm
@@ -19,13 +19,6 @@ logger = get_logger(name="llm_judge", level=logging.INFO)
 # ─────────────────────────────────────────────────────────────────────────────
 # 1) JudgeType, JudgeInput, Parser classes (original code kept intact)
 # ─────────────────────────────────────────────────────────────────────────────
-
-class JudgeType(Enum):
-    """Evaluation types for LLM responses."""
-    RUBRIC_AND_RESPONSE = "rubric_and_response"
-    RUBRIC_RESPONSE_AND_GOLD = "rubric_response_and_gold"
-    RESPONSE_COMPARISON = "response_comparison"
-
 
 @dataclass
 class JudgeInput:
@@ -87,19 +80,25 @@ class RubricScoreParser(ResponseParser):
 class PairwiseComparisonParser(ResponseParser):
     """
     Parser for pairwise winner selection in a comparative evaluation.
-
-    It looks for tokens like [[A]] or [[B]] or [[C]](tie).
+    Format example: [[A]] or [[B]]
     """
-    def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
+    def parse(self, response: str, model_a: str = None, model_b: str = None) -> Dict[str, Any]:
         if not response:
             raise ValueError("Response is None")
-        if "[[A]]" in response:
-            return {"winner": "A", "model_name": model_name or "unknown"}
-        elif "[[B]]" in response:
-            return {"winner": "B", "model_name": model_name or "unknown"}
-        elif "[[C]]" in response:
-            return {"winner": "tie", "model_name": model_name or "unknown"}
-        raise ValueError(f"No valid verdict found in response: {response}")
+        
+        winner_pattern = r"\[\[([AB])\]\]"
+        match = re.search(winner_pattern, response)
+        if not match:
+            raise ValueError(f"No valid winner found in response: {response}")
+            
+        winner = match.group(1)
+        # Map winner (A/B) to corresponding model name
+        model_name = model_a if winner == "A" else model_b
+        
+        return {
+            "winner": winner,
+            "model_name": model_name or "unknown"
+        }
 
 
 class GoldComparisonParser(ResponseParser):
@@ -126,6 +125,19 @@ class GoldComparisonParser(ResponseParser):
                 }
             return {"correct": False, "step": None, "model_name": model_name or "unknown"}
         raise ValueError(f"No valid verdict found in response: {response}")
+
+
+class ResponseComparisonParser(ResponseParser):
+    """Parser for A/B comparison responses."""
+    def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
+        # 정규식으로 [[A]] 또는 [[B]] 찾기
+        match = re.search(r'\[\[([AB])\]\]', response)
+        if not match:
+            raise ValueError(f"No valid verdict [[A]] or [[B]] found in response: {response}")
+        winner = match.group(1)
+        return {
+            "winner": winner
+        }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -243,23 +255,9 @@ class MultiLLMJudge:
 class LLMJudgeEvaluator(BaseEvaluator):
     """
     Evaluator that uses an LLM-as-a-Judge approach to assess the quality of model responses.
-
-    Requirements / Assumptions:
-    - The 'multi_judge_model' argument is a MultiModel instance that has a valid 'judge_model' loaded.
-    - Each sample in 'samples' should contain:
-        * "input" (optional, not strictly used here)
-        * "reference": Gold standard or correct answer
-        * "prediction": The model's generated answer to evaluate
-        * "judge_type": (optional) which type of judging logic to use (RUBRIC_AND_RESPONSE, etc.)
-          If absent, uses 'default_judge_type'.
-        * "rubric", "model_response_b" (optional, for more advanced judge tasks)
-    - The code calls `multi_judge_model.judge_batch(...)` with N prompts, each derived from a template
-      matching the 'judge_type'. The judge_batch method is expected to fill 'prediction' with
-      the judge model's raw output (one per sample).
-    - The raw outputs are then parsed to extract "score", "correct", or "winner", depending on the judge type.
     """
-
     name = "llm_judge"
+    has_custom_judge = True  # Flag indicating that this evaluator has its own judging logic
 
     def __init__(
         self,
@@ -267,151 +265,144 @@ class LLMJudgeEvaluator(BaseEvaluator):
         default_judge_type: Union[str, JudgeType] = "rubric_and_response",
         **kwargs
     ):
-        """
-        Args:
-            multi_judge_model (MultiModel):
-                A MultiModel instance that has its 'judge_model' set.
-            default_judge_type (str|JudgeType):
-                The judge type to apply if a sample does not specify 'judge_type'.
-                Valid values: "rubric_and_response", "rubric_response_and_gold", "response_comparison".
-            kwargs: 
-                Additional parameters if needed (not used in this minimal example).
-        """
         super().__init__()
-        # Convert string to JudgeType if needed
-        if isinstance(default_judge_type, str):
-            self.default_judge_type = JudgeType(default_judge_type)
-        else:
-            self.default_judge_type = default_judge_type
-
+        self.default_judge_type = JudgeType(default_judge_type) if isinstance(default_judge_type, str) else default_judge_type
         self.multi_judge_model = model
-        # Define parsers for each judge type
         self.parsers = {
             JudgeType.RUBRIC_AND_RESPONSE: RubricScoreParser(),
             JudgeType.RUBRIC_RESPONSE_AND_GOLD: GoldComparisonParser(),
             JudgeType.RESPONSE_COMPARISON: PairwiseComparisonParser(),
         }
-
-        # Prompt templates (dict: JudgeType -> str)
         self.prompt_templates = JUDGE_PROMPTS
 
-    def evaluate_predictions(
-        self,
-        samples: List[Dict[str, Any]]
-    ) -> Dict[str, float]:
-        """
-        Implementation of BaseEvaluator's evaluate_predictions() method:
-        1) Build judge prompts from each sample (based on judge_type)
-        2) Call `multi_judge_model.judge_batch(...)` to get LLM-based evaluation outputs
-        3) Parse each raw output (prediction) using the appropriate parser
-        4) Record "judge_score", "judge_correct", "judge_winner", etc. in samples
-        5) Compute simple metrics (e.g., average_score, correct_rate) and return
+    def prepare_prompt(self, sample: Dict[str, Any]) -> str:
+        template = self.prompt_templates.get(self.default_judge_type)
+        if template is None:
+            raise ValueError(f"No template found for judge_type: {self.default_judge_type}")
+            
+        return template.format(**sample)
 
-        Returns:
-            A dict with metric names (e.g. "average_score", "correct_rate") and values.
-        """
+    def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
         if not samples:
             return {}
-
-        # 1) Build prompts
-        prompts = []
-        judge_types = []
-        for s in samples:
-            judge_type_str = s.get("judge_type", self.default_judge_type.value)
-            try:
-                j_type = JudgeType(judge_type_str)
-            except Exception as e:
-                logger.error(f"Invalid judge_type '{judge_type_str}' in sample {s}, using default '{self.default_judge_type.value}'.")
-                j_type = self.default_judge_type
-
-            template = self.prompt_templates.get(j_type.name, "")
-            try:
-                filled_prompt = template.format(
-                    rubric=s.get("rubric", "").strip(),
-                    response=s.get("prediction", "").strip(),
-                    gold=s.get("reference", "").strip(),
-                    response_b=s.get("model_response_b", "").strip()
-                )
-            except Exception as e:
-                logger.error(f"Error formatting judge prompt for sample {s}: {e}")
-                filled_prompt = "Invalid prompt."
-            if not filled_prompt.strip():
-                logger.warning("Filled judge prompt is empty; assigning default prompt.")
-                filled_prompt = "No prompt provided for judge evaluation."
-            prompts.append({"input": filled_prompt})
-            judge_types.append(j_type)
-
-        # 2) Call multi_judge_model.judge_batch to get raw outputs
-        try:
-            judged_results = self.multi_judge_model.judge_batch(prompts)
-        except Exception as e:
-            logger.error(f"Error during judge_batch call: {e}")
-            judged_results = [{"prediction": ""} for _ in prompts]
-
 
         total_score = 0.0
         score_count = 0
         total_correct = 0
         total_items = len(samples)
-
-        for sample, out, j_type in zip(samples, judged_results, judge_types):
-            raw_output = out.get("prediction", "").strip()
-            if not raw_output:
-                logger.warning(f"Empty judge output for sample {sample}. Using default error output.")
-                raw_output = "[[score: 0]]"  # 기본값; 필요에 따라 조정
-            parser = self.parsers.get(j_type)
+        
+        # Prepare prompts for all samples at once
+        batch_inputs = []
+        batch_indices = []  # Track original indices
+        
+        for i, sample in enumerate(samples):
             try:
-                parsed = parser.parse(raw_output, model_name="JudgeLLM")
-            except ValueError as e:
-                logger.error(f"Parser error for sample {sample} with raw_output '{raw_output}': {e}")
-                parsed = {"error": str(e)}
-            if "evaluation" not in sample or not isinstance(sample["evaluation"], dict):
-                sample["evaluation"] = {}
-            sample["judge_raw_output"] = raw_output
-            sample["judge_parsed"] = parsed
-            sample["judge_type"] = j_type.value
+                judge_type_str = sample.get("judge_type", self.default_judge_type.value)
+                j_type = JudgeType(judge_type_str)
 
-            # is_correct 계산 로직
-            is_correct = None
-            if "correct" in parsed:
-                try:
-                    is_correct = bool(parsed["correct"])
-                except Exception as e:
-                    logger.error(f"Error converting 'correct' value {parsed.get('correct')} to bool: {e}")
-                    is_correct = False
-                if is_correct:
-                    total_correct += 1
-            sample["judge_correct"] = is_correct
+                if j_type == JudgeType.RESPONSE_COMPARISON:
+                    filled_prompt = f"""Please act as an impartial judge and evaluate the quality of the responses provided by two AI assistants. Choose the assistant that follows the instructions and answers the question better.
 
-            # Create or update "evaluation" dict
-            sample["evaluation"] = {
-                "raw_output": raw_output,
-                "parsed": parsed,
-                "is_correct": is_correct,
-            }
+### Instruction:
+{sample.get('input', '').strip()}
 
-            # Check if there's a numeric score
-            if "score" in parsed:
-                try:
-                    sc = float(parsed["score"])
-                    score_count += 1
-                    total_score += sc
-                    sample["judge_score"] = sc
-                    sample["evaluation"]["score"] = sc
-                except Exception as e:
-                    logger.error(f"Error converting score {parsed.get('score')} to float: {e}")
-                    sample["judge_score"] = 0.0
-                    sample["evaluation"]["score"] = 0.0
+### Response A:
+{sample.get('prediction', '').strip()}
+
+### Response B:
+{sample.get('model_response_b', '').strip()}
+
+Compare these responses and provide your verdict in this exact format:
+[[A]] if Response A is better, or [[B]] if Response B is better."""
+                else:
+                    template = self.prompt_templates.get(j_type)
+                    if template is None:
+                        raise ValueError(f"No template found for judge_type: {j_type}")
+                    filled_prompt = template.format(
+                        rubric=sample.get("rubric", "").strip(),
+                        response=sample.get("prediction", "").strip(),
+                        gold=sample.get("reference", "").strip(),
+                        response_b=sample.get("model_response_b", "").strip()
+                    )
+
+                batch_inputs.append({
+                    "input": filled_prompt
+                })
+                batch_indices.append(i)
+            except Exception as e:
+                logger.error(f"Error preparing prompt: {e}")
+                
+        # Only call judge_batch if there are samples that need evaluation
+        if batch_inputs:
+            try:
+                logger.info(f"LLMJudgeEvaluator: Calling judge_batch for {len(batch_inputs)} samples")
+                judge_responses = self.multi_judge_model.judge_batch(batch_inputs)
+                
+                # Process results using original indices
+                for response_idx, sample_idx in enumerate(batch_indices):
+                    sample = samples[sample_idx]
+                    judge_response = judge_responses[response_idx]["prediction"]
                     
-            # If there's a winner field
-            if "winner" in parsed:
-                sample["judge_winner"] = parsed["winner"]
-                sample["evaluation"]["winner"] = parsed["winner"]
+                    # Store judge response in prediction field
+                    sample["prediction"] = judge_response
+                    
+                    # Get judge_score and language_penalizer from judge_responses
+                    if "judge_score" in judge_responses[response_idx]:
+                        sample["judge_score"] = judge_responses[response_idx]["judge_score"]
+                    if "language_penalizer" in judge_responses[response_idx]:
+                        sample["language_penalizer"] = judge_responses[response_idx]["language_penalizer"]
+                    
+                    j_type = JudgeType(sample.get("judge_type", self.default_judge_type.value))
+                    
+                    # Simplified for pointwise evaluation (RUBRIC_AND_RESPONSE)
+                    if j_type == JudgeType.RUBRIC_AND_RESPONSE:
+                        # Use judge_score if already set
+                        if "judge_score" in judge_responses[response_idx]:
+                            score = judge_responses[response_idx]["judge_score"]
+                            if isinstance(score, (int, float)):
+                                total_score += score
+                                score_count += 1
+                    
+                    # Keep existing logic for pairwise evaluation (RESPONSE_COMPARISON)
+                    elif j_type == JudgeType.RESPONSE_COMPARISON:
+                        parser = ResponseComparisonParser()  # Use instead of PairwiseComparisonParser
+                        try:
+                            parsed = parser.parse(judge_response)
+                            
+                            sample["evaluation"] = {
+                                "raw_output": judge_response,
+                                "parsed": parsed,
+                            }
+                            
+                            if "winner" in parsed:
+                                winner = parsed["winner"]
+                                sample["judge_winner"] = winner
+                                sample["evaluation"]["winner"] = winner
+                                
+                                # Set model_name here
+                                if winner == "A":
+                                    model_name = sample.get("model_a", "unknown")
+                                else:  # winner == "B"
+                                    model_name = sample.get("model_b", "unknown")
+                                    
+                                sample["evaluation"]["parsed"]["model_name"] = model_name
+                                
+                                is_correct = sample.get("reference") == winner
+                                sample["evaluation"]["is_correct"] = is_correct
+                                sample["judge_correct"] = is_correct
+                                if is_correct:
+                                    total_correct += 1
+                        except ValueError as e:
+                            logger.error(f"Error parsing judge response: {e}")
+            except Exception as e:
+                logger.error(f"Error in judge_batch: {e}")
+                return {"error": str(e)}
 
+        # Calculate final metrics
         metrics = {}
         if score_count > 0:
             metrics["average_score"] = total_score / score_count
-        if total_items > 0:
-            metrics["correct_rate"] = total_correct / total_items
+        if total_items > 0 and JudgeType.RESPONSE_COMPARISON.value in [sample.get("judge_type", self.default_judge_type.value) for sample in samples]:
+            metrics["accuracy"] = total_correct / total_items
 
         return metrics
