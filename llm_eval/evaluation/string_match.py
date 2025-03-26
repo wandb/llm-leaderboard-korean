@@ -103,29 +103,48 @@ class StringMatchEvaluator(BaseEvaluator):
 
     def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
         """
-        Computes accuracy by checking if the normalized prediction matches:
-          - For MCQA tasks (if mcqa is True and options exist): one of the normalized options.
-          - Otherwise, the normalized reference.
-        Also, records detailed evaluation info in each sample.
+        Computes accuracy by comparing the normalized prediction against the normalized reference.
+        
+        For MCQA (Multiple-Choice Question Answering) tasks:
+        - If 'mcqa' is enabled and an 'options' list is provided in the sample,
+            the evaluation considers a prediction correct only if:
+            1. The normalized prediction exactly matches the normalized reference.
+            2. The normalized reference is one of the normalized options.
+        
+        For non-MCQA tasks, the prediction is considered correct if the normalized prediction 
+        exactly matches the normalized reference.
+        
+        Each sample is augmented with detailed evaluation information in the 'evaluation' key.
+        
+        Returns:
+            A dictionary with the computed accuracy metric, e.g. {"accuracy": 0.85}.
         """
         total = len(samples)
         correct = 0
+
+        # Log information when evaluating MCQA tasks with provided options.
         if self.mcqa and "options" in samples[0] and isinstance(samples[0]["options"], list) and samples[0]["options"]:
             logger.info(f"Evaluating outputs using string match with mcqa={self.mcqa}")
 
         for sample in tqdm(samples, desc="String-Match Evaluation"):
+            # Normalize the prediction and reference texts.
             pred_norm = self.parse_prediction(sample["prediction"])
             ref_norm = self.parse_prediction(sample["reference"])
 
             if self.mcqa and "options" in sample and isinstance(sample["options"], list) and sample["options"]:
+                # Normalize all provided options.
                 normalized_options = [self._normalize_text(opt) for opt in sample["options"]]
-                is_correct = pred_norm in normalized_options
+                # For MCQA tasks, consider the prediction correct only if it exactly matches
+                # the reference and the reference is among the provided options.
+                is_correct = (pred_norm == ref_norm) and (ref_norm in normalized_options)
             else:
+                # For non-MCQA tasks, a simple exact match suffices.
                 is_correct = (pred_norm == ref_norm)
 
             if is_correct:
                 correct += 1
 
+            # Record detailed evaluation info within the sample for debugging and analysis.
             sample["evaluation"] = {
                 "normalized_pred": pred_norm,
                 "normalized_ref": ref_norm,
@@ -133,5 +152,6 @@ class StringMatchEvaluator(BaseEvaluator):
                 "options": sample.get("options", None)
             }
 
-        accuracy = correct / total if total else 0.0
+        accuracy = correct / total if total > 0 else 0.0
         return {"accuracy": accuracy}
+

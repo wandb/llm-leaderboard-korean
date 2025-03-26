@@ -46,7 +46,7 @@ class HuggingFaceModel(BaseModel):
     def __init__(
         self,
         model_name_or_path: str,
-        device: str = "cpu",
+        device: str = "cuda",
         max_new_tokens: int = 128,
         temperature: float = 1.0,
         top_p: float = 0.95,
