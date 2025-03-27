@@ -23,6 +23,7 @@ class StringMatchEvaluator(BaseEvaluator):
       compares the prediction against the normalized options.
     * If the generated text is long (e.g., contains multiple lines), only the first non-empty
       line is used for evaluation.
+    * Additionally, it removes markdown formatting tokens from the final answer.
     """
 
     name = "string_match"
@@ -77,12 +78,19 @@ class StringMatchEvaluator(BaseEvaluator):
         text = " ".join(text.strip().split())
         return text
 
+    def remove_markdown_formatting(self, text: str) -> str:
+        """
+        Removes markdown formatting tokens (such as **, __, ~~ and `) from the text.
+        """
+        return re.sub(r"(\*\*|__|~~|`)", "", text)
+
     def parse_prediction(self, raw_output: Any) -> str:
         """
         Processes the model's raw output:
           1) If extract_final_answer is enabled, extract the text after 'Answer:'.
-          2) If the resulting text is long (contains multiple lines), only the first non-empty line is used.
-          3) Normalize the final text.
+          2) Remove markdown formatting tokens.
+          3) If the resulting text is long (contains multiple lines), only the first non-empty line is used.
+          4) Normalize the final text.
         """
         if raw_output is None:
             raw_output = ""
@@ -91,6 +99,9 @@ class StringMatchEvaluator(BaseEvaluator):
 
         if self.extract_final_answer:
             raw_output = extract_final_answer(raw_output)
+
+        # Remove markdown formatting tokens from the extracted text.
+        raw_output = self.remove_markdown_formatting(raw_output)
 
         # Split into lines and take the first non-empty line.
         lines = [line.strip() for line in raw_output.splitlines() if line.strip()]
@@ -134,8 +145,9 @@ class StringMatchEvaluator(BaseEvaluator):
             if self.mcqa and "options" in sample and isinstance(sample["options"], list) and sample["options"]:
                 # Normalize all provided options.
                 normalized_options = [self._normalize_text(opt) for opt in sample["options"]]
-                # For MCQA tasks, consider the prediction correct only if it exactly matches
-                # the reference and the reference is among the provided options.
+                # For MCQA tasks, consider the prediction correct only if
+                # the normalized prediction exactly matches the normalized reference
+                # and the normalized reference is among the provided options.
                 is_correct = (pred_norm == ref_norm) and (ref_norm in normalized_options)
             else:
                 # For non-MCQA tasks, a simple exact match suffices.
@@ -154,4 +166,3 @@ class StringMatchEvaluator(BaseEvaluator):
 
         accuracy = correct / total if total > 0 else 0.0
         return {"accuracy": accuracy}
-
