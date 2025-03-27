@@ -5,6 +5,7 @@ from . import register_evaluator
 from math_verify import parse, verify
 from math_verify import LatexExtractionConfig, ExprExtractionConfig
 from llm_eval.utils.logging import get_logger
+from llm_eval.utils.prompt_template import extract_final_answer  # Import extract_final_answer
 import logging
 from tqdm import tqdm
 
@@ -14,33 +15,34 @@ logger = get_logger(name="math_match", level=logging.INFO)
 class MathMatchEvaluator(BaseEvaluator):
     """
     Mathematical expression evaluator that uses math_verify to compare predictions 
-    against reference answers. Handles LaTeX and mathematical expressions, comparing
-    them for mathematical equivalence rather than string equality.
-
+    against reference answers. It handles LaTeX and mathematical expressions, 
+    comparing them for mathematical equivalence rather than simple string equality.
+    
     Features:
-    - Supports both LaTeX and plain mathematical expressions
-    - Handles set operations, equations, and other mathematical notations
-    - Can extract final answers from Chain-of-Thought responses
+    - Supports both LaTeX and plain mathematical expressions.
+    - Handles set operations, equations, and other mathematical notations.
+    - Can extract final answers from Chain-of-Thought (CoT) responses using extract_final_answer.
+    - Stores extracted and parsed answers for debugging or analysis.
     
     Example Usage:
         from llm_eval.evaluation.math_eval import MathMatchEvaluator
         
         evaluator = MathMatchEvaluator(
-            latex_only=True,  # If you're only dealing with LaTeX
-            extract_final_answer=False  # If you need to extract from CoT set to True
+            latex_only=True,           # If you're only dealing with LaTeX
+            extract_final_answer=True  # To extract from Chain-of-Thought responses
         )
         
         # Example evaluation
         results = evaluator.evaluate_predictions([
             {
-                "prediction": "정답은 \\boxed{1,2,3,4\\text{inch}} 입니다.",
+                "prediction": "Answer: \\boxed{1,2,3,4\\text{inch}}",
                 "reference": "${1,3} \\cup {2,4}$"
             }
         ])
         
         # results will contain:
         # {
-        #     "accuracy": 1.0,  # if expressions are mathematically equivalent
+        #     "accuracy": 1.0,           # if expressions are mathematically equivalent
         #     "parse_failure_rate": 0.0,
         #     "verify_failure_rate": 0.0
         # }
@@ -51,8 +53,8 @@ class MathMatchEvaluator(BaseEvaluator):
         self,
         latex_only: bool = True,  # If True, only use LaTeX extraction
         expr_only: bool = False,  # If True, only use expression extraction
-        extract_final_answer: bool = True,  # Extract after "정답:" or "Answer:"
-        answer_patterns: List[str] = None,  # Custom patterns for answer extraction
+        extract_final_answer: bool = True,  # Extract final answer using extract_final_answer
+        answer_patterns: List[str] = None,  # Custom regex patterns for answer extraction (not used in this implementation)
         *args,
         **kwargs
     ):
@@ -63,14 +65,15 @@ class MathMatchEvaluator(BaseEvaluator):
             expr_only (bool):
                 If True, only attempts expression extraction. (Default: False)
             extract_final_answer (bool):
-                If True, extracts answer after keywords like "정답:" or "Answer:"
+                If True, extracts the final answer using keywords like "Answer:" or "정답:".
             answer_patterns (List[str] | None):
-                Custom regex patterns for answer extraction
+                Custom regex patterns for answer extraction (not used in this implementation).
         """
         super().__init__(*args, **kwargs)
         self.latex_only = latex_only
         self.expr_only = expr_only
         self.extract_final_answer = extract_final_answer
+        # Although answer_patterns are defined, they are not used directly here.
         self.answer_patterns = answer_patterns or [
             r"정답\s*:\s*(.*?)(?:\n|$)",
             r"Answer\s*:\s*(.*?)(?:\n|$)"
@@ -90,17 +93,19 @@ class MathMatchEvaluator(BaseEvaluator):
 
     def extract_answer(self, text: str) -> str:
         """
-        Extracts the final answer from text containing Chain-of-Thought reasoning,
-        based on regex patterns. If extract_final_answer is False, returns as-is.
+        Extracts the final answer from a Chain-of-Thought (CoT) text.
+        If extract_final_answer is enabled, it uses the extract_final_answer function
+        to retrieve the answer following keywords like "정답:" or "Answer:".
+        If the extracted answer spans multiple lines, only the first non-empty line is returned.
         """
         if not text or not self.extract_final_answer:
             return text
 
-        for pattern in self.answer_patterns:
-            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
-            if match:
-                return match.group(1).strip()
-        return text
+        # Use extract_final_answer function to get the final answer portion
+        text = extract_final_answer(text)
+        # Split into lines and return the first non-empty line
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        return lines[0] if lines else text
 
     def parse_math(self, text: str) -> Any:
         """
@@ -110,34 +115,42 @@ class MathMatchEvaluator(BaseEvaluator):
         try:
             return parse(text, extraction_config=self.extraction_config)
         except Exception as e:
-            self.logger.warning(f"Failed to parse mathematical expression: {text}")
-            self.logger.warning(f"Error: {str(e)}")
+            logger.warning(f"Failed to parse mathematical expression: {text}")
+            logger.warning(f"Error: {str(e)}")
             return None
 
     def verify_equivalent(self, pred: Any, ref: Any) -> bool:
         """
         Verifies if two mathematical expressions are equivalent.
-        Returns False if either expression is None or verification fails.
+        Returns False if either expression is None or if verification fails.
         """
         if pred is None or ref is None:
             return False
-            
+
         try:
             return verify(ref, pred)
         except Exception as e:
-            self.logger.warning(f"Verification failed between: {pred} and {ref}")
-            self.logger.warning(f"Error: {str(e)}")
+            logger.warning(f"Verification failed between: {pred} and {ref}")
+            logger.warning(f"Error: {str(e)}")
             return False
 
     def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
         """
         Evaluates mathematical expressions for equivalence and calculates accuracy.
+        Additionally, stores extracted and parsed answers for debugging or analysis.
+        
+        For each sample, an "evaluation" field is added with:
+            - "extracted_pred": The final extracted prediction text.
+            - "extracted_ref": The final extracted reference text.
+            - "parsed_pred": The parsed prediction object.
+            - "parsed_ref": The parsed reference object.
+            - "is_correct": Boolean indicating whether the prediction is mathematically equivalent to the reference.
         
         Returns:
-            Dict containing accuracy score and optionally detailed metrics.
-
-        Additionally, for each sample, adds an "evaluation" field with "is_correct"
-        to indicate whether the verification was successful (True) or not (False).
+            A dictionary containing metrics:
+                - "accuracy": Correct predictions / total samples.
+                - "parse_failure_rate": Fraction of samples where parsing failed.
+                - "verify_failure_rate": Fraction of samples where verification failed.
         """
         total = len(samples)
         correct = 0
@@ -146,27 +159,40 @@ class MathMatchEvaluator(BaseEvaluator):
 
         for sample in tqdm(samples, desc="Math-Match Evaluation"):
             # Extract final answers if needed
-            pred_text = self.extract_answer(str(sample.get("prediction", "")))
-            ref_text = self.extract_answer(str(sample.get("reference", "")))
+            extracted_pred = self.extract_answer(str(sample.get("prediction", "")))
+            extracted_ref = self.extract_answer(str(sample.get("reference", "")))
 
             # Parse mathematical expressions
-            pred = self.parse_math(pred_text)
-            ref = self.parse_math(ref_text)
+            parsed_pred = self.parse_math(extracted_pred)
+            parsed_ref = self.parse_math(extracted_ref)
 
-            if pred is None or ref is None:
+            # Check if parsing failed
+            if parsed_pred is None or parsed_ref is None:
                 parse_failures += 1
-                sample["evaluation"] = {"is_correct": False}
+                sample["evaluation"] = {
+                    "extracted_pred": extracted_pred,
+                    "extracted_ref": extracted_ref,
+                    "parsed_pred": parsed_pred,
+                    "parsed_ref": parsed_ref,
+                    "is_correct": False
+                }
                 continue
 
             # Verify mathematical equivalence
-            is_correct = self.verify_equivalent(pred, ref)
+            is_correct = self.verify_equivalent(parsed_pred, parsed_ref)
             if is_correct:
                 correct += 1
             else:
                 verify_failures += 1
 
-            # Record "is_correct" in the sample
-            sample["evaluation"] = {"is_correct": is_correct}
+            # Record detailed evaluation information
+            sample["evaluation"] = {
+                "extracted_pred": extracted_pred,
+                "extracted_ref": extracted_ref,
+                "parsed_pred": parsed_pred,
+                "parsed_ref": parsed_ref,
+                "is_correct": is_correct
+            }
 
         metrics = {
             "accuracy": correct / total if total else 0.0,
