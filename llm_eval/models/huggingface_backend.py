@@ -56,6 +56,7 @@ class HuggingFaceModel(BaseModel):
     stop_token: Optional[str] = None,
     device: Optional[str] = None,
     cot: bool = False,
+    batch_size: int = 1,
     cot_trigger: Optional[str] = "Let's think step by step.",
     cot_parser: Optional[Callable[[str], Tuple[str, str]]] = default_cot_parser,
     **kwargs
@@ -85,6 +86,7 @@ class HuggingFaceModel(BaseModel):
         self.cot = cot
         self.cot_trigger = cot_trigger
         self.cot_parser = cot_parser
+        self.batch_size = batch_size
 
     def _score_option(self, prompt: str, option: str) -> float:
         """
