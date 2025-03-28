@@ -122,7 +122,7 @@ class MathMatchEvaluator(BaseEvaluator):
     def verify_equivalent(self, pred: Any, ref: Any) -> bool:
         """
         Verifies if two mathematical expressions are equivalent.
-        Returns False if either expression is None or if verification fails.
+        Returns False if verification fails.
         """
         if pred is None or ref is None:
             return False
@@ -145,6 +145,7 @@ class MathMatchEvaluator(BaseEvaluator):
             - "parsed_pred": The parsed prediction object.
             - "parsed_ref": The parsed reference object.
             - "is_correct": Boolean indicating whether the prediction is mathematically equivalent to the reference.
+            - "fallback_used": Boolean indicating if fallback string comparison was used.
         
         Returns:
             A dictionary containing metrics:
@@ -158,7 +159,7 @@ class MathMatchEvaluator(BaseEvaluator):
         verify_failures = 0
 
         for sample in tqdm(samples, desc="Math-Match Evaluation"):
-            # Extract final answers if needed
+            # Extract final answers
             extracted_pred = self.extract_answer(str(sample.get("prediction", "")))
             extracted_ref = self.extract_answer(str(sample.get("reference", "")))
 
@@ -166,32 +167,32 @@ class MathMatchEvaluator(BaseEvaluator):
             parsed_pred = self.parse_math(extracted_pred)
             parsed_ref = self.parse_math(extracted_ref)
 
-            # Check if parsing failed
+            fallback_used = False
+            # If parsing fails for either expression, fall back to string equality
             if parsed_pred is None or parsed_ref is None:
+                logger.warning(f"Parse failure for sample:\npred: {extracted_pred}\nref: {extracted_ref}\nFalling back to string match.")
+                is_correct = extracted_pred.strip() == extracted_ref.strip()
+                fallback_used = True
                 parse_failures += 1
-                sample["evaluation"] = {
-                    "extracted_pred": extracted_pred,
-                    "extracted_ref": extracted_ref,
-                    "parsed_pred": parsed_pred,
-                    "parsed_ref": parsed_ref,
-                    "is_correct": False
-                }
-                continue
+            else:
+                try:
+                    is_correct = self.verify_equivalent(parsed_pred, parsed_ref)
+                except Exception as e:
+                    logger.warning(f"Verification exception for sample:\npred: {parsed_pred}\nref: {parsed_ref}\nFalling back to string match.")
+                    is_correct = extracted_pred.strip() == extracted_ref.strip()
+                    fallback_used = True
+                    verify_failures += 1
 
-            # Verify mathematical equivalence
-            is_correct = self.verify_equivalent(parsed_pred, parsed_ref)
             if is_correct:
                 correct += 1
-            else:
-                verify_failures += 1
 
-            # Record detailed evaluation information
             sample["evaluation"] = {
                 "extracted_pred": extracted_pred,
                 "extracted_ref": extracted_ref,
                 "parsed_pred": parsed_pred,
                 "parsed_ref": parsed_ref,
-                "is_correct": is_correct
+                "is_correct": is_correct,
+                "fallback_used": fallback_used
             }
 
         metrics = {
