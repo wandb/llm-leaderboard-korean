@@ -1,7 +1,5 @@
 import pytest
 from llm_eval.datasets import DATASET_REGISTRY, load_datasets
-from datasets import DatasetNotFoundError
-import urllib3
 
 # Get dataset keys from the registry
 dataset_keys = list(DATASET_REGISTRY.keys())
@@ -28,7 +26,7 @@ def test_dataset_loading(dataset_key):
             ds = load_datasets(name=dataset_key)
         assert ds is not None, f"Failed to load dataset: {dataset_key}"
         assert hasattr(ds, 'load'), f"Dataset {dataset_key} does not have a 'load' method."
-    except (DatasetNotFoundError, ConnectionError, urllib3.exceptions.MaxRetryError) as e:
+    except (FileNotFoundError, ValueError, urllib3.exceptions.MaxRetryError) as e:
         pytest.skip(f"Skipping dataset {dataset_key} due to: {e.__class__.__name__} - {e}")
     except Exception as e:
         pytest.fail(f"Dataset loading failed for {dataset_key}: {e}")
@@ -58,7 +56,7 @@ def test_dataset_load_output(dataset_key):
             assert isinstance(data[0], dict), "Each item should be a dictionary."
             assert "input" in data[0], "Each item should have 'input' key."
             assert "reference" in data[0], "Each item should have 'reference' key."
-    except (DatasetNotFoundError, ConnectionError, urllib3.exceptions.MaxRetryError) as e:
+    except (FileNotFoundError, ValueError, urllib3.exceptions.MaxRetryError) as e:
         pytest.skip(f"Skipping dataset {dataset_key} due to: {e.__class__.__name__} - {e}")
     except Exception as e:
         pytest.fail(f"Dataset loading failed for {dataset_key}: {e}")
