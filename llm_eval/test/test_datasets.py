@@ -1,5 +1,6 @@
 import pytest
 from llm_eval.datasets import DATASET_REGISTRY, load_datasets
+import urllib3
 
 # Get dataset keys from the registry
 dataset_keys = list(DATASET_REGISTRY.keys())
