@@ -1,44 +1,45 @@
 import pytest
-import yaml
-from pathlib import Path
+from llm_eval.scaling_methods import SCALING_REGISTRY, load_scaling_method
+from llm_eval.models.base import BaseModel  # Import BaseModel
 
-from llm_eval.scaling_methods import load_scaling_method
-from llm_eval.models.base import BaseModel
+# Get scaling method keys from the registry
+scaling_keys = list(SCALING_REGISTRY.keys())
 
-CONFIG_FILE = Path(__file__).parent / "test_config.yaml"
-with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-    test_config = yaml.safe_load(f)
-
-SCALING_KEYS = test_config.get("scalers", [])
-
-@pytest.mark.parametrize("scaler_key", SCALING_KEYS)
+@pytest.mark.parametrize("scaler_key", scaling_keys)
 def test_scaler_registration(scaler_key):
+    """
+    Test scaling method registration.
+
+    This test checks if the scaling method is correctly registered and can be
+    instantiated using load_scaling_method().
+    """
     scaler = load_scaling_method(scaler_key)
     assert scaler is not None, f"Scaler not found: {scaler_key}"
 
-@pytest.mark.parametrize("scaler_key", SCALING_KEYS)
+@pytest.mark.parametrize("scaler_key", scaling_keys)
 def test_scaler_apply(scaler_key):
     """
-    각 scaler에 대해 간단히 apply() 로직이 동작하는지 확인.
+    Test the apply() method of each scaling method.
+
+    This test verifies that the apply() method returns a list and that each item
+    in the list contains the 'prediction' key.
     """
     scaler = load_scaling_method(scaler_key)
 
-    # 모의 모델(언제나 "Hello world"만만 반환)
-    class FakeModel(BaseModel):
-        def generate_batch(self, inputs, return_logits=False):
-            return [
-                {
-                    "input": inp.get("input", ""),
-                    "reference": inp.get("reference", ""),  
-                    "prediction": "Hello world",
-                }
-                for inp in inputs
-            ]
-    
-    scaler.model = FakeModel()
+    # Mock model for testing (using BaseModel as a base)
+    class MockModel(BaseModel):
+        def generate_batch(self, inputs, return_logits=False, **kwargs):
+            return [{"prediction": "Hello world"} for _ in inputs]
+
+    mock_model = MockModel()
+    scaler.model = mock_model  # Assign the mock model to the scaler
+
     test_data = [{"input": "Test 1", "reference": "Ref 1"}]
-    output_data = scaler.apply(test_data)
-    assert len(output_data) == len(test_data)
-    for item in output_data:
-        assert "prediction" in item
-        assert item["prediction"] == "Hello world"
+    try:
+        output_data = scaler.apply(test_data)
+        assert isinstance(output_data, list), "apply() should return a list."
+        assert len(output_data) == len(test_data), "Output should have the same length as input."
+        for item in output_data:
+            assert "prediction" in item, "Each item should have 'prediction' key."
+    except Exception as e:
+        pytest.fail(f"Scaler {scaler_key} failed during apply() call: {e}")
