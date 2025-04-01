@@ -17,9 +17,13 @@ def test_dataset_loading(dataset_key):
     try:
         if dataset_key == "generic_file":
             # Provide dummy dataset_name and file_path for GenericFileDataset
-            ds = load_datasets(dataset_name="generic_file", file_path="dummy_file.csv")
+            # You might need to adjust 'dummy_file.csv' to an actual file if needed for your tests
+            ds = load_datasets(name="generic_file", file_path="dummy_file.csv")
+        elif dataset_key == "KUDGE":
+            # Provide a subset for KUDGE dataset
+            ds = load_datasets(name=dataset_key, subset="Pairwise")  # Or another valid subset
         else:
-            ds = load_datasets(dataset_key)
+            ds = load_datasets(name=dataset_key)
         assert ds is not None, f"Failed to load dataset: {dataset_key}"
         assert hasattr(ds, 'load'), f"Dataset {dataset_key} does not have a 'load' method."
     except Exception as e:
@@ -33,14 +37,22 @@ def test_dataset_load_output(dataset_key):
     This test verifies that the load() method of each dataset returns a list
     and that each item in the list is a dictionary containing 'input' and 'reference' keys.
     """
-    # Skip the test if the dataset_key is "generic_file"
-    if dataset_key == "generic_file":
-        pytest.skip("Skipping generic_file dataset test.")
-
-    ds = load_datasets(dataset_key)
-    data = ds.load()
-    assert isinstance(data, list), "load() should return a list."
-    if data:
-        assert isinstance(data[0], dict), "Each item should be a dictionary."
-        assert "input" in data[0], "Each item should have 'input' key."
-        assert "reference" in data[0], "Each item should have 'reference' key."
+    try:
+        if dataset_key == "generic_file":
+            pytest.skip("Skipping generic_file dataset test.")
+        elif dataset_key == "click":
+            # Use "train" split for "click" dataset
+            ds = load_datasets(name=dataset_key, split="train")
+        elif dataset_key == "KUDGE":
+            # Provide a subset for KUDGE dataset
+            ds = load_datasets(name=dataset_key, subset="Pairwise")  # Or another valid subset
+        else:
+            ds = load_datasets(name=dataset_key)
+        data = ds.load()
+        assert isinstance(data, list), "load() should return a list."
+        if data:
+            assert isinstance(data[0], dict), "Each item should be a dictionary."
+            assert "input" in data[0], "Each item should have 'input' key."
+            assert "reference" in data[0], "Each item should have 'reference' key."
+    except Exception as e:
+        pytest.fail(f"Dataset loading failed for {dataset_key}: {e}")
