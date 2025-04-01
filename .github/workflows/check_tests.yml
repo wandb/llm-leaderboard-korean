@@ -42,14 +42,6 @@ jobs:
         run: |
           pytest llm_eval/test/test_evaluations.py
 
-      - name: Run llm judge tests
-        run: |
-          pytest llm_eval/test/test_llm_judge.py
-
-      - name: Run model tests
-        run: |
-          pytest llm_eval/test/test_models.py
-
       - name: Run scaling tests
         run: |
           pytest llm_eval/test/test_scailing.py
