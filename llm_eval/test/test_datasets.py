@@ -51,6 +51,8 @@ def test_dataset_load_output(dataset_key):
         elif dataset_key == "KUDGE":
             # Provide a subset for KUDGE dataset
             ds = load_datasets(name=dataset_key, subset="Pairwise")  # Or another valid subset
+        elif dataset_key == "kmmlu":
+            ds = load_datasets(name=dataset_key, subset=["Chemistry"])  # import only one subset for testing
         else:
             ds = load_datasets(name=dataset_key)
         data = ds.load()
