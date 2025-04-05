@@ -58,9 +58,9 @@ def test_dataset_load_output(dataset_key):
         data = ds.load()
         assert isinstance(data, list), "load() should return a list."
         if data:
-            assert isinstance(data[-1], dict), "Each item should be a dictionary."
-            assert "input" in data[-1], "Each item should have 'input' key."
-            assert "reference" in data[-1], "Each item should have 'reference' key."
+            assert isinstance(data[0], dict), "Each item should be a dictionary."
+            assert "input" in data[0], "Each item should have 'input' key."
+            assert "reference" in data[0], "Each item should have 'reference' key."
     except (FileNotFoundError, ValueError, urllib3.exceptions.MaxRetryError) as e:
         pytest.skip(f"Skipping dataset {dataset_key} due to: {e.__class__.__name__} - {e}")
     except Exception as e:
