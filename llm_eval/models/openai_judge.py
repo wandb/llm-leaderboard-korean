@@ -16,7 +16,7 @@ from llm_eval.utils.logging import get_logger
 import re
 import random
 
-import nest_asyncio
+# import nest_asyncio
 
 logger = get_logger(name="openai_judge", level=logging.INFO)
 
