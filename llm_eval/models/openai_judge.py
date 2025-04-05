@@ -302,11 +302,11 @@ class OpenAIJudge(BaseJudge):
             List[Dict[str, Any]]: The list of input dictionaries updated with a "prediction" field
                                   containing the judge model's output.
         """
-        # Apply nest_asyncio preemptively to avoid nested event loop issues
-        try:
-            nest_asyncio.apply()
-        except ImportError:
-            pass
+        # # Apply nest_asyncio preemptively to avoid nested event loop issues
+        # try:
+        #     nest_asyncio.apply()
+        # except ImportError:
+        #     pass
             
         # Now run the async function with the configured event loop
         return asyncio.run(self._generate_batch_async(inputs, until, **kwargs))
