@@ -70,7 +70,7 @@ We are actively developing core features and interfaces. Current goals include:
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/HAE-RAE/haerae-evaluation-toolkit.git](https://github.com/HAE-RAE/haerae-evaluation-toolkit.git)
+    git clone https://github.com/HAE-RAE/haerae-evaluation-toolkit.git
     cd haerae-evaluation-toolkit
     ```
 
