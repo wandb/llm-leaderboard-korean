@@ -120,7 +120,7 @@ evaluator = Evaluator()
 
 # 2) Run the evaluation pipeline
 results = evaluator.run(
-    model="huggingface",                        # or "vllm", "openai", etc.
+    model="huggingface",                        # or "litellm", "openai", etc.
     judge_model=None,                           # specify e.g. "huggingface_judge" if needed
     reward_model=None,                          # specify e.g. "huggingface_reward" if needed
     dataset="haerae_bench",                     # or "kmmlu", "qarv", ...
@@ -139,7 +139,7 @@ results = evaluator.run(
 ```
 
 - Dataset is loaded from the registry (e.g., `haerae_bench` is just one of many).
-- Model is likewise loaded via the registry (`huggingface`, `vllm`, etc.).
+- Model is likewise loaded via the registry (`huggingface`, `litellm`, etc.).
 - judge_model and reward_model can be provided if you want LLM-as-a-Judge or reward-model logic. If both are None, the system uses a single model backend.
 - `ScalingMethod` is optional if you want to do specialized decoding.
 - `EvaluationMethod` (e.g., `string_match`, `log_likelihood`, `partial_match` or `llm_judge`) measures performance.
