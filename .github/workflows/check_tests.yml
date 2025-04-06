@@ -44,4 +44,4 @@ jobs:
 
       - name: Run scaling tests
         run: |
-          pytest llm_eval/test/test_scailing.py
+          pytest llm_eval/test/test_scaling.py
