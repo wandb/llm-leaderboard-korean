@@ -1,4 +1,5 @@
 # Haerae-Evaluation-Toolkit
+[![arXiv](https://img.shields.io/badge/arXiv-2503.22968-b31b1b.svg)](https://arxiv.org/abs/2503.22968) 
 
 <p align="center">
   <img src="assets/imgs/logo.png" alt="logo" width="250">
@@ -6,6 +7,8 @@
 
 
 Haerae-Evaluation-Toolkit is an emerging open-source Python library designed to streamline and standardize the evaluation of Large Language Models (LLMs), with a particular focus on Korean.
+
+[HRET: A Self-Evolving LLM Evaluation Toolkit for Korean](https://arxiv.org/abs/2503.22968) (Paper Link)
 
 ## ✨ Key Features
 
@@ -195,9 +198,12 @@ We look forward to hearing your ideas and contributions!
 If you find HRET useful in your research, please consider citing our paper:
 
 ```bibtex
-@misc{lee2025hretselfevolvingllmevaluation,
-      title={HRET: A Self-Evolving LLM Evaluation Toolkit for Korean}, 
-      author={Hanwool Lee and Soo Yong Kim and Dasol Choi and SangWon Baek and Seunghyeok
+@article{lee2025hret,
+  title={HRET: A Self-Evolving LLM Evaluation Toolkit for Korean},
+  author={Lee, Hanwool and Kim, Soo Yong and Choi, Dasol and Baek, SangWon and Hong, Seunghyeok and Jeong, Ilgyun and Hwang, Inseon and Lee, Naeun and Son, Guijin},
+  journal={arXiv preprint arXiv:2503.22968},
+  year={2025}
+}
 ```
 ## 📜 License
 
