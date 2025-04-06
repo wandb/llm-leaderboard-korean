@@ -188,6 +188,17 @@ We look forward to hearing your ideas and contributions!
 
 ---
 
+---
+
+## 📝 Citation
+
+If you find HRET useful in your research, please consider citing our paper:
+
+```bibtex
+@misc{lee2025hretselfevolvingllmevaluation,
+      title={HRET: A Self-Evolving LLM Evaluation Toolkit for Korean}, 
+      author={Hanwool Lee and Soo Yong Kim and Dasol Choi and SangWon Baek and Seunghyeok
+```
 ## 📜 License
 
 Licensed under the Apache License 2.0.
