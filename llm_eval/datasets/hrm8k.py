@@ -102,7 +102,7 @@ class HRM8KDataset(BaseDataset):
         """
         processed_list = []
         # Define a default prompt template if none is provided.
-        default_template = "put your final answer within \\boxed{}.\nQuestion: {question}"
+        default_template = "put your final answer within \\boxed{{}}.\nQuestion: {question}"
         
         for item in hf_dataset:
             # Extract and clean the question text.
