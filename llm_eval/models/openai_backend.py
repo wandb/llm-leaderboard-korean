@@ -232,10 +232,17 @@ class OpenAIModel(BaseModel):
         """
         effective_retries = max_retries if max_retries is not None else self.max_retries
         payload = self._create_payload(item["input"], cot=cot, until=until, **kwargs)
+        
+        headers = {}
+        if self.api_key: 
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        # Add standard content type header
+        headers["Content-Type"] = "application/json"
+
         attempt = 0
         while attempt <= effective_retries:
             try:
-                response = client.post(self.api_base, json=payload, timeout=self.timeout)
+                response = client.post(self.api_base, headers = headers, json=payload, timeout=self.timeout)
                 if response.status_code != 200:
                     raise RuntimeError(f"HTTP {response.status_code} Error: {response.text}")
                 resp_data = response.json()
