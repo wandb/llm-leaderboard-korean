@@ -65,13 +65,39 @@ We are actively developing core features and interfaces. Current goals include:
 
 ## ⚙️ Installation
 
-(Currently under development — installation steps may vary.)
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/HAE-RAE/haerae-evaluation-toolkit.git](https://github.com/HAE-RAE/haerae-evaluation-toolkit.git)
+    cd haerae-evaluation-toolkit
+    ```
 
-```bash
-git clone https://github.com/HAE-RAE/haerae-evaluation-toolkit.git
+2.  **(Optional) Create and activate a virtual environment:**
+    * Using venv:
+        ```bash
+        python -m venv venv
+        source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+        ```
+    * Using Conda:
+        ```bash
+        conda create -n hret python=3.11 -y
+        conda activate hret
+        ```
 
-```
+3.  **Install dependencies:** Choose one of the following methods:
 
+    * **Using pip:**
+        ```bash
+        pip install -r requirements.txt
+        ```
+
+    * **Using uv (Recommended for speed):**
+        * First, install uv if you haven't already. See [uv installation guide](https://github.com/astral-sh/uv).
+        * Then, install dependencies using uv:
+            ```bash
+            uv pip install -r requirements.txt
+            ```
+
+---
 
 ---
 
@@ -79,7 +105,7 @@ git clone https://github.com/HAE-RAE/haerae-evaluation-toolkit.git
 
 Below is a minimal example of how to use the `Evaluator` interface to load a dataset, apply a model and (optionally) a scaling method, and then evaluate the outputs.
 
-Below is an example, for more detailed instructions on getting it up and running, see tutorial/kor(eng)/quick_start.md.
+Below is an example, for more detailed instructions on getting it up and running, see **tutorial/kor(eng)/quick_start.md**.
 
 ### Python Usage
 
