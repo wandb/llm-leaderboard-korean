@@ -95,6 +95,8 @@ class OpenAIModel(BaseModel):
         else:
             # For text generation, use httpx-based synchronous calls
             self.api_base = api_base
+            if api_key:
+                self.api_key = api_key
             logger.info("Using httpx-based synchronous calls for text generation.")
 
     def _process_image_content(self, content: Union[str, Dict, List]) -> Dict[str, Any]:
