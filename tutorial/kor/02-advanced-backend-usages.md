@@ -43,7 +43,7 @@ df = results.to_dataframe()
 print(df)
 ```
 
-### 1.3 여러 모델 비교하기
+### 1.3 여러 모델 비교하기 (On Develop!)
 
 LiteLLM의 장점은 동일한 인터페이스로 여러 모델을 쉽게 비교할 수 있다는 것입니다.
 
