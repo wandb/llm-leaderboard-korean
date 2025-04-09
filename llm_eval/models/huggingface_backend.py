@@ -53,6 +53,7 @@ class HuggingFaceModel(BaseModel):
     max_input_tokens: Optional[int] = None,
     temperature: float = 0.0,
     top_p: float = 1.0,
+    do_sample: bool = True,
     stop_token: Optional[str] = None,
     device: Optional[str] = None,
     batch_size: int = 1,
@@ -83,6 +84,7 @@ class HuggingFaceModel(BaseModel):
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.top_p = top_p
+        self.do_sample = do_sample
         self.cot = cot
         self.cot_trigger = cot_trigger
         self.cot_parser = cot_parser
