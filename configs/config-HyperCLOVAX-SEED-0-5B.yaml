@@ -1,0 +1,16 @@
+wandb:
+  run_name: "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-0.5B" # use run_name defined above
+
+# if you don't use api, please set "api" as "false"
+# if you use api, please select from "openai", "anthoropic", "google", "cohere", "vllm"
+api: vllm
+batch_size: 256 # vllmは256, apiは32を推奨
+
+model:
+  use_wandb_artifacts: false
+  pretrained_model_name_or_path: "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-0.5B" #if you use openai api, put the name of model
+  chat_template: "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-0.5B"
+  size_category: "<10B"
+  size: 500000000
+  release_date: "4/24/2025"
+  max_model_len: 2500
