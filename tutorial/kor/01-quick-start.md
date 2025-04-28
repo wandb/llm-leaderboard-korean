@@ -91,7 +91,7 @@ evaluator = Evaluator()
 
 # 2) Run the evaluation pipeline
 results = evaluator.run(
-    model="huggingface",                        # or "vllm", "openai", etc.
+    model="huggingface",                        # or "litellm", "openai", etc.
     model_params={"model_name_or_path":"kakaocorp/kanana-nano-2.1b-instruct", "device":"cuda:0", "batch_size": 2, "max_new_tokens": 128}, # example HF Transformers param
 
     dataset="haerae_bench",                     # or "kmmlu", "qarv", ...
