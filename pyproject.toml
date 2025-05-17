@@ -12,7 +12,8 @@ dependencies = [
     "tqdm",
     "langdetect",
     "httpx",
-    "vllm"           
+    "vllm",
+    "accelerate"
 ]
 
 [project.optional-dependencies]
