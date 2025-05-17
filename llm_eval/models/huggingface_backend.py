@@ -7,10 +7,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from transformers import StoppingCriteria, StoppingCriteriaList
 from tqdm import tqdm
 
-from .base import BaseModel # Assuming this is in the same directory structure
-from . import register_model # Assuming this is in the same directory structure
-from llm_eval.utils.logging import get_logger # Assuming this path is correct
-from llm_eval.utils.prompt_template import default_cot_parser # Assuming this path is correct
+from .base import BaseModel 
+from . import register_model
+from llm_eval.utils.logging import get_logger 
+from llm_eval.utils.prompt_template import default_cot_parser 
 
 logger = get_logger(name="huggingface", level=logging.INFO)
 
@@ -56,7 +56,7 @@ class HuggingFaceModel(BaseModel):
         temperature: float = 0.0,
         top_p: float = 1.0,
         do_sample: bool = True,
-        stop_token: Optional[str] = None, # Not directly used in this snippet's generation part but kept
+        stop_token: Optional[str] = None, # Not used in this snippet but kept for consistency
         device: Optional[str] = None,
         batch_size: int = 1,
         cot: bool = False,
@@ -127,8 +127,6 @@ class HuggingFaceModel(BaseModel):
                     self.device = "cpu"
                     self.model.to(self.device) # Fallback to CPU
             else: # device is None
-                # Let transformers decide, or it might be on 'meta' if no weights loaded yet.
-                # Usually defaults to CPU if not specified and CUDA not available.
                 self.device = self.model.device # Get the device it was loaded on
                 logger.info(f"[HuggingFaceModel] Model device not specified, loaded on: {self.device}")
         
