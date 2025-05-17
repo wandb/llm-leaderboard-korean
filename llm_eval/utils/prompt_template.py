@@ -7,7 +7,7 @@ import logging
 logger = get_logger(name="prompt_template", level=logging.INFO)
 
 DEFAULT_FEW_SHOT_INSTRUCTION = "다음은 문제와 정답의 몇 가지 예시입니다.\n\n"
-DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE = "{input}\n답: {reference}\n\n"
+DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE = "{input}\n정답: {reference}\n\n"
 
 # 대신 직접 정의
 class JudgeType(Enum):
