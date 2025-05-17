@@ -11,7 +11,8 @@ dependencies = [
     "pandas",              
     "tqdm",
     "langdetect",
-    "httpx"           
+    "httpx",
+    "vllm"           
 ]
 
 [project.optional-dependencies]

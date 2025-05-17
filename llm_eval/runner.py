@@ -23,6 +23,11 @@ from llm_eval.scaling_methods import load_scaling_method, BaseScalingMethod
 from llm_eval.evaluation import get_evaluator, BaseEvaluator
 from llm_eval.utils.logging import get_logger
 from llm_eval.utils.util import EvaluationResult
+from llm_eval.utils.prompt_template import (
+    format_few_shot_prompt_prefix, 
+    DEFAULT_FEW_SHOT_INSTRUCTION, 
+    DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
+)
 
 from llm_eval.utils.metrics import language_penalizer
 
@@ -64,6 +69,10 @@ class PipelineRunner:
         language_penalize: bool = True,
         target_lang: str = "ko",  # parameterized target language for penalizer
         custom_cot_parser: Optional[Callable[[str], Tuple[str, str]]] = None,
+        num_few_shot: Optional[int] = 0,
+        few_shot_split: Optional[str] = None,
+        few_shot_instruction: Optional[str] = DEFAULT_FEW_SHOT_INSTRUCTION,
+        few_shot_example_template: str = DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
     ):
         """
         Initialize the PipelineRunner with identifiers and parameters for each component.
@@ -107,6 +116,15 @@ class PipelineRunner:
         if self.custom_cot_parser is not None:
             self.model_backend_params["cot_parser"] = self.custom_cot_parser
         # ------------------------------------
+
+        self.num_few_shot = num_few_shot if num_few_shot is not None else 0
+        if not isinstance(self.num_few_shot, int) or self.num_few_shot < 0:
+            logger.warning(f"Invalid num_few_shot value: {self.num_few_shot}. Setting to 0.")
+            self.num_few_shot = 0
+            
+        self.few_shot_split = few_shot_split
+        self.few_shot_instruction = few_shot_instruction
+        self.few_shot_example_template = few_shot_example_template
 
         self.dataset: Optional[BaseDataset] = None
         self.model: Optional[BaseModel] = None
@@ -173,6 +191,62 @@ class PipelineRunner:
         else:
             self.evaluator = get_evaluator(self.evaluation_method_name, **self.evaluator_params)
 
+    def _prepare_few_shot_prefix(self) -> str:
+        if self.num_few_shot <= 0:
+            logger.info("[FewShot] num_few_shot is 0 or less. No few-shot examples will be prepared.")
+            return ""
+
+        few_shot_source_split_actual = self.few_shot_split if self.few_shot_split else self.split
+        logger.info(f"[FewShot] Attempting to prepare {self.num_few_shot} few-shot examples "
+                    f"from dataset '{self.dataset_name}', subset '{self.subset}', split '{few_shot_source_split_actual}'.")
+
+        try:
+            # dataset_params에서 few-shot 관련 파라미터는 제외하고 전달 (무한 재귀 방지)
+            fs_dataset_params = self.dataset_params.copy()
+            for key in ['num_few_shot', 'few_shot_split', 'few_shot_instruction', 'few_shot_example_template']:
+                fs_dataset_params.pop(key, None)
+            
+            logger.debug(f"[FewShot] Loading dataset for few-shot examples with params: {fs_dataset_params}")
+            few_shot_ds_loader = load_datasets(
+                name=self.dataset_name,
+                subset=self.subset, # 동일한 subset 사용
+                split=few_shot_source_split_actual,
+                **fs_dataset_params 
+            )
+            few_shot_examples_raw = few_shot_ds_loader.load() # This returns List[Dict[str, Any]]
+            
+            if not few_shot_examples_raw:
+                logger.warning(f"[FewShot] No data found for few-shot examples from split '{few_shot_source_split_actual}'. Returning empty prefix.")
+                return ""
+            
+            num_available = len(few_shot_examples_raw)
+            num_to_take = min(self.num_few_shot, num_available)
+
+            if num_to_take == 0:
+                 logger.warning(f"[FewShot] Not enough samples available ({num_available}) in '{few_shot_source_split_actual}' to create {self.num_few_shot} few-shot examples. No prefix generated.")
+                 return ""
+            
+            if num_to_take < self.num_few_shot:
+                logger.warning(f"[FewShot] Requested {self.num_few_shot} examples, but only {num_to_take} are available in '{few_shot_source_split_actual}'. Using {num_to_take} examples.")
+
+            selected_few_shot_samples = few_shot_examples_raw[:num_to_take]
+            logger.info(f"[FewShot] Selected {len(selected_few_shot_samples)} samples for few-shot prefix construction.")
+            
+            prefix_str = format_few_shot_prompt_prefix(
+                selected_few_shot_samples,
+                instruction=self.few_shot_instruction,
+                example_template=self.few_shot_example_template
+            )
+            if not prefix_str:
+                 logger.warning("[FewShot] Constructed few-shot prefix is empty. This might happen if all selected samples were invalid for formatting.")
+            else:
+                 logger.info(f"[FewShot] Successfully constructed few-shot prefix with {len(selected_few_shot_samples)} examples.")
+            return prefix_str
+
+        except Exception as e:
+            logger.error(f"[FewShot] Critical error during loading or processing of few-shot examples from split '{few_shot_source_split_actual}': {e}", exc_info=True)
+            return "" # Return empty string on error to allow main pipeline to proceed without few-shot
+        
     def run(self) -> EvaluationResult:
         """
         Executes the entire pipeline:
@@ -189,48 +263,114 @@ class PipelineRunner:
             raise RuntimeError("Pipeline components are not fully loaded.")
 
         start_time = time.time()
+        logger.info(f"Pipeline run started for dataset: {self.dataset_name}, split: {self.split}, model: {self.model_backend_name}")
 
-        # Step 1: Load data
-        data = self.dataset.load()  # e.g., [{"input": "...", "reference": "...", ...}, ...]
-        logger.info(f"[Pipeline] Dataset loaded. Number of samples: {len(data)}")
+        main_evaluation_data_raw = self.dataset.load()
+        logger.info(f"Loaded {len(main_evaluation_data_raw)} samples for main evaluation from split '{self.split}'.")
 
-        # Step 2: Inference
-        already_has_prediction = all("prediction" in item for item in data)
-        if already_has_prediction:
-            logger.info("[Pipeline] Existing predictions found; skipping model inference.")
-            predictions = data
-        else:
-            if self.scaler:
-                logger.info(f"[Pipeline] Applying scaling method: {self.scaling_method_name}")
-                predictions = self.scaler.apply(data)
+        few_shot_prompt_prefix = self._prepare_few_shot_prefix()
+
+        samples_for_processing = main_evaluation_data_raw
+        if self.num_few_shot > 0 and (self.few_shot_split is None or self.few_shot_split == self.split):
+            if len(main_evaluation_data_raw) <= self.num_few_shot:
+                logger.warning(
+                    f"Number of samples in '{self.split}' ({len(main_evaluation_data_raw)}) is less than or equal to "
+                    f"num_few_shot ({self.num_few_shot}). No samples left for evaluation."
+                )
+                samples_for_processing = []
             else:
-                logger.info("[Pipeline] Using direct model inference (no scaling method).")
-                predictions = self.model.generate_batch(data)
-            logger.info(f"[Pipeline] Inference completed for {len(predictions)} items.")
+                logger.info(
+                    f"Using first {self.num_few_shot} samples from '{self.split}' for few-shot examples. "
+                    f"Evaluating on the remaining {len(main_evaluation_data_raw) - self.num_few_shot} samples."
+                )
+                samples_for_processing = main_evaluation_data_raw[self.num_few_shot:]
+        
+        if not samples_for_processing:
+            logger.warning("No samples available for evaluation after processing few-shot examples. Returning empty result.")
+            return EvaluationResult(
+                metrics={}, 
+                samples=[], 
+                info={
+                    "dataset_name": self.dataset_name, "subset": self.subset, "split": self.split,
+                    "model_backend_name": self.model_backend_name,
+                    "num_few_shot_applied": self.num_few_shot if few_shot_prompt_prefix else 0,
+                    "error": "No samples for evaluation after few-shot example processing."
+                }
+            )
 
-        # Step 3: Evaluation
-        logger.info(f"[Pipeline] Evaluating with {self.evaluation_method_name}")
-        eval_dict = self.evaluator.evaluate(predictions, model=self.model)
-        # Expected eval_dict format: {"metrics": {...}, "samples": [...], ...}
+        # 각 샘플의 'input'에 few_shot_prompt_prefix 추가 
+        samples_for_inference = []
+        for sample in samples_for_processing:
+            new_sample = sample.copy() 
+            original_input = new_sample.get("input", "")
+            new_sample["input"] = few_shot_prompt_prefix + original_input
+            if self.num_few_shot > 0 and few_shot_prompt_prefix: # few-shot이 실제로 적용되었는지 추적
+                new_sample["few_shot_applied"] = True 
+            samples_for_inference.append(new_sample)
+        
+        logger.info(f"Prepared {len(samples_for_inference)} samples for model inference with few-shot prefixes (if any).")
 
-        # Step 4: Optionally apply language penalizer if enabled
+        try:
+            if self.scaler:
+                logger.info(f"Applying scaling method: {self.scaling_method_name} to {len(samples_for_inference)} samples.")
+                predictions_with_metadata = self.scaler.apply(samples_for_inference)
+            else:
+                logger.info(f"Performing direct model inference for {len(samples_for_inference)} samples.")
+                predictions_with_metadata = self.model.generate_batch(samples_for_inference)
+            logger.info(f"Inference completed for {len(predictions_with_metadata)} items.")
+        except Exception as e:
+            logger.error(f"Error during model inference or scaling: {e}", exc_info=True)
+            return EvaluationResult(
+                metrics={"error_on_inference": str(e)}, 
+                samples=samples_for_inference, # Prefix가 적용된 input을 포함한 샘플 반환 (디버깅용)
+                info={
+                    "dataset_name": self.dataset_name, "subset": self.subset, "split": self.split,
+                    "model_backend_name": self.model_backend_name, "error": f"Inference failed: {e}"
+                }
+            )
+
+        logger.info(f"Starting evaluation with '{self.evaluation_method_name}'.")
+        try:
+            eval_dict = self.evaluator.evaluate(predictions_with_metadata, model=self.model)
+        except Exception as e:
+            logger.error(f"Error during evaluation with '{self.evaluation_method_name}': {e}", exc_info=True)
+            return EvaluationResult(
+                metrics={"error_on_evaluation": str(e)}, 
+                samples=predictions_with_metadata, # 추론 결과까지는 포함하여 반환
+                info={
+                    "dataset_name": self.dataset_name, "subset": self.subset, "split": self.split,
+                    "model_backend_name": self.model_backend_name, "error": f"Evaluation failed: {e}"
+                }
+            )
+
+
         if self.language_penalize:
-            # Use the parameterized target language instead of a hardcoded value
-            target_lang = self.target_lang
+            logger.info(f"Applying language penalizer with target language '{self.target_lang}'.")
+            target_lang_for_penalty = self.target_lang
             language_scores = []
-            for sample in eval_dict.get("samples", []):
-                # original_prediction이 있으면 그것을 사용하고, 없으면 prediction 사용
-                pred_text = sample.get("original_prediction", sample.get("prediction", ""))
-                lp_score = language_penalizer(pred_text, target_lang=target_lang)
-                sample["language_penalizer"] = lp_score
+            evaluated_samples = eval_dict.get("samples", [])
+            for sample_in_eval_result in evaluated_samples:
+                pred_text = sample_in_eval_result.get("original_prediction", sample_in_eval_result.get("prediction", ""))
+                if not isinstance(pred_text, str): # Ensure pred_text is a string
+                    logger.debug(f"Prediction text is not a string, cannot apply language penalizer. Sample ID: {sample_in_eval_result.get('id', 'N/A')}, Type: {type(pred_text)}")
+                    lp_score = 0.0 # Or some other default or skip
+                else:
+                    lp_score = language_penalizer(pred_text, target_lang=target_lang_for_penalty)
+                sample_in_eval_result["language_penalizer"] = lp_score
                 language_scores.append(lp_score)
-            avg_lp = sum(language_scores) / len(language_scores) if language_scores else 0.0
-            eval_dict.setdefault("metrics", {})["language_penalizer_average"] = avg_lp
+            
+            if language_scores: 
+                avg_lp = sum(language_scores) / len(language_scores)
+                eval_dict.setdefault("metrics", {})["language_penalizer_average"] = avg_lp
+                logger.info(f"Average language penalizer score: {avg_lp:.4f}")
+            else:
+                eval_dict.setdefault("metrics", {})["language_penalizer_average"] = 0.0
+                logger.info("No samples to calculate language penalizer average or all predictions were non-string.")
 
-        # Step 5: Aggregate results into an EvaluationResult
+
         end_time = time.time()
-        elapsed = end_time - start_time
-        logger.info(f"[Pipeline] Pipeline completed. Elapsed time: {elapsed:.2f} seconds.")
+        elapsed_seconds = end_time - start_time
+        logger.info(f"Pipeline run completed in {elapsed_seconds:.2f} seconds.")
 
         pipeline_info = {
             "dataset_name": self.dataset_name,
@@ -239,19 +379,22 @@ class PipelineRunner:
             "model_backend_name": self.model_backend_name,
             "scaling_method_name": self.scaling_method_name,
             "evaluation_method_name": self.evaluation_method_name,
-            "elapsed_time_sec": elapsed,
+            "elapsed_time_sec": elapsed_seconds,
+            "num_few_shot_configured": self.num_few_shot,
+            "num_few_shot_applied": self.num_few_shot if few_shot_prompt_prefix else 0, #실제 적용된 수
+            "few_shot_source_split": self.few_shot_split if self.num_few_shot > 0 and few_shot_prompt_prefix else None,
+            "language_penalize_enabled": self.language_penalize,
+            "target_lang_for_penalty": self.target_lang if self.language_penalize else None,
         }
-
-        metrics = eval_dict.get("metrics", {})
-        samples = eval_dict.get("samples", [])
         
-        existing_info = eval_dict.get("info", {})
+        metrics = eval_dict.get("metrics", {})
+        final_samples_output = eval_dict.get("samples", [])
+        
+        existing_info = eval_dict.get("info", {}) # evaluator가 info를 반환했을 경우
         merged_info = {**existing_info, **pipeline_info}
 
-        result = EvaluationResult(
+        return EvaluationResult(
             metrics=metrics,
-            samples=samples,
+            samples=final_samples_output,
             info=merged_info
         )
-
-        return result
