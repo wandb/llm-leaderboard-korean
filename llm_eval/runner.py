@@ -27,7 +27,6 @@ from llm_eval.utils.prompt_template import (
     format_few_shot_prompt_prefix, 
     DEFAULT_FEW_SHOT_INSTRUCTION, 
     DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
-    _load_function # Evaluator에서 custom_cot_parser 로드 시 사용하던 것과 동일
 )
 
 from llm_eval.utils.metrics import language_penalizer
