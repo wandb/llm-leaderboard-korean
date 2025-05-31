@@ -23,6 +23,7 @@ from llm_eval.scaling_methods import load_scaling_method, BaseScalingMethod
 from llm_eval.evaluation import get_evaluator, BaseEvaluator
 from llm_eval.utils.logging import get_logger
 from llm_eval.utils.util import EvaluationResult
+from llm_eval.internal.benchhub_info import DATASETS as BENCHHUB_INFO_ENTRIES
 from llm_eval.utils.prompt_template import (
     format_few_shot_prompt_prefix, 
     DEFAULT_FEW_SHOT_INSTRUCTION, 
@@ -387,6 +388,32 @@ class PipelineRunner:
             "target_lang_for_penalty": self.target_lang if self.language_penalize else None,
         }
         
+        # If the dataset is BenchHub, add benchmark details
+        if self.dataset_name == "benchhub": #
+            processed_samples = eval_dict.get("samples", [])
+            if processed_samples:
+                unique_benchmark_names = set()
+                for sample in processed_samples:
+                    if "metadata" in sample and "benchmark_name" in sample["metadata"]: #
+                        unique_benchmark_names.add(sample["metadata"]["benchmark_name"]) #
+                
+                if unique_benchmark_names:
+                    benchmark_details = {}
+                    for bn_name in unique_benchmark_names:
+                        for entry in BENCHHUB_INFO_ENTRIES: #
+                            if entry.dataset == bn_name: # DatasetEntry.dataset과 비교
+                                benchmark_details[bn_name] = {
+                                    "citation_key": entry.citation_key, #
+                                    "citation": entry.citation, #
+                                    "license": entry.license, #
+                                    "anthology": entry.anthology, #
+                                    "languages": entry.languages, #
+                                }
+                                break
+                    if benchmark_details:
+                        pipeline_info['benchmark_details'] = benchmark_details
+                        logger.info(f"BenchHub 벤치마크에 대한 인용 정보 추가 완료: {list(benchmark_details.keys())}")
+
         metrics = eval_dict.get("metrics", {})
         final_samples_output = eval_dict.get("samples", [])
         
