@@ -14,7 +14,7 @@ HRET 프레임워크는 기존 한국어 LLM 평가 방식이 일관되지 않�
 ---
 
 # 설치 (Installation)
-파이썬(python >= 3.9) 가상환경 구축 후 설치를 권장합니다. 
+파이썬(python >= 3.10) 가상환경 구축 후 설치를 권장합니다. 
 다음과 같은 과정을 통해 실행 환경을 구축할 수 있습니다.
 - 가상환경 구축 (Conda 또는 Venv)
 - git clone 명령어로 HRET GitHub 프로젝트를 로컬에 복사해오기
@@ -40,6 +40,7 @@ git clone https://github.com/HAE-RAE/haerae-evaluation-toolkit.git
 ```bash
 cd haerae-evaluation-toolkit
 ```
+
 
 [6] requirements.txt로 요구되는 패키지 설치
 ```bash
@@ -243,7 +244,7 @@ print(results)
 ```
 ---
 
-## CoT (Chain of Thought, 생각의 연쇄)
+## CoT (Chain of Thought)
 CoT는 복잡한 문제를 단계적으로 해결하는 프로세스를 모델이 따르도록 유도하는 기법입니다.
 
 ### cot basic
