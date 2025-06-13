@@ -1,7 +1,7 @@
 import os
 
 config_list_gpt = [
-    "o1-preview",
+    # "o1-preview",
     # "gpt-3-5-turbo-0125",
     # "chatgpt-4o-latest",
     # "gpt-4o-2024-05-13",
@@ -13,6 +13,8 @@ config_list_gpt = [
     # "solar-mini"
 ]
 config_list_claude = [
+    # "anthropic-claude-sonnet-4-20250514",
+    "anthropic-claude-opus-4-20250514",
     # "anthropic-claude-3-5-sonnet-20241022",
     # "anthropic-claude-3-haiku-20240307",
     # "anthropic-claude-3-opus-20240229",
@@ -52,5 +54,5 @@ config_list_korean = [
     "EXAONE-3-5-32B-Instruct"
 ]
 
-for config in config_list_korean:
+for config in config_list_claude:
     os.system(f"python3 scripts/run_eval.py --config config-{config}")
