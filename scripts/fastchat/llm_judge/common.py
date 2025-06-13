@@ -468,6 +468,32 @@ def chat_completion_upstage(model, conv, temperature, max_tokens):
 
     return output
 
+def chat_completion_deepseek(model, conv, temperature, max_tokens):
+    #openai_chat_completion_func = setup_openai_api(model)
+    client = openai.OpenAI(
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    base_url="https://api.deepseek.com/v1",
+    )
+    output = API_ERROR_OUTPUT
+    # TODO: allow additional params for toggling between azure api
+    for _ in range(API_MAX_RETRY):
+        try:
+            messages = conv.to_openai_api_messages()
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                n=1,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            output = response.choices[0].message.content
+            break
+        except openai.OpenAIError as e:
+            print(type(e), e)
+            time.sleep(API_RETRY_SLEEP)
+
+    return output
+
 def chat_completion_openai(model, conv, temperature, max_tokens):
     #openai_chat_completion_func = setup_openai_api(model)
     output = API_ERROR_OUTPUT
@@ -568,7 +594,12 @@ def chat_completion_anthropic(model, conv, temperature, max_tokens, api_dict=Non
     output = API_ERROR_OUTPUT
     for _ in range(API_MAX_RETRY):
         # if model in {"claude-3-opus-20240229", "claude-3-5-sonnet", "claude-3-haiku-20240307", "claude-3-sonnet-20240229", "cluade-3-5-sonnet-20241022"}:
-        llm = ChatAnthropic(model_name=model)
+        llm = ChatAnthropic(
+            model_name=model,
+            api_key=api_key,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
         max_retries = 3
         retry_count = 0
         prompt = conv.get_prompt()
