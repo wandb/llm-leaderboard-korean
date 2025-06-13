@@ -1,0 +1,16 @@
+wandb:
+  run_name: "kakaocorp/kanana-1.5-8b-instruct-2505" # use run_name defined above
+
+# if you don't use api, please set "api" as "false"
+# if you use api, please select from "openai", "anthoropic", "google", "cohere", "vllm"
+api: vllm
+batch_size: 256 # vllmは256, apiは32を推奨
+
+model:
+  use_wandb_artifacts: false
+  pretrained_model_name_or_path: "kakaocorp/kanana-1.5-8b-instruct-2505" #if you use openai api, put the name of model
+  chat_template: "kakaocorp/kanana-1.5-8b-instruct-2505"
+  size_category: "<10B"
+  size: 8030000000
+  release_date: "5/23/2025"
+  max_model_len: 2500
