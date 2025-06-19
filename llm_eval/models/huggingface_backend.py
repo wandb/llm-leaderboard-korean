@@ -127,6 +127,7 @@ class HuggingFaceModel(BaseModel):
                     self.device = "cpu"
                     self.model.to(self.device) # Fallback to CPU
             else: # device is None
+
                 self.device = self.model.device # Get the device it was loaded on
                 logger.info(f"[HuggingFaceModel] Model device not specified, loaded on: {self.device}")
         
@@ -317,17 +318,6 @@ class HuggingFaceModel(BaseModel):
                         
                         # CoT parsing for MCQA (if applicable, though less common for pure scoring)
                         if self.cot and self.cot_parser: # Apply CoT parsing even if prediction is from scoring
-                            # For MCQA, the "generated_text" for CoT might be just the chosen option,
-                            # or a constructed thought process if one were generated alongside scoring.
-                            # Here, we assume CoT applies to the *final answer format*.
-                            # If CoT is about the reasoning *to get to the MCQA choice*, it's more complex.
-                            # This part might need refinement based on expected CoT behavior for MCQA.
-                            # A common pattern is to generate CoT then pick, or generate CoT *for* the picked option.
-                            # Let's assume for now the prediction is the final answer.
-                            # If CoT is used to *generate* the rationale for the *chosen* option, it would be:
-                            # cot_prompt = f"{prompt}\nQuestion: Based on the options, which is correct? Chosen: {item['prediction']}\n{self.cot_trigger}"
-                            # ... then generate from this.
-                            # Simpler: just parse if the prediction itself contains CoT markers (unlikely for MCQA)
                             # For now, let's assume no CoT text is generated *by scoring*, so chain_of_thought is None for MCQA.
                             item["chain_of_thought"] = None # Typically, _score_option doesn't produce CoT text.
                             # If a CoT string should be *added* even for MCQA, that logic would go here.

@@ -106,3 +106,37 @@ results = evaluator.run(
     evaluation_method="string_match"
 )
 ```
+### 3 vLLM 백엔드 활용
+
+`vllm` 백엔드는 단순 텍스트 생성뿐만 아니라, `log_likelihood` 평가 방식을 지원합니다. 이 방식은 주로 객관식 문제(MCQA)에서 각 선택지가 얼마나 그럴듯한지를 모델의 로그 확률(Log Probability)을 통해 직접 계산하여 정답을 선택하는 데 사용됩니다. `huggingface` 백엔드와 마찬가지로 `vllm`에서도 이 기능을 사용할 수 있습니다.
+
+또한, vLLM 엔진의 성능을 세밀하게 튜닝하기 위해 `max_num_seqs`(동시 처리 시퀀스 수)와 `max_num_batched_tokens`(배치 내 최대 토큰 수) 같은 파라미터를 직접 설정할 수 있습니다.
+
+#### 3.1 주요 설정
+- **`evaluation_method`**: `log_likelihood`로 설정해야 합니다.
+- **`model`**: `vllm`으로 설정합니다.
+- **`model_params`**:
+    - `model_name_or_path`: 사용할 모델의 경로 또는 ID.
+    - `max_num_seqs` (선택 사항): vLLM 엔진의 최대 동시 시퀀스 수. 기본값은 `256`입니다.
+    - `max_num_batched_tokens` (선택 사항): vLLM 엔진의 배치 당 최대 토큰 수. 기본값은 `8192`입니다.
+- **`evaluator_params`**:
+    - `return_logits`: `true`로 반드시 설정해야 `LogProbEvaluator`가 정상 동작합니다.
+
+#### 3.2 사용 예시 (CLI)
+
+CLI에서 `vllm` 백엔드로 `log_likelihood` 평가를 수행하는 예시입니다.
+
+```bash
+python llm_eval/evaluator.py \
+  --model vllm \
+  --evaluation_method log_likelihood \
+  --dataset haerae_bench \
+  --subset csat_geo \
+  --model_params '{
+    "model_name_or_path": "EleutherAI/polyglot-ko-1.3b", 
+    "tensor_parallel_size": 1, 
+    "max_num_seqs": 128, 
+    "max_num_batched_tokens": 4096
+  }' \
+  --evaluator_params '{"return_logits": true}' \
+  --output_file vllm_logprob_results.json
