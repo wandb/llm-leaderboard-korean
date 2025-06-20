@@ -2,7 +2,8 @@ import logging
 from typing import List, Dict, Any, Optional, Union
 
 from datasets import load_dataset
-from huggingface_hub import get_dataset_config_names
+# kept for get_raw_samples or other utilities.
+from datasets import get_dataset_config_names
 
 from .base import BaseDataset
 from . import register_dataset
@@ -10,8 +11,28 @@ from ..utils.logging import get_logger
 
 logger = get_logger(name="kbl_dataset", level=logging.INFO)
 
-# Default prompt template for the KBL dataset, as per user request.
 DEFAULT_KBL_PROMPT_TEMPLATE = "Question: {question}\nChoices: {choices}"
+
+# When no specific subset is requested, only these will be loaded to prevent format errors.
+DEFAULT_KBL_SUBSETS = [
+    "bar_exam_civil_2012", "bar_exam_civil_2013", "bar_exam_civil_2014", "bar_exam_civil_2015",
+    "bar_exam_civil_2016", "bar_exam_civil_2017", "bar_exam_civil_2018", "bar_exam_civil_2019",
+    "bar_exam_civil_2020", "bar_exam_civil_2021", "bar_exam_civil_2022", "bar_exam_civil_2023",
+    "bar_exam_civil_2024", "bar_exam_civil_2025",
+    "bar_exam_criminal_2012", "bar_exam_criminal_2013", "bar_exam_criminal_2014", "bar_exam_criminal_2015",
+    "bar_exam_criminal_2016", "bar_exam_criminal_2017", "bar_exam_criminal_2018", "bar_exam_criminal_2019",
+    "bar_exam_criminal_2020", "bar_exam_criminal_2021", "bar_exam_criminal_2022", "bar_exam_criminal_2023",
+    "bar_exam_criminal_2024", "bar_exam_criminal_2025",
+    "bar_exam_public_2012", "bar_exam_public_2013", "bar_exam_public_2014", "bar_exam_public_2015",
+    "bar_exam_public_2016", "bar_exam_public_2017", "bar_exam_public_2018", "bar_exam_public_2019",
+    "bar_exam_public_2020", "bar_exam_public_2021", "bar_exam_public_2022", "bar_exam_public_2023",
+    "bar_exam_public_2024", "bar_exam_public_2025",
+    "bar_exam_responsibility_2010", "bar_exam_responsibility_2011", "bar_exam_responsibility_2012",
+    "bar_exam_responsibility_2013", "bar_exam_responsibility_2014", "bar_exam_responsibility_2015",
+    "bar_exam_responsibility_2016", "bar_exam_responsibility_2017", "bar_exam_responsibility_2018",
+    "bar_exam_responsibility_2019", "bar_exam_responsibility_2020", "bar_exam_responsibility_2021",
+    "bar_exam_responsibility_2022", "bar_exam_responsibility_2023",
+]
 
 @register_dataset("kbl")
 class KBLDataset(BaseDataset):
@@ -19,11 +40,11 @@ class KBLDataset(BaseDataset):
     KBL(Korean Benchmark for Legal Language Understanding) Dataset Class.
 
     - Loads the 'lbox/kbl' dataset from the Hugging Face Hub.
-    - It can load all or specific subsets via the 'subset' argument.
-        - None: Dynamically loads and combines all subsets.
+    - It can load a specific subset, a list of subsets, or a predefined default list.
+        - None: Loads a default list of subsets known to have a consistent format.
         - str: Loads a single specified subset.
         - list: Loads and combines multiple specified subsets.
-    - It formats the prompt using the dataset's 'question' column and choice columns.
+    - Formats the prompt using the dataset's 'question' column and choice columns.
     - The 'gt' (ground truth) column is used as the reference answer.
     """
     def __init__(
@@ -39,8 +60,8 @@ class KBLDataset(BaseDataset):
 
         Args:
             dataset_name (str): The name of the dataset on the HuggingFace Hub.
-            subset (Optional[Union[str, List[str]]]): The name of the subset or a list of subset names.
-                                                      If None, all subsets are loaded.
+            subset (Optional[Union[str, List[str]]]): The subset(s) to load.
+                                                      If None, a predefined list of subsets is loaded.
             split (str): The data split to load (defaults to 'test').
             base_prompt_template (str): The prompt template string for formatting the input.
             **kwargs: Additional arguments to be passed to `load_dataset`.
@@ -58,17 +79,12 @@ class KBLDataset(BaseDataset):
         Loads the data and returns it in the HRET standard format.
         """
         subsets_to_load = self.subset
-        # If subset is None, dynamically fetch the list of all subsets from the Hub.
+        # If no subset is specified, default to the predefined list of compatible subsets
+        # to avoid format errors from other subsets.
         if subsets_to_load is None:
-            try:
-                logger.info(f"Subset is None. Fetching all available subsets from '{self.dataset_name}'...")
-                subsets_to_load = get_dataset_config_names(self.dataset_name)
-                logger.info(f"Found {len(subsets_to_load)} subsets to load.")
-            except Exception as e:
-                logger.error(f"Failed to fetch subsets for '{self.dataset_name}': {e}")
-                return []
-        
-        # If subset is a single string, convert it to a list for iteration.
+            subsets_to_load = DEFAULT_KBL_SUBSETS
+            logger.info(f"Subset is None. Loading the predefined default set of {len(subsets_to_load)} KBL subsets.")
+
         if isinstance(subsets_to_load, str):
             subsets_to_load = [subsets_to_load]
 
@@ -95,7 +111,6 @@ class KBLDataset(BaseDataset):
         """
         processed_list = []
         CHOICE_KEYS = ["A", "B", "C", "D", "E"]
-
         template = self.base_prompt_template
 
         for item in hf_dataset:
@@ -125,7 +140,7 @@ class KBLDataset(BaseDataset):
             processed_list.append({
                 "input": final_input,
                 "reference": reference,
-                "options": option_texts,  # List of choice texts for potential use in evaluators
+                "options": option_texts,
                 "_subset_name": subset_name,
                 "metadata": item.get("meta")
             })
@@ -134,16 +149,9 @@ class KBLDataset(BaseDataset):
 
     def get_raw_samples(self) -> Any:
         """Returns the raw HuggingFace Dataset object for debugging purposes."""
-        if self.subset is None:
-            # If no subset is specified, load the first one as an example.
-            try:
-                first_subset = get_dataset_config_names(self.dataset_name)[0]
-                return load_dataset(self.dataset_name, name=first_subset, split=self.split, **self.kwargs)
-            except Exception as e:
-                logger.error(f"Failed to load raw samples for '{self.dataset_name}': {e}")
-                return None
-        elif isinstance(self.subset, list):
-            return [load_dataset(self.dataset_name, name=s, split=self.split, **self.kwargs) for s in self.subset]
+        subsets_to_load = self.subset or DEFAULT_KBL_SUBSETS
+        if isinstance(subsets_to_load, list):
+            return [load_dataset(self.dataset_name, name=s, split=self.split, **self.kwargs) for s in subsets_to_load]
         else: # str
             return load_dataset(self.dataset_name, name=self.subset, split=self.split, **self.kwargs)
 
