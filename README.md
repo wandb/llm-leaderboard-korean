@@ -19,7 +19,7 @@ Haerae-Evaluation-Toolkit is an emerging open-source Python library designed to 
   - Dedicated to analyzing extended Korean chain-of-thought reasoning.
 
 - **Extensive Korean Datasets**
-  - Includes HAE-RAE Bench, KMMLU, KUDGE, CLiCK, K2-Eval, HRM8K, and more.
+  - Includes HAE-RAE Bench, KMMLU, KUDGE, CLiCK, K2-Eval, HRM8K, Benchhub, Kormedqa, KBL and more.
 
 - **Scalable Inference-Time Techniques**
   - Best-of-N, Majority Voting, Beam Search, and other advanced methods.
