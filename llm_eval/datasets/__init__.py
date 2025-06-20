@@ -42,3 +42,4 @@ from .k2_eval import K2_EvalDataset
 from .kudge import KUDGEDataset
 from .dataset_loader import GenericFileDataset
 from .benchhub import BenchHubDataset
+from .hrc import HRCDataset
