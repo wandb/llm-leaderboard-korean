@@ -56,8 +56,6 @@ class VLLMModel(BaseModel):
         dtype: str = "auto",
         tensor_parallel_size: int = 1,
         gpu_memory_utilization: float = 0.9,
-        max_num_seqs: int = 256,
-        max_num_batched_tokens: int = 8192,
         cot: bool = False,
         cot_trigger: Optional[str] = "Let's think step by step.",
         cot_parser: Optional[Callable[[str], Tuple[str, str]]] = default_cot_parser,
@@ -80,6 +78,7 @@ class VLLMModel(BaseModel):
         self.max_tokens = max_tokens
         self.stop = stop if stop is not None else []
         self.sampling_kwargs = kwargs
+        self.cot = cot
 
         try:
             llm_init_valid_args = [
@@ -92,10 +91,6 @@ class VLLMModel(BaseModel):
                 "engine_use_ray", "disable_log_stats", "disable_log_requests"
             ]
             llm_init_kwargs = {k: v for k, v in kwargs.items() if k in llm_init_valid_args}
-            
-            # Add new args to the init kwargs
-            llm_init_kwargs['max_num_seqs'] = max_num_seqs
-            llm_init_kwargs['max_num_batched_tokens'] = max_num_batched_tokens
 
 
             self.llm = vllm.LLM(
