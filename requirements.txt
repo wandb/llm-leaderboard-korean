@@ -12,3 +12,5 @@ langdetect
 httpx
 vllm >=0.4.0
 accelerate
+spacy
+scikit-learn

@@ -1,9 +1,11 @@
 import json
 import pandas as pd
-from typing import Any, Dict, List, Callable
+from typing import Any, Dict, List, Callable, Any, Union
 from collections import Counter 
 from llm_eval.utils.logging import get_logger
+from llm_eval.analysis import AnalysisReportGenerator, format_report_as_markdown
 import importlib
+
 logger = get_logger(name="util", level="INFO")
 
 class EvaluationResult:
@@ -189,6 +191,49 @@ The individual datasets include in the evaluation set, along with their statisti
             return self.__getitem__(key)
         except KeyError:
             return default
+    
+    def analysis_report(
+        self, top_n: int = 5, output_format: str = 'markdown'
+    ) -> Union[str, Dict[str, Any]]:
+        """
+        Generates an in-depth analysis report of the evaluation results.
+        
+        This method acts as a facade, delegating the actual analysis logic
+        to the `AnalysisReportGenerator` class for better modularity.
+
+        Args:
+            top_n (int): The number of top items to show for keywords, patterns, etc.
+            output_format (str): The desired output format. Can be 'markdown' or 'dict'.
+
+        Returns:
+            Union[str, Dict[str, Any]]: The formatted report as a string or a structured dictionary.
+        
+        Raises:
+            ValueError: If an unsupported output format is requested.
+        """
+        if not self.samples:
+            return "No samples available for analysis."
+
+        try:
+            # 1. Prepare data for the analysis module
+            df = self.to_dataframe()
+            
+            # 2. Instantiate the generator and create the report data
+            generator = AnalysisReportGenerator(df, self.metrics)
+            report_data = generator.generate(top_n=top_n)
+
+            # 3. Return the result in the requested format
+            if output_format == 'dict':
+                return report_data
+            elif output_format == 'markdown':
+                # Delegate formatting to the analysis module as well
+                return format_report_as_markdown(report_data)
+            else:
+                raise ValueError(f"Unsupported output format: {output_format}")
+
+        except Exception as e:
+            # Catch potential errors (e.g., spaCy model not found)
+            return f"An error occurred while generating the report: {e}"
 
 def _load_function(func_path: str) -> Callable:
     """

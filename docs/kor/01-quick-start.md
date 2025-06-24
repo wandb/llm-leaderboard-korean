@@ -119,6 +119,79 @@ df = results.to_dataframe()
 print(df) # input, reference, prediction, options, chain-of-thought, logits, 등 확인 가능
 ```
 
+## 👌Output 평가
+
+### Raw 데이터 직접 분석하기: to_dataframe()
+가장 기본적이면서 강력한 분석 방법은 평가 결과 전체를 pandas.DataFrame으로 변환하여 직접 다루는 것입니다. 
+results.to_dataframe() 메서드를 사용하면 평가 과정의 모든 샘플 데이터를 로우 포맷으로 받아와 자유롭게 분석할 수 있습니다. 미리 정의된 리포트 외에 자신만의 기준으로 데이터를 심층 분석하고 싶을 때 매우 유용합니다.
+
+```python
+from llm_eval.evaluator import Evaluator
+
+evaluator = Evaluator()
+results = evaluator.run(
+    model="huggingface",
+    model_params={"model_name_or_path": "google/gemma-2b-it"},
+    dataset="haerae_bench",
+    evaluation_method="string_match"
+)
+```
+
+#### 평가 결과를 데이터프레임으로 변환
+```python
+df = results.to_dataframe()
+```
+
+데이터프레임에는 다음과 같은 유용한 정보가 기본적으로 포함되며, 추가적으로 각 평가 옵션에 따른 중간 결과가 제공됩니다.
+
+input: 모델에 입력된 값
+
+prediction: 모델이 생성한 답변
+
+reference: 정답 레이블
+
+eval_is_correct: 평가 결과 (True/False)
+
+_subset_name: 해당 샘플이 속한 서브셋 이름
+
+이를 활용하여 특정 조건의 샘플만 필터링하거나, 그룹별로 통계를 내는 등 pandas 라이브러리의 모든 기능을 활용하여 무한한 가능성의 커스텀 분석을 수행할 수 있습니다.
+
+### 자동 분석 리포트 활용하기: analysis_report()
+매번 직접 데이터를 분석하는 것이 번거로울 수 있습니다. 이를 위해 툴킷은 한국어의 특성에 맞는 주요 분석 항목들을 종합하여 보여주는 자동화된 리포팅 기능을 제공합니다. analysis_report() 메서드는 클릭 한 번으로 종합적인 분석 리포트를 생성합니다. 
+
+####  분석 리포트 생성 및 출력
+```python
+markdown_report = results.analysis_report()
+print(markdown_report)
+```
+
+#### 주의: 해당 기능을 사용하기 위해서는 다음의 Spacy 모델이 필요함
+
+```bash
+python -m spacy download ko_core_news_sm
+```
+
+#### 파일로 저장하여 확인
+```python
+with open("analysis_report.md", "w", encoding="utf-8") as f:
+    f.write(markdown_report)
+```
+
+리포트 해석하기 (Interpreting the Report)
+자동 생성된 리포트의 각 섹션은 다음과 같은 분석 정보를 담고 있습니다.
+
+종합 성능 분석 (Overall Performance Analysis): 전체 정확도, 총 샘플 수 등 핵심 성능 지표를 요약합니다.
+
+서브셋별 심층 분석 (In-depth Analysis by Subset): 데이터셋의 하위 그룹별 정확도를 비교하여 모델의 강점과 약점을 파악합니다.
+
+언어적 품질 분석 (Linguistic Quality Analysis): 정답/오답 답변의 어휘 다양성(TTR)을 비교하여 생성물의 언어적 품질을 평가합니다.
+
+오답 원인 추론 분석 (Error Cause Inference Analysis): 오답에서 자주 나타나는 키워드나 정답에서 누락된 키워드를 분석하여 모델의 실패 원인을 추정합니다.
+
+#### 고급 사용법
+리포트를 Markdown 텍스트로 출력하는 대신, 분석 결과를 딕셔너리 형태로 받아 후속 처리를 할 수 있습니다. output_format='dict' 인자를 사용하세요. 이는 자동화된 로깅이나 커스텀 시각화를 구현할 때 유용합니다.
+
+
 ### 백엔드 모델 변경 - vllm (Backend model changed)
 ```python
 from llm_eval.evaluator import Evaluator
