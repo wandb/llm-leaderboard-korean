@@ -44,7 +44,9 @@ dependencies = [
     "langdetect",
     "httpx",
     "vllm",
-    "accelerate"
+    "accelerate",
+    "spacy",
+    "scikit-learn"
 ]
 
 [project.optional-dependencies]
