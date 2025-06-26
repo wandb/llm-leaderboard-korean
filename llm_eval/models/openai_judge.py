@@ -1,285 +1,143 @@
-import asyncio
-import time
+import os
 import logging
-import json
-from copy import deepcopy
+import time
+from typing import List, Dict, Any, Optional, Union
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Dict, Any, Optional, Union, Callable, Tuple
 
 import httpx
 from tqdm import tqdm
-
 from .base import BaseJudge
 from . import register_model
-from llm_eval.utils.logging import get_logger
 
-import re
-import random
-
-# import nest_asyncio
-
-logger = get_logger(name="openai_judge", level=logging.INFO)
-
+# Initialize module-level logger
+logger = logging.getLogger(__name__)
 
 @register_model("openai_judge")
 class OpenAIJudge(BaseJudge):
     """
-    OpenAIJudge is a production-grade judge backend that uses an HTTP-based API (via httpx)
-    to evaluate generated answers. This implementation supports:
-      - Both Chat and Completions API payload structures, controlled by the use_chat_api flag.
-      - Chain-of-thought (CoT) prompting: if enabled, the CoT trigger is appended to the prompt,
-        and the generated output is parsed into a chain-of-thought and a final answer.
-      - Concurrent batch processing using asynchronous HTTP requests with httpx.
-      - Robust retry logic with exponential backoff on API errors.
+    A threaded judge backend for OpenAI-compatible APIs.
     
-    Args:
-        api_base (Optional[str]): The base URL of the judge API endpoint. Defaults to OpenAI's API URL.
-        model_name (str): Judge model identifier (e.g., "gpt-4").
-        api_key (Optional[str]): API key for authentication.
-        system_message (Optional[str]): A system message to include in chat completions.
-        use_chat_api (bool): If True, uses a Chat API payload; otherwise, uses a Completions API payload.
-        max_tokens (int): Maximum tokens to generate for each judge response.
-        temperature (float): Sampling temperature.
-        top_p (float): Nucleus sampling probability.
-        do_sample (bool): Whether to use sampling (True) or greedy decoding (False).
-        batch_size (int): Number of judge prompts to process concurrently.
-        max_retries (int): Maximum number of retry attempts for API calls.
-        timeout (Optional[float]): Timeout in seconds for HTTP requests.
-        **kwargs: Additional parameters for the API (e.g., frequency_penalty, presence_penalty).
-        
-    Examples:
-        ```python
-        # 1. Example using OpenAI API
-        judge = OpenAIJudge(
-            api_base="https://api.openai.com/v1",  # Only specify base URL (endpoint is auto-appended)
-            model_name="gpt-4",
-            api_key="sk-...",  # Specify OpenAI API key
-            system_message="You are a helpful judge that evaluates model outputs."
-        )
-        
-        # 2. Example using self-hosted API server
-        judge = OpenAIJudge(
-            api_base="http://localhost:8000",  # vLLM or other OpenAI-compatible server
-            model_name="llama-3-8b",
-            use_chat_api=True
-        )
-        
-        # 3. Run evaluation
-        results = judge.judge_batch([
-            {"input": "Judge the following response: ..."},
-            {"input": "Evaluate this answer: ..."}
-        ])
-        ```
+    Uses a pool of worker threads to send concurrent requests to the API,
+    applies simple retry logic with exponential backoff, and returns
+    structured results including predictions and finish reasons.
     """
     def __init__(
         self,
         model_name: str,
-        api_base: Optional[str] = "https://api.openai.com/v1",
         api_key: Optional[str] = None,
-        system_message: Optional[str] = None,
-        use_chat_api: bool = True,
-        max_tokens: int = 64,
-        temperature: float = 0.1,
-        top_p: float = 0.95,
-        do_sample: bool = True,
-        batch_size: int = 32,
-        max_retries: int = 3,
-        timeout: Optional[float] = 30.0,
+        api_base: Optional[str] = None,
+        temperature: float = 0.0,
+        max_tokens: int = 1024,
+        top_p: float = 1.0,
+        frequency_penalty: float = 0.0,
+        presence_penalty: float = 0.0,
+        batch_size: int = 10,
         **kwargs,
     ):
+        """
+        Args:
+            model_name: Identifier for the model (e.g., "gpt-4o").
+            api_key: OpenAI API key (can also be set via OPENAI_API_KEY env var).
+            api_base: Base URL for API calls (defaults to https://api.openai.com/v1).
+            temperature: Sampling temperature (0.0 = deterministic).
+            max_tokens: Maximum tokens to generate per request.
+            top_p: Nucleus sampling probability.
+            frequency_penalty: Penalize repeated tokens.
+            presence_penalty: Penalize new topic introduction.
+            batch_size: Number of threads to use for parallel calls.
+        """
         super().__init__(**kwargs)
-        if not model_name:
-            raise ValueError("model_name is required for OpenAIJudge.")
-        
-        # Judge API endpoint is specified via api_base; API key is optional.
-        self.api_base = api_base
-        self.api_key = api_key
         self.model_name = model_name
-        self.system_message = system_message
-        self.use_chat_api = use_chat_api
-        self.max_tokens = max_tokens
-        self.temperature = temperature
-        self.top_p = top_p
-        self.do_sample = do_sample
-        self.batch_size = batch_size
-        self.max_retries = max_retries
-        self.timeout = timeout
-        self.default_params = kwargs
+        # Load API credentials and endpoint
+        self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        self.api_base = api_base or os.environ.get(
+            "OPENAI_API_BASE", "https://api.openai.com/v1"
+        )
+        if not self.api_key:
+            raise ValueError(
+                "OpenAI API key is required. Provide it or set OPENAI_API_KEY."
+            )
 
-    def _create_payload(
+        # Shared payload parameters for each request
+        self.params = {
+            "model": self.model_name,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "top_p": top_p,
+            "frequency_penalty": frequency_penalty,
+            "presence_penalty": presence_penalty,
+        }
+
+        # Number of worker threads for concurrent evaluation
+        self.batch_size = batch_size
+
+    def _build_url(self) -> str:
+        """
+        Construct the full API URL for chat completions.
+
+        Returns:
+            A URL ending in '/chat/completions' or '/completions'.
+        """
+        base = self.api_base.rstrip('/')
+        # If user already provided the full path, use it directly
+        if base.endswith("/chat/completions") or base.endswith("/completions"):
+            return base
+        # Otherwise default to the chat endpoint
+        return f"{base}/chat/completions"
+
+    def _send_single_request(
         self,
         prompt: str,
         until: Optional[Union[str, List[str]]] = None,
-        **kwargs,
     ) -> Dict[str, Any]:
         """
-        Constructs the API payload for the judge call.
-        Supports both Chat and Completions API payload formats.
-        If the payload is for the Chat API and a system message is provided, it is prepended.
-        If 'until' is provided, it is added as a stop sequence.
+        Send one synchronous request to the judge API with basic retries.
+
+        Args:
+            prompt: The user prompt to evaluate.
+            until: Optional stop sequence(s) for generation.
+
+        Returns:
+            A dict containing:
+              - 'prediction': The model's response content.
+              - 'finish_reason': Why the model stopped (e.g., 'stop', 'length').
         """
-        params = deepcopy(self.default_params)
-        params.update(kwargs)
-        payload = {"model": self.model_name}
-        if until is not None:
-            if isinstance(until, str):
-                until = [until]
+        # HTTP headers including auth
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+        }
+        # Merge common params and user message
+        payload = {**self.params}
+        payload["messages"] = [{"role": "user", "content": prompt}]
+        if until:
             payload["stop"] = until
 
-        if self.use_chat_api:
-            messages = []
-            if self.system_message:
-                messages.append({"role": "system", "content": self.system_message})
-            messages.append({"role": "user", "content": prompt})
-            payload["messages"] = messages
-        else:
-            payload["prompt"] = prompt
-            if params.get("logprobs") is not None:
-                payload["logprobs"] = params["logprobs"]
-
-        for param in ["max_tokens", "temperature", "top_p", "frequency_penalty", "presence_penalty"]:
-            if param in params:
-                payload[param] = params[param]
-        return {k: v for k, v in payload.items() if v is not None}
-
-    async def _send_single_request(
-        self,
-        client: httpx.AsyncClient,
-        prompt: str,
-        until: Optional[Union[str, List[str]]] = None,
-        **kwargs,
-    ) -> Dict[str, Any]:
-        """
-        Sends a single HTTP POST request to the judge API endpoint using httpx.
-        Implements retry logic with exponential backoff.
-        """
-        effective_retries = self.max_retries
-        payload = self._create_payload(prompt, until=until, **kwargs)
-        attempt = 0
-        
-        # Determine the appropriate endpoint URL based on the API type
-        api_url = self.api_base
-        if not (api_url.endswith('/chat/completions') or api_url.endswith('/completions')):
-            # Add the appropriate endpoint if not already included
-            if self.use_chat_api:
-                if not api_url.endswith('/'):
-                    api_url += '/'
-                if not api_url.endswith('v1/'):
-                    api_url += 'v1/' if 'v1/' not in api_url else ''
-                api_url += 'chat/completions'
-            else:
-                if not api_url.endswith('/'):
-                    api_url += '/'
-                if not api_url.endswith('v1/'):
-                    api_url += 'v1/' if 'v1/' not in api_url else ''
-                api_url += 'completions'
-            
-        # Prepare headers
-        headers = {}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-        
-        while attempt <= effective_retries:
+        url = self._build_url()
+        retries = 3
+        for attempt in range(1, retries + 1):
             try:
-                response = await client.post(api_url, json=payload, headers=headers, timeout=self.timeout)
-                if response.status_code != 200:
-                    error_msg = f"HTTP {response.status_code} Error: {response.text}"
-                    logger.error(error_msg)
-                    raise RuntimeError(error_msg)
-                resp_data = response.json()
-                
-                # Parse response: expected format similar to OpenAI ChatCompletion
-                if self.use_chat_api:
-                    try:
-                        content = resp_data["choices"][0]["message"]["content"]
-                        finish_reason = resp_data["choices"][0].get("finish_reason", "")
-                    except (KeyError, IndexError):
-                        content = json.dumps(resp_data, indent=2)
-                        finish_reason = ""
-                else:
-                    try:
-                        content = resp_data["choices"][0]["text"]
-                        finish_reason = resp_data["choices"][0].get("finish_reason", "")
-                    except (KeyError, IndexError):
-                        content = json.dumps(resp_data, indent=2)
-                        finish_reason = ""
-                
-                # Parse score from content if available
-                score_pattern = r"\[RESULT\]\s*(\d+(?:\.\d+)?)"
-                score_match = None
-                try:
-                    score_match = re.search(score_pattern, content)
-                except:
-                    pass
-                
-                score = float(score_match.group(1)) if score_match else None
-                
-                result = {
-                    "prediction": content,
-                    "finish_reason": finish_reason,
-                }
-                
-                # score가 있을 때만 judge_score 필드 추가
-                if score is not None:
-                    result["judge_score"] = score
-                return result
-            except Exception as e:
-                logger.error(f"HTTP attempt {attempt + 1}/{effective_retries} failed: {e}")
-                attempt += 1
-                # Add random jitter to backoff time to prevent thundering herd problem
-                
-                jitter = random.uniform(0, 1)
-                backoff_time = min(2 ** attempt + jitter, 32)
-                logger.info(f"Retrying in {backoff_time:.2f} seconds...")
-                await asyncio.sleep(backoff_time)
-        raise RuntimeError(f"Failed after {effective_retries} retries via httpx.")
+                # Each thread uses its own client for simplicity
+                with httpx.Client(timeout=60.0) as client:
+                    response = client.post(url, headers=headers, json=payload)
+                    response.raise_for_status()
+                    data = response.json()
 
-    async def _generate_batch_async(
-        self,
-        inputs: List[Dict[str, Any]],
-        until: Optional[Union[str, List[str]]] = None,
-        **kwargs,
-    ) -> List[Dict[str, Any]]:
-        """
-        Asynchronously processes a batch of judge prompts using httpx.
-        """
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            # Increase batch size - process more requests in parallel
-            batch_size = min(self.batch_size, 32)  
-            logger.info(f"Processing {len(inputs)} items in batches of {batch_size}")
-            
-            all_results = []
-            for i in range(0, len(inputs), batch_size):
-                batch = inputs[i:i+batch_size]
-                logger.info(f"Processing batch {i//batch_size + 1}/{(len(inputs) + batch_size - 1)//batch_size}")
-                
-                # Process current batch
-                tasks = []
-                for item in batch:
-                    prompt = item["input"]
-                    tasks.append(self._send_single_request(client, prompt, until=until, **kwargs))
-                
-                # Wait for all requests in this batch
-                batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-                
-                # Process results
-                for orig, res in zip(batch, batch_results):
-                    merged = deepcopy(orig)
-                    if isinstance(res, Exception):
-                        logger.error(f"Error processing judge prompt: {str(res)}")
-                        merged.update({
-                            "prediction": f"Error: {str(res)}",
-                            "finish_reason": "error"
-                        })
-                    else:
-                        merged.update(res)
-                    all_results.append(merged)
-                
-                # Minimize wait time between batches
-                if i + batch_size < len(inputs):
-                    await asyncio.sleep(0.2)  
-            
-            return all_results
+                # Extract the first choice (chat or completion)
+                choice = data.get("choices", [])[0]
+                content = (
+                    choice.get("message", {}).get("content") or choice.get("text")
+                )
+                finish = choice.get("finish_reason")
+                return {"prediction": content, "finish_reason": finish}
+
+            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                # Log warning and retry with exponential backoff
+                logger.warning(f"Attempt {attempt} failed: {e}")
+                if attempt == retries:
+                    logger.error("Max retries reached.")
+                    return {"prediction": f"Error: {e}", "finish_reason": "error"}
+                time.sleep(2 ** attempt)
 
     def judge_batch(
         self,
@@ -289,21 +147,38 @@ class OpenAIJudge(BaseJudge):
         **kwargs,
     ) -> List[Dict[str, Any]]:
         """
-        Processes a batch of judge prompts concurrently using httpx.
-        Each input dictionary must have an "input" field containing the judge prompt.
-        
+        Evaluate a list of prompts in parallel using a thread pool.
+
         Args:
-            inputs (List[Dict[str, Any]]): List of judge prompt dictionaries.
-            until (Optional[Union[str, List[str]]]): Stop sequence(s) for generation.
-            show_progress (bool): If True, displays a progress bar.
-            **kwargs: Additional parameters for API calls.
-        
+            inputs: A list of dicts each containing an 'input' key with the prompt.
+            until: Optional stop sequence(s) for all prompts.
+            show_progress: Whether to display a tqdm progress bar.
+
         Returns:
-            List[Dict[str, Any]]: The list of input dictionaries updated with a "prediction" field
-                                  containing the judge model's output.
+            The same list of inputs, each updated with 'prediction' and 'finish_reason'.
         """
-        try:
-            loop = asyncio.get_running_loop()
-            return loop.run_until_complete(self._generate_batch_async(inputs, until, **kwargs))
-        except RuntimeError:
-            return asyncio.run(self._generate_batch_async(inputs, until, **kwargs))
+        with ThreadPoolExecutor(max_workers=self.batch_size) as executor:
+            # Submit all requests and map futures to their indices
+            future_to_index = {
+                executor.submit(
+                    self._send_single_request, item["input"], until
+                ): i
+                for i, item in enumerate(inputs)
+            }
+            # Wrap as_completed in tqdm for optional progress display
+            progress = tqdm(
+                as_completed(future_to_index),
+                total=len(inputs),
+                desc="Judging Batches",
+                disable=not show_progress,
+            )
+            # As each thread finishes, store its result
+            for future in progress:
+                idx = future_to_index[future]
+                try:
+                    result = future.result()
+                except Exception as e:
+                    logger.error(f"Error in thread {idx}: {e}")
+                    result = {"prediction": f"Error: {e}", "finish_reason": "error"}
+                inputs[idx].update(result)
+        return inputs
