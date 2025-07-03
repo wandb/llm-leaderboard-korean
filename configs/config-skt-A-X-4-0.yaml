@@ -1,0 +1,17 @@
+wandb:
+  run_name: "skt/A.X-4.0" # use run_name defined above
+
+# if you don't use api, please set "api" as "false"
+# if you use api, please select from "openai", "anthoropic", "google", "cohere", "vllm"
+api: vllm
+num_gpus: 1
+batch_size: 32 # vllmは256, apiは32を推奨
+
+model:
+  use_wandb_artifacts: false
+  pretrained_model_name_or_path: "skt/A.X-4.0" #if you use openai api, put the name of model
+  chat_template: "skt/A.X-4.0"
+  size_category: "30B≤"
+  size: 71900000000
+  release_date: "7/3/2025"
+  max_model_len: 2500
