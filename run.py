@@ -52,7 +52,9 @@ config_list_korean = [
     # "EXAONE-3-5-2-4B-Instruct",
     # "EXAONE-3-5-7-8B-Instruct",
     # "EXAONE-3-5-32B-Instruct",
-    # "K-intelligence-Midm-2-0-Base-Instruct",
+    # "skt-A-X-4-0",
+    "skt-A-X-4-0-Light",
+    "K-intelligence-Midm-2-0-Base-Instruct",
     "K-intelligence-Midm-2-0-Mini-Instruct"
 ]
 
