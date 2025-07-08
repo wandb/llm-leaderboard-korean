@@ -6,11 +6,11 @@
 </p>
 
 
-Haerae-Evaluation-Toolkit is an emerging open-source Python library designed to streamline and standardize the evaluation of Large Language Models (LLMs), with a particular focus on Korean.
+Haerae-Evaluation-Toolkit is an emerging open-source Python library designed to streamline and standardize the evaluation of Large Language Models (LLMs), focusing on Korean.
 
-[HRET: A Self-Evolving LLM Evaluation Toolkit for Korean](https://arxiv.org/abs/2503.22968) (Paper Link)
+[Redefining Evaluation Standards: A Unified Framework for Evaluating the Korean Capabilities of Language Models](https://arxiv.org/abs/2503.22968) (Paper Link)
 
-## ✨ Key Features
+## ✨ Key FeaturesRedefining Evaluation Standards: A Unified Framework for Evaluating the Korean Capabilities of Language ModelsRedefining Evaluation Standards: A Unified Framework for Evaluating the Korean Capabilities of Language Models
 
 - **Multiple Evaluation Methods**
   - Logit-Based, String-Match, Partial-Match LLM-as-a-Judge, and more.
@@ -198,11 +198,14 @@ We look forward to hearing your ideas and contributions!
 If you find HRET useful in your research, please consider citing our paper:
 
 ```bibtex
-@article{lee2025hret,
-  title={HRET: A Self-Evolving LLM Evaluation Toolkit for Korean},
-  author={Lee, Hanwool and Kim, Soo Yong and Choi, Dasol and Baek, SangWon and Hong, Seunghyeok and Jeong, Ilgyun and Hwang, Inseon and Lee, Naeun and Son, Guijin},
-  journal={arXiv preprint arXiv:2503.22968},
-  year={2025}
+@misc{lee2025redefiningevaluationstandardsunified,
+      title={Redefining Evaluation Standards: A Unified Framework for Evaluating the Korean Capabilities of Language Models}, 
+      author={Hanwool Lee and Dasol Choi and Sooyong Kim and Ilgyun Jung and Sangwon Baek and Guijin Son and Inseon Hwang and Naeun Lee and Seunghyeok Hong},
+      year={2025},
+      eprint={2503.22968},
+      archivePrefix={arXiv},
+      primaryClass={cs.CE},
+      url={https://arxiv.org/abs/2503.22968}, 
 }
 ```
 ## 📜 License
