@@ -2,7 +2,7 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2503.22968-b31b1b.svg)](https://arxiv.org/abs/2503.22968) 
 
 <p align="center">
-  <img src="assets/imgs/logo.png" alt="logo" width="250">
+  <img src="assets/imgs/logo.png.png" alt="logo" width="250">
 </p>
 
 
