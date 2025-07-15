@@ -10,7 +10,8 @@ config_list_gpt = [
     # "gpt-4-0613",
     # "gpt-4o-mini-2024-07-18",
     # "solar-pro",
-    # "solar-mini"
+    # "solar-mini",
+    "solar-pro2-250710"
 ]
 config_list_claude = [
     # "anthropic-claude-sonnet-4-20250514",
@@ -53,9 +54,10 @@ config_list_korean = [
     # "EXAONE-3-5-7-8B-Instruct",
     # "EXAONE-3-5-32B-Instruct",
     # "skt-A-X-4-0",
-    "skt-A-X-4-0-Light",
-    "K-intelligence-Midm-2-0-Base-Instruct",
-    "K-intelligence-Midm-2-0-Mini-Instruct"
+    # "skt-A-X-4-0-Light",
+    # "K-intelligence-Midm-2-0-Base-Instruct",
+    # "K-intelligence-Midm-2-0-Mini-Instruct",
+    "solar-pro2-250710"
 ]
 
 for config in config_list_korean:
