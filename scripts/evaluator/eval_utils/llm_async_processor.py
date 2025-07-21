@@ -9,7 +9,7 @@ from openai import OpenAI
 import backoff
 from langchain.schema import AIMessage
 from tqdm import tqdm
-
+import os
 
 
 MAX_TRIES = 100
@@ -45,10 +45,15 @@ class LLMAsyncProcessor:
         self.model_name = cfg.model.pretrained_model_name_or_path
         self.batch_size = cfg.get("batch_size", 256)
         self.inference_interval = cfg.inference_interval
+        self.cfg = instance.config
 
     @error_handler
     @backoff.on_exception(backoff.expo, Exception, max_tries=MAX_TRIES)
     def _invoke(self, messages: Messages, **kwargs) -> Tuple[AIMessage, float]:
+        # Orca API 호환성을 위해 max_completion_tokens를 max_tokens로 변환
+        if 'max_completion_tokens' in kwargs and 'max_tokens' not in kwargs:
+            kwargs['max_tokens'] = kwargs.pop('max_completion_tokens')
+            
         if self.api_type == "google":
             self.llm.max_output_tokens = kwargs["max_tokens"]
             for i in range(n:=10):
@@ -59,6 +64,18 @@ class LLMAsyncProcessor:
                     print(f"Retrying request due to empty content. Retry attempt {i+1} of {n}.")
         elif self.api_type == "amazon_bedrock":
             response = self.llm.invoke(messages, **kwargs)
+        elif self.api_type == "friendliai":
+            # FriendliAI는 직접 클라이언트를 사용하여 LangChain을 우회
+            client = OpenAI(
+                api_key=os.environ.get("FRIENDLIAI_API_KEY"),
+                base_url=self.cfg.model.base_url
+            )
+            response = client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": m["role"], "content": m["content"]} for m in messages]
+            )
+            return AIMessage(content=response.choices[0].message.content)
+            
         elif self.api_type == "openai":
             client = OpenAI()
             response = client.chat.completions.create(
@@ -74,7 +91,7 @@ class LLMAsyncProcessor:
     @backoff.on_exception(backoff.expo, Exception, max_tries=MAX_TRIES)
     async def _ainvoke(self, messages: Messages, **kwargs) -> Tuple[AIMessage, float]:
         await asyncio.sleep(self.inference_interval)
-        if self.api_type in ["google", "amazon_bedrock", "openai"]:
+        if self.api_type in ["google", "amazon_bedrock", "openai", "friendliai"]:
             return await asyncio.to_thread(self._invoke, messages, **kwargs)
         else:
             if self.model_name == "tokyotech-llm/Swallow-7b-instruct-v0.1":

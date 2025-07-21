@@ -469,9 +469,16 @@ def chat_completion_upstage(model, conv, temperature, max_tokens):
     return output
 
 def chat_completion_friendliai(model, conv, temperature, max_tokens):
+    # Get base_url from config, fallback to dedicated URL if not available
+    try:
+        cfg = WandbConfigSingleton.get_instance().config
+        base_url = getattr(cfg.model, 'base_url', "https://api.friendli.ai/dedicated/v1")
+    except:
+        base_url = "https://api.friendli.ai/dedicated/v1"
+    
     client = openai.OpenAI(
         api_key=os.getenv("FRIENDLI_API_KEY"),
-        base_url="https://api.friendli.ai/serverless/v1"
+        base_url=base_url
     )
     output = API_ERROR_OUTPUT
     for _ in range(API_MAX_RETRY):
