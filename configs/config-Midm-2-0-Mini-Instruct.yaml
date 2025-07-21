@@ -1,0 +1,14 @@
+wandb:
+  run_name: "K-intelligence/Midm-2.0-Mini-Instruct" # use run_name defined above
+
+# if you don't use api, please set "api" as "false"
+# if you use api, please select from "openai", "anthoropic", "google", "cohere", "vllm"
+api: "friendliai"
+batch_size: 32 # vllmは256, apiは32を推奨
+
+model:
+  pretrained_model_name_or_path: "K-intelligence/Midm-2.0-Mini-Instruct" #if you use openai api, put the name of model
+  size_category: "<10B"
+  size: 2310000000
+  release_date: "7/3/2025"
+  max_model_len: 2500

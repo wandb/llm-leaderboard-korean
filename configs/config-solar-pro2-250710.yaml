@@ -14,3 +14,9 @@ model:
   size_category: "api"
   size: null
   release_date: "7/10/2025"
+
+generator:
+  top_p: 1.0
+  temperature: 0.1
+  max_tokens: 128
+  reasoning_effort: "high"

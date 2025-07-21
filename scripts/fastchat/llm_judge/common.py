@@ -468,6 +468,30 @@ def chat_completion_upstage(model, conv, temperature, max_tokens):
 
     return output
 
+def chat_completion_friendliai(model, conv, temperature, max_tokens):
+    client = openai.OpenAI(
+        api_key=os.getenv("FRIENDLI_API_KEY"),
+        base_url="https://api.friendli.ai/serverless/v1"
+    )
+    output = API_ERROR_OUTPUT
+    for _ in range(API_MAX_RETRY):
+        try:
+            messages = conv.to_openai_api_messages()
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                n=1,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            output = response.choices[0].message.content
+            break
+        except openai.OpenAIError as e:
+            print(type(e), e)
+            time.sleep(API_RETRY_SLEEP)
+
+    return output
+
 def chat_completion_deepseek(model, conv, temperature, max_tokens):
     #openai_chat_completion_func = setup_openai_api(model)
     client = openai.OpenAI(

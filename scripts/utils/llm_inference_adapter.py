@@ -155,6 +155,14 @@ def get_llm_inference_engine():
             **cfg.generator,
         )
 
+    elif api_type == "friendliai":
+        llm = ChatOpenAI(
+            model=cfg.model.pretrained_model_name_or_path, 
+            api_key=os.environ["FRIENDLIAI_API_KEY"],
+            base_url=cfg.model.base_url,
+            **cfg.generator,
+        )
+
     # elif api_type == "azure-openai":
     #     llm = AzureChatOpenAI(
     #         api_key=os.environ["OPENAI_API_KEY"],
