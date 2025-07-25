@@ -50,6 +50,7 @@
                 {{- "\n\n" }}{{- available_tools(tools) }}
             {%- endif %}
             {{- end_of_turn -}}
+            {%- continue %}
         {%- elif tools is defined and tools %}            
             {{- role_indicators['system'] }}
             {{- available_tools(tools) }}
