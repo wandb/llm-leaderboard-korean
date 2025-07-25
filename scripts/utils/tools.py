@@ -96,10 +96,14 @@ def get_tokenizer_config(model_id=None, chat_template_name=None) -> dict[str, An
         with local_chat_template_path.open(encoding="utf-8") as f:
             chat_template = f.read()
     # chat_template from hf
-    else:
+    elif model_id == "EXAONE-4.0-34B":
         chat_template = hf_download(
             repo_id=chat_template_name, filename="chat_template.jinja"
         )
+    else:
+        chat_template = hf_download(
+            repo_id=chat_template_name, filename="tokenizer_config.json"
+        ).get("chat_template")
 
     # add chat_template to tokenizer_config
     tokenizer_config.update({"chat_template": chat_template})
