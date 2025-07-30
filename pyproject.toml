@@ -51,10 +51,6 @@ dev = [
     "pytest>=7.3.0",
 ]
 
-[project.urls]
-Homepage = "https://github.com/HAE-RAE/haerae-evaluation-toolkit"
-Issues = "https://github.com/HAE-RAE/haerae-evaluation-toolkit/issues"
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["llm_eval*"]
