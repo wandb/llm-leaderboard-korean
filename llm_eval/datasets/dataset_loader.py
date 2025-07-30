@@ -74,6 +74,19 @@ class GenericFileDataset(BaseDataset):
         self.reference_col = reference_col
         self.loader_kwargs = kwargs  # Arguments for pandas read_* functions
 
+    def _load_dataframe(self) -> pd.DataFrame:
+        """Internal helper to load a file into a DataFrame based on extension."""
+        _, ext = os.path.splitext(self.file_path)
+        ext = ext.lower()
+        if ext in [".csv", ".tsv"]:
+            return pd.read_csv(self.file_path, **self.loader_kwargs)
+        elif ext in [".xlsx", ".xls"]:
+            return pd.read_excel(self.file_path, **self.loader_kwargs)
+        elif ext == ".parquet":
+            return pd.read_parquet(self.file_path, **self.loader_kwargs)
+        else:
+            raise ValueError(f"Unsupported file extension: {ext}")
+
     def load(self) -> List[Dict[str, Any]]:
         """
         Loads the local file based on its extension (CSV/TSV, XLS/XLSX, or Parquet) using pandas,
@@ -86,43 +99,33 @@ class GenericFileDataset(BaseDataset):
                 - "reference": The expected output.
                 - "metadata": A dictionary containing any additional columns.
         """
-        _, ext = os.path.splitext(self.file_path)
-        ext = ext.lower()
-
-        if ext in [".csv", ".tsv"]:
-            df = pd.read_csv(self.file_path, **self.loader_kwargs)
-        elif ext in [".xlsx", ".xls"]:
-            df = pd.read_excel(self.file_path, **self.loader_kwargs)
-        elif ext == ".parquet":
-            df = pd.read_parquet(self.file_path, **self.loader_kwargs)
-        else:
-            raise ValueError(f"Unsupported file extension: {ext}")
+        df = self._load_dataframe()
 
         result = []
-        for _, row in df.iterrows():
+        for row in df.to_dict(orient="records"):
             input_val = row.get(self.input_col, "")
             ref_val = row.get(self.reference_col, "")
 
-            # Format the input using the base_prompt_template if provided.
-            # The template should include a placeholder "{input}".
             raw_input = str(input_val)
-            if self.base_prompt_template:
-                formatted_input = self.base_prompt_template.format(input=raw_input)
-            else:
-                formatted_input = raw_input
+            formatted_input = (
+                self.base_prompt_template.format(input=raw_input)
+                if self.base_prompt_template
+                else raw_input
+            )
 
-            # Optionally store all other columns as metadata.
-            meta = {}
-            for col in df.columns:
-                if col not in [self.input_col, self.reference_col]:
-                    meta[col] = row[col]
-
-            item = {
-                "input": formatted_input,
-                "reference": str(ref_val),
-                "metadata": meta
+            meta = {
+                col: row[col]
+                for col in row
+                if col not in [self.input_col, self.reference_col]
             }
-            result.append(item)
+
+            result.append(
+                {
+                    "input": formatted_input,
+                    "reference": str(ref_val),
+                    "metadata": meta,
+                }
+            )
 
         return result
 
@@ -133,17 +136,7 @@ class GenericFileDataset(BaseDataset):
         Returns:
             Any: The raw DataFrame loaded from the file.
         """
-        _, ext = os.path.splitext(self.file_path)
-        ext = ext.lower()
-
-        if ext in [".csv", ".tsv"]:
-            return pd.read_csv(self.file_path, **self.loader_kwargs)
-        elif ext in [".xlsx", ".xls"]:
-            return pd.read_excel(self.file_path, **self.loader_kwargs)
-        elif ext == ".parquet":
-            return pd.read_parquet(self.file_path, **self.loader_kwargs)
-        else:
-            raise ValueError(f"Unsupported file extension: {ext}")
+        return self._load_dataframe()
 
     def info(self) -> Dict[str, Any]:
         """

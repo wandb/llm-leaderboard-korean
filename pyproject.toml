@@ -29,10 +29,7 @@ classifiers = [
 Homepage = "https://github.com/HAE-RAE/haerae-evaluation-toolkit"
 Issues = "https://github.com/HAE-RAE/haerae-evaluation-toolkit/issues"
 
-[project]
-name = "haerae-evaluation-toolkit"   
-version = "0.1.0"     
-dependencies = [      
+dependencies = [
     "transformers", 
     "torch>=2.0.0",        
     "openai>=1.0.0",       
