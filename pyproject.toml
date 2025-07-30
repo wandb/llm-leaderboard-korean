@@ -24,7 +24,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Text Processing :: Linguistic",
 ]
-
 [project.urls]
 Homepage = "https://github.com/HAE-RAE/haerae-evaluation-toolkit"
 Issues = "https://github.com/HAE-RAE/haerae-evaluation-toolkit/issues"
@@ -51,6 +50,10 @@ dev = [
     "pre-commit==4.0.1",
     "pytest>=7.3.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/HAE-RAE/haerae-evaluation-toolkit"
+Issues = "https://github.com/HAE-RAE/haerae-evaluation-toolkit/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]

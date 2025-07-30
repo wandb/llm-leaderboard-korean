@@ -2,6 +2,7 @@ import logging
 import sys
 from typing import Optional
 
+
 def get_logger(
     name: str = "llm_eval",
     level: int = logging.INFO,
@@ -14,7 +15,8 @@ def get_logger(
     Args:
         name (str): Logger name (usually the package or module name)
         level (int): Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        log_to_stdout (bool): If True, output to stdout; if False, do not add a handler.
+        log_to_stdout (bool): If True, output to stdout. If False,
+            do not add a handler.
         log_format (str): Custom log format. If None, the default format is used.
 
     Returns:

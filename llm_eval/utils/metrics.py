@@ -1,6 +1,3 @@
-# What code was I trying to put in here? 
-# probably.. THE LANGUAGE PENALIZER
-
 from langdetect import detect
 
 def language_penalizer(text: str, target_lang: str = 'ko') -> float:
@@ -18,5 +15,5 @@ def language_penalizer(text: str, target_lang: str = 'ko') -> float:
     """
     try:
         return 1.0 if detect(text) == target_lang else 0.0
-    except:
+    except Exception:
         return 0.0
