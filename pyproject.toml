@@ -24,22 +24,14 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Text Processing :: Linguistic",
 ]
-
-[project.urls]
-Homepage = "https://github.com/HAE-RAE/haerae-evaluation-toolkit"
-Issues = "https://github.com/HAE-RAE/haerae-evaluation-toolkit/issues"
-
-[project]
-name = "haerae-evaluation-toolkit"   
-version = "0.1.0"     
-dependencies = [      
-    "transformers", 
-    "torch>=2.0.0",        
-    "openai>=1.0.0",       
-    "datasets>=3.2.0",     
-    "litellm>=1.59.0",     
-    "math-verify",        
-    "pandas",              
+dependencies = [
+    "transformers",
+    "torch>=2.0.0",
+    "openai>=1.0.0",
+    "datasets>=3.2.0",
+    "litellm>=1.59.0",
+    "math-verify",
+    "pandas",
     "tqdm",
     "langdetect",
     "httpx",
@@ -54,6 +46,10 @@ dev = [
     "pre-commit==4.0.1",
     "pytest>=7.3.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/HAE-RAE/haerae-evaluation-toolkit"
+Issues = "https://github.com/HAE-RAE/haerae-evaluation-toolkit/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
