@@ -178,6 +178,102 @@ Reward model: huggingface_reward (if you pass relevant reward_params).
 
 ---
 
+## 🎯 HRET API: MLOps-Friendly Interface
+
+For production environments and MLOps integration, we provide **HRET** (Haerae Evaluation Toolkit) - a decorator-based API inspired by deepeval that makes LLM evaluation seamless and integration-ready.
+
+### Quick Start with HRET
+
+```python
+import llm_eval.hret as hret
+
+# Simple decorator-based evaluation
+@hret.evaluate(dataset="kmmlu", model="huggingface")
+def my_model(input_text: str) -> str:
+    return model.generate(input_text)
+
+# Run evaluation
+result = my_model()
+print(f"Accuracy: {result.metrics['accuracy']}")
+```
+
+### Key HRET Features
+
+- **🎨 Decorator-Based API**: `@hret.evaluate`, `@hret.benchmark`, `@hret.track_metrics`
+- **🔧 Context Managers**: Fine-grained control with `hret.evaluation_context()`
+- **📊 MLOps Integration**: Built-in support for MLflow, Weights & Biases, and custom loggers
+- **⚙️ Configuration Management**: YAML/JSON config files and global settings
+- **📈 Metrics Tracking**: Cross-run comparison and performance monitoring
+- **🚀 Production Ready**: Designed for training pipelines, A/B testing, and continuous evaluation
+
+### Advanced Usage Examples
+
+#### Model Benchmarking
+```python
+@hret.benchmark(dataset="kmmlu")
+def compare_models():
+    return {
+        "gpt-4": lambda x: gpt4_model.generate(x),
+        "claude-3": lambda x: claude_model.generate(x),
+        "custom": lambda x: custom_model.generate(x)
+    }
+
+results = compare_models()
+```
+
+#### MLOps Integration
+```python
+with hret.evaluation_context(dataset="kmmlu") as ctx:
+    # Add MLOps integrations
+    ctx.log_to_mlflow(experiment_name="llm_experiments")
+    ctx.log_to_wandb(project_name="model_evaluation")
+    
+    # Run evaluation
+    result = ctx.evaluate(my_model_function)
+```
+
+#### Training Pipeline Integration
+```python
+class ModelTrainingPipeline:
+    def evaluate_checkpoint(self, epoch):
+        with hret.evaluation_context(
+            run_name=f"checkpoint_epoch_{epoch}"
+        ) as ctx:
+            ctx.log_to_mlflow(experiment_name="training")
+            result = ctx.evaluate(self.model.generate)
+            
+            if self.detect_degradation(result):
+                self.send_alert(epoch, result)
+```
+
+### Configuration Management
+
+Create `hret_config.yaml`:
+```yaml
+default_dataset: "kmmlu"
+default_model: "huggingface"
+mlflow_tracking: true
+wandb_tracking: true
+output_dir: "./results"
+auto_save_results: true
+```
+
+Load and use:
+```python
+hret.load_config("hret_config.yaml")
+result = hret.quick_eval(my_model_function)
+```
+
+### Documentation
+
+- **English**: [docs/eng/08-hret-api-guide.md](docs/eng/08-hret-api-guide.md)
+- **한국어**: [docs/kor/08-hret-api-guide.md](docs/kor/08-hret-api-guide.md)
+- **Examples**: [examples/hret_examples.py](examples/hret_examples.py), [examples/mlops_integration_example.py](examples/mlops_integration_example.py)
+
+HRET maintains full backward compatibility with the existing Evaluator API while providing a modern, MLOps-friendly interface for production deployments.
+
+---
+
 ## 🤝 Contributing & Contact
 
 We welcome collaborators, contributors, and testers interested in advancing LLM evaluation methods, especially for Korean language tasks.
