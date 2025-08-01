@@ -1,0 +1,53 @@
+# HRET Configuration File
+# This file contains configuration options for the Haerae Evaluation Toolkit (HRET)
+
+# Default evaluation settings
+default_dataset: "kmmlu"
+default_model: "huggingface"
+default_split: "test"
+default_evaluation_method: "string_match"
+
+# MLOps integration settings
+mlflow_tracking: false
+wandb_tracking: false
+tensorboard_tracking: false
+
+# Logging and output settings
+log_level: "INFO"
+output_dir: "./hret_results"
+auto_save_results: true
+
+# Performance settings
+batch_size: null  # null means use default
+max_workers: null  # null means use default
+
+# Advanced settings
+custom_loggers: []
+
+# Example configurations for different environments:
+
+# Development environment
+# default_dataset: "kmmlu"
+# default_model: "huggingface"
+# log_level: "DEBUG"
+# auto_save_results: true
+# mlflow_tracking: false
+
+# Production environment
+# default_dataset: "benchhub"
+# default_model: "openai"
+# log_level: "INFO"
+# auto_save_results: true
+# mlflow_tracking: true
+# wandb_tracking: true
+# output_dir: "/data/hret_results"
+
+# Research environment
+# default_dataset: "kmmlu"
+# default_model: "huggingface"
+# log_level: "DEBUG"
+# auto_save_results: true
+# mlflow_tracking: true
+# wandb_tracking: true
+# batch_size: 16
+# max_workers: 4
