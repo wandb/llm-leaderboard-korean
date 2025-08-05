@@ -1,27 +1,27 @@
 # 소개 (Introduction)
-HRET(HaeRae Evaluation Toolkit)는 한국어 대형 언어 모델(LLM)에 대해 표준화된 평가환경에서 포괄적인 유효성 검증 기능을 지원하기 위한 오픈소스 라이브러리입니다. 
+HRET(HaeRae Evaluation Toolkit)는 한국어 대형 언어 모델(LLM)에 대해 표준화된 평가환경에서 포괄적인 유효성 검증 기능을 지원하기 위한 오픈소스 라이브러리입니다.
 
 HRET 프레임워크는 기존 한국어 LLM 평가 방식이 일관되지 않아서 직접적인 비교가 어려웠던 것을 보완하기 위해 다음과 같은 목표를 갖고 있습니다.
 
 ## 특징 (Features)
 - HRET는 주요 한국어 벤치마크(HAE-RAE Bench, KMMLU, KUDGE, HRM8K 등)를 통합합니다.
-- 평가 기법(문자열 일치, 언어 불일치 패널티, 로그 확률 기반 평가, LLM-as-judge)을 지원합니다. 
+- 평가 기법(문자열 일치, 언어 불일치 패널티, 로그 확률 기반 평가, LLM-as-judge)을 지원합니다.
   로짓 기반으로 토큰 수준의 확률을 제공하기 때문에 모델 신뢰도 평가까지 가능하며, 한글으로 요청한 사항에 대해 그외 언어가 발생했을 때 검출하여 패널티를 부여할 수 있습니다.
 - Test-time-scale(Beam Search, Best-of-N, Self-Consistency Voting)을 제공하여 언어 모델의 성능을 여러 각도로 평가할 수 있습니다.
-- HuggingFace를 통한 on-premise 사용 뿐만 아니라, litellm, openai-compatible api를 통해 100+개의 online inference와 연동 가능하도록 설계되었습니다. 
+- HuggingFace를 통한 on-premise 사용 뿐만 아니라, litellm, openai-compatible api를 통해 100+개의 online inference와 연동 가능하도록 설계되었습니다.
 - HRET는 한국어 NLP 연구의 재현성과 투명성을 향상시키고, 일관된 대규모 실험 환경을 제공하는 것을 목표로 합니다.
 
 ---
 
 # 설치 (Installation)
-파이썬(python >= 3.10) 가상환경 구축 후 설치를 권장합니다. 
+파이썬(python >= 3.10) 가상환경 구축 후 설치를 권장합니다.
 다음과 같은 과정을 통해 실행 환경을 구축할 수 있습니다.
 - 가상환경 구축 (Conda 또는 Venv)
 - git clone 명령어로 HRET GitHub 프로젝트를 로컬에 복사해오기
 - 요구 패키지 설치
 
-## Conda 가상환경 (Virtual Environment) 구현 예시 
-[1] 아나콘다 설치 https://www.anaconda.com/download   
+## Conda 가상환경 (Virtual Environment) 구현 예시
+[1] 아나콘다 설치 https://www.anaconda.com/download
    (다운로드 페이지 우측 하단의 skip registration으로 가입없이 설치 가능)
 
 [2] Anaconda prompt 실행
@@ -119,10 +119,40 @@ df = results.to_dataframe()
 print(df) # input, reference, prediction, options, chain-of-thought, logits, 등 확인 가능
 ```
 
+### 설정 파일 사용
+
+여러 매개변수를 코드로 전달하는 대신 하나의 YAML 파일로 전체 파이프라인을 제어할 수 있습니다.
+`evaluator_config.yaml`을 생성해 보세요:
+
+```yaml
+dataset:
+  name: haerae_bench
+  split: test
+  params: {}
+model:
+  name: huggingface
+  params:
+    model_name_or_path: gpt2
+evaluation:
+  method: string_match
+  params: {}
+language_penalize: false
+```
+
+사용 예:
+
+```python
+from llm_eval.evaluator import run_from_config
+
+result = run_from_config("evaluator_config.yaml")
+```
+
+모든 필드는 `examples/evaluator_config.yaml` 템플릿을 참고하세요.
+
 ## 👌Output 평가
 
 ### Raw 데이터 직접 분석하기: to_dataframe()
-가장 기본적이면서 강력한 분석 방법은 평가 결과 전체를 pandas.DataFrame으로 변환하여 직접 다루는 것입니다. 
+가장 기본적이면서 강력한 분석 방법은 평가 결과 전체를 pandas.DataFrame으로 변환하여 직접 다루는 것입니다.
 results.to_dataframe() 메서드를 사용하면 평가 과정의 모든 샘플 데이터를 로우 포맷으로 받아와 자유롭게 분석할 수 있습니다. 미리 정의된 리포트 외에 자신만의 기준으로 데이터를 심층 분석하고 싶을 때 매우 유용합니다.
 
 ```python
@@ -157,7 +187,7 @@ _subset_name: 해당 샘플이 속한 서브셋 이름
 이를 활용하여 특정 조건의 샘플만 필터링하거나, 그룹별로 통계를 내는 등 pandas 라이브러리의 모든 기능을 활용하여 무한한 가능성의 커스텀 분석을 수행할 수 있습니다.
 
 ### 자동 분석 리포트 활용하기: analysis_report()
-매번 직접 데이터를 분석하는 것이 번거로울 수 있습니다. 이를 위해 툴킷은 한국어의 특성에 맞는 주요 분석 항목들을 종합하여 보여주는 자동화된 리포팅 기능을 제공합니다. analysis_report() 메서드는 클릭 한 번으로 종합적인 분석 리포트를 생성합니다. 
+매번 직접 데이터를 분석하는 것이 번거로울 수 있습니다. 이를 위해 툴킷은 한국어의 특성에 맞는 주요 분석 항목들을 종합하여 보여주는 자동화된 리포팅 기능을 제공합니다. analysis_report() 메서드는 클릭 한 번으로 종합적인 분석 리포트를 생성합니다.
 
 ####  분석 리포트 생성 및 출력
 ```python
@@ -378,7 +408,7 @@ cot_parser는 pythonpath안에 함수가 위치한 곳 이름만 적어두면, �
 
 ## FAQ
 Q. 다음 에러 메시지가 출력됩니다: 'Make sure to have access to it at {model url} 403 Client Error. (Request ID: ~~ )'
-A. 해당 모델(ex: Llama, Gemma, etc)은 허깅페이스 로그인 후 모델 페이지 상단에 있는 
+A. 해당 모델(ex: Llama, Gemma, etc)은 허깅페이스 로그인 후 모델 페이지 상단에 있는
 {Model Name} COMMUNITY LICENSE AGREEMENT의 하단에 Expand to review and access 클릭 후 정보 입력한 다음 Submit 후 허가를 받은 다음 (약 10분) 사용하실 수 있습니다.
 
 ---
