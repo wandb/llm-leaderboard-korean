@@ -136,6 +136,15 @@ def get_llm_inference_engine():
             base_url="https://api.anthropic.com/v1",
             **cfg.generator,
         )
+
+    elif api_type == "wandb":
+        llm = ChatOpenAI(
+            api_key=os.environ["WANDB_API_KEY"],
+            model=cfg.model.pretrained_model_name_or_path,
+            base_url="https://api.inference.wandb.ai/v1",
+            project="wandb-korea/llm-leaderboard3",
+            **cfg.generator,
+        )
     
     elif api_type == "upstage":
         # use LangChain upstage integration
