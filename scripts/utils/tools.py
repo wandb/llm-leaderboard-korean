@@ -61,10 +61,14 @@ def hf_download(repo_id: str, filename: str):
         use_auth_token=os.getenv("HUGGING_TOKEN"),
     )
 
-    with Path(file_path).open("r") as f:
-        tokenizer_config = json.load(f)
-
-    return tokenizer_config
+    if 'chat_template' in filename:
+        with Path(file_path).open("r") as f:
+            chat_template = f.read()
+        return chat_template
+    else:
+        with Path(file_path).open("r") as f:
+            tokenizer_config = json.load(f)
+        return tokenizer_config
 
 
 def get_tokenizer_config(model_id=None, chat_template_name=None) -> dict[str, Any]:
@@ -92,6 +96,10 @@ def get_tokenizer_config(model_id=None, chat_template_name=None) -> dict[str, An
         with local_chat_template_path.open(encoding="utf-8") as f:
             chat_template = f.read()
     # chat_template from hf
+    elif model_id in ["EXAONE-4.0-34B", "trillionlabs/Tri-21B", "trillionlabs/Tri-7B"]:
+        chat_template = hf_download(
+            repo_id=chat_template_name, filename="chat_template.jinja"
+        )
     else:
         chat_template = hf_download(
             repo_id=chat_template_name, filename="tokenizer_config.json"
