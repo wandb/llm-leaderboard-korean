@@ -76,7 +76,7 @@ class MTBenchEvaluator(AbstractEvaluator):
 
         
         # 1. generate model answers
-        if self.cfg.api in ["openai","anthropic","cohere","google","amazon_bedrock","mistral","upstage","deepseek","vllm","wandb"]:
+        if self.cfg.api in ["openai","anthropic","cohere","google","amazon_bedrock","mistral","upstage","deepseek","vllm","wandb","openrouter"]:
             questions = load_questions(question_file, None, None)
             get_api_answer(
                 question_file=question_file,

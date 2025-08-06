@@ -146,6 +146,14 @@ def get_llm_inference_engine():
             **cfg.generator,
         )
     
+    elif api_type == "openrouter":
+        llm = ChatOpenAI(
+            api_key=os.environ["OPENROUTER_API_KEY"],
+            model=cfg.model.pretrained_model_name_or_path,
+            base_url="https://openrouter.ai/api/v1",
+            **cfg.generator,
+        )
+    
     elif api_type == "upstage":
         # use LangChain upstage integration
         llm = ChatOpenAI(

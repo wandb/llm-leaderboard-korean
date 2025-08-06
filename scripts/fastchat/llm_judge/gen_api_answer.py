@@ -31,6 +31,7 @@ from fastchat.llm_judge.common import (
     chat_completion_upstage,
     chat_completion_deepseek,
     chat_completion_wandb,
+    chat_completion_openrouter,
 )
 from fastchat.llm_judge.gen_model_answer import reorg_answer_file
 from fastchat.model.model_adapter import get_conversation_template, ANTHROPIC_MODEL_LIST
@@ -124,6 +125,10 @@ def get_answer(
                 )
             elif cfg.api == "wandb":
                 output = chat_completion_wandb(
+                    model, conv, temperature, max_tokens
+                )
+            elif cfg.api == "openrouter":
+                output = chat_completion_openrouter(
                     model, conv, temperature, max_tokens
                 )
             elif cfg.api == "deepseek":

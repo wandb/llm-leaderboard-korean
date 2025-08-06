@@ -78,6 +78,17 @@ class LLMAsyncProcessor:
                 messages=[{"role": m["role"], "content": m["content"]} for m in messages]
             )
             return AIMessage(content=response.choices[0].message.content)
+        elif self.api_type == "openrouter":
+            import os
+            client = OpenAI(
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+                base_url="https://openrouter.ai/api/v1",
+            )
+            response = client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": m["role"], "content": m["content"]} for m in messages]
+            )
+            return AIMessage(content=response.choices[0].message.content)
         else:
             raise NotImplementedError(f"Synchronous invoke is not implemented for API type: {self.api_type}")
         return response
@@ -86,7 +97,7 @@ class LLMAsyncProcessor:
     @backoff.on_exception(backoff.expo, Exception, max_tries=MAX_TRIES)
     async def _ainvoke(self, messages: Messages, **kwargs) -> Tuple[AIMessage, float]:
         await asyncio.sleep(self.inference_interval)
-        if self.api_type in ["google", "amazon_bedrock", "openai", "wandb"]:
+        if self.api_type in ["google", "amazon_bedrock", "openai", "wandb", "openrouter"]:
             return await asyncio.to_thread(self._invoke, messages, **kwargs)
         else:
             if self.model_name == "tokyotech-llm/Swallow-7b-instruct-v0.1":

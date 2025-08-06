@@ -3,11 +3,11 @@ wandb:
 
 # if you don't use api, please set "api" as "false"
 # if you use api, please select from "openai", "anthoropic", "google", "cohere", "vllm"
-api: wandb
-batch_size: 256 # vllmは256, apiは32を推奨
+api: openrouter
+batch_size: 32 # vllmは256, apiは32を推奨
 
 model:
-  base_url: "https://api.inference.wandb.ai/v1"
+  base_url: "https://openrouter.ai/api/v1"
   pretrained_model_name_or_path: "openai/gpt-oss-20b" #if you use openai api, put the name of model
   size_category: "10B≤ <30B"
   size: 21000000000
