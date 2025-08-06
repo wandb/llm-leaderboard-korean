@@ -57,7 +57,10 @@ config_list_korean = [
     # "skt-A-X-4-0-Light",
     # "K-intelligence-Midm-2-0-Base-Instruct",
     # "K-intelligence-Midm-2-0-Mini-Instruct",
-    "solar-pro2-250710"
+    # "solar-pro2-250710",
+    "EXAONE-Deep-2-4B",
+    "EXAONE-Deep-7-8B",
+    "EXAONE-Deep-32B",
 ]
 
 for config in config_list_korean:

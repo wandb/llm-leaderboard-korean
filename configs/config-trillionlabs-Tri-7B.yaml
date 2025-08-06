@@ -1,0 +1,15 @@
+wandb:
+  run_name: "trillionlabs/Tri-7B" # use run_name defined above
+
+# if you don't use api, please set "api" as "false"
+# if you use api, please select from "openai", "anthoropic", "google", "cohere", "vllm"
+api: vllm
+batch_size: 256 # vllmは256, apiは32を推奨
+
+model:
+  pretrained_model_name_or_path: "trillionlabs/Tri-7B" #if you use openai api, put the name of model
+  chat_template: "trillionlabs/Tri-7B"
+  size_category: "<10B"
+  size: 7530000000
+  release_date: "7/23/2025"
+  max_model_len: 2500

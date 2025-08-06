@@ -50,7 +50,6 @@ def start_vllm_server():
                 "--max-model-len", str(cfg.model.max_model_len),
                 "--max-num-seqs", str(cfg.batch_size),
                 "--tensor-parallel-size", str(cfg.get("num_gpus", 1)),
-                "--device", cfg.model.device_map,
                 "--seed", "42",
                 "--uvicorn-log-level", "warning",
                 "--disable-log-stats",
