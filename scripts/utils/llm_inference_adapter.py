@@ -147,12 +147,16 @@ def get_llm_inference_engine():
         )
     
     elif api_type == "openrouter":
+        from omegaconf import OmegaConf
+        # generator_config = OmegaConf.to_container(cfg.generator, resolve=True)
+
         llm = ChatOpenAI(
             api_key=os.environ["OPENROUTER_API_KEY"],
             model=cfg.model.pretrained_model_name_or_path,
             base_url="https://openrouter.ai/api/v1",
             **cfg.generator,
         )
+        print(llm)
     
     elif api_type == "upstage":
         # use LangChain upstage integration

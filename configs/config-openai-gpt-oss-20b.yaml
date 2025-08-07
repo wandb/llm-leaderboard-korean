@@ -12,3 +12,12 @@ model:
   size_category: "10B≤ <30B"
   size: 21000000000
   release_date: "8/6/2025"
+  
+# generator:
+#   extra_body:
+#     provider:
+#       order:
+#         - "deepinfra/fp4"
+#     reasoning:
+#       exclude: true
+#       max_tokens: 100000

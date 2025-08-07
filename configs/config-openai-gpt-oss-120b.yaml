@@ -12,3 +12,14 @@ model:
   size_category: "30B≤"
   size: 117000000000
   release_date: "8/6/2025"
+
+# generator:
+#   extra_body:
+#     provider:
+#       order:
+#         - "groq"
+#         - "novita"
+#         - "fireworks"
+#     reasoning:
+#       exclude: false
+#       max_tokens: 100000
