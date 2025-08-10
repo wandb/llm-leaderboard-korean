@@ -89,7 +89,7 @@ evaluator = Evaluator()
 
 # 2) Run the evaluation pipeline
 results = evaluator.run(
-    model="huggingface",  
+    model="huggingface",
     model_params={
         "model_name_or_path": "kakaocorp/kanana-nano-2.1b-instruct",
         "device": "cuda:0",
@@ -124,6 +124,36 @@ print(results)
 df = results.to_dataframe()
 print(df)  # DataFrame with inputs, references, predictions, logits, etc.
 ```
+
+### Configuration File Usage
+
+You can control the entire pipeline via a single YAML file instead of passing
+parameters in code. Create `evaluator_config.yaml`:
+
+```yaml
+dataset:
+  name: haerae_bench
+  split: test
+  params: {}
+model:
+  name: huggingface
+  params:
+    model_name_or_path: gpt2
+evaluation:
+  method: string_match
+  params: {}
+language_penalize: false
+```
+
+Run the configuration with:
+
+```python
+from llm_eval.evaluator import run_from_config
+
+result = run_from_config("evaluator_config.yaml")
+```
+
+See `examples/evaluator_config.yaml` for a template containing all supported fields.
 
 ### Changing Backend to vLLM or OpenAI-Compatible API
 

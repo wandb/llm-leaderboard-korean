@@ -1,5 +1,5 @@
 # Haerae-Evaluation-Toolkit
-[![arXiv](https://img.shields.io/badge/arXiv-2503.22968-b31b1b.svg)](https://arxiv.org/abs/2503.22968) 
+[![arXiv](https://img.shields.io/badge/arXiv-2503.22968-b31b1b.svg)](https://arxiv.org/abs/2503.22968)
 
 <p align="center">
   <img src="assets/imgs/logo.png.png" alt="logo" width="250">
@@ -170,10 +170,44 @@ This command will:
 2. Create a MultiModel internally with:
 Generate model: huggingface → gpt2
 Judge model: huggingface_judge (if you pass relevant judge_params)
-Reward model: huggingface_reward (if you pass relevant reward_params).  
+Reward model: huggingface_reward (if you pass relevant reward_params).
 3. Apply Beam Search (`beam_size=3`).
 4. Evaluate final outputs via `string_match`.
 5. Save the resulting JSON file to `results.json`.
+
+### Configuration File
+
+Instead of passing many arguments, the entire pipeline can be described in a
+single YAML file. Create `evaluator_config.yaml`:
+
+```yaml
+dataset:
+  name: haerae_bench
+  split: test
+  params: {}
+model:
+  name: huggingface
+  params:
+    model_name_or_path: gpt2
+evaluation:
+  method: string_match
+  params: {}
+language_penalize: true
+target_lang: ko
+few_shot:
+  num: 0
+```
+
+Run the configuration with:
+
+```python
+from llm_eval.evaluator import run_from_config
+
+result = run_from_config("evaluator_config.yaml")
+```
+
+See `examples/evaluator_config.yaml` for a full template including judge,
+reward, and scaling options.
 
 
 ---
@@ -227,7 +261,7 @@ with hret.evaluation_context(dataset="kmmlu") as ctx:
     # Add MLOps integrations
     ctx.log_to_mlflow(experiment_name="llm_experiments")
     ctx.log_to_wandb(project_name="model_evaluation")
-    
+
     # Run evaluation
     result = ctx.evaluate(my_model_function)
 ```
@@ -241,7 +275,7 @@ class ModelTrainingPipeline:
         ) as ctx:
             ctx.log_to_mlflow(experiment_name="training")
             result = ctx.evaluate(self.model.generate)
-            
+
             if self.detect_degradation(result):
                 self.send_alert(epoch, result)
 ```
@@ -295,13 +329,13 @@ If you find HRET useful in your research, please consider citing our paper:
 
 ```bibtex
 @misc{lee2025redefiningevaluationstandardsunified,
-      title={Redefining Evaluation Standards: A Unified Framework for Evaluating the Korean Capabilities of Language Models}, 
+      title={Redefining Evaluation Standards: A Unified Framework for Evaluating the Korean Capabilities of Language Models},
       author={Hanwool Lee and Dasol Choi and Sooyong Kim and Ilgyun Jung and Sangwon Baek and Guijin Son and Inseon Hwang and Naeun Lee and Seunghyeok Hong},
       year={2025},
       eprint={2503.22968},
       archivePrefix={arXiv},
       primaryClass={cs.CE},
-      url={https://arxiv.org/abs/2503.22968}, 
+      url={https://arxiv.org/abs/2503.22968},
 }
 ```
 ## 📜 License

@@ -1,5 +1,5 @@
 """
-Evaluator CLI 
+Evaluator CLI
 
 This module provides a high-level interface to run the full LLM evaluation pipeline,
 which includes dataset loading, model inference (with optional scaling),
@@ -10,13 +10,18 @@ to the main task prompt within the PipelineRunner.
 
 import argparse
 import json
-import logging # Standard logging
-from typing import Any, Dict, List, Optional, Union, Callable, Tuple
+import logging  # Standard logging
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
+import yaml
 
 from llm_eval.runner import PipelineRunner
-from llm_eval.utils.logging import get_logger # Using the project's logger setup
-from llm_eval.utils.util import EvaluationResult, _load_function # _load_function for dynamic imports
-from llm_eval.utils.prompt_template import DEFAULT_FEW_SHOT_INSTRUCTION, DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE
+from llm_eval.utils.logging import \
+    get_logger  # Using the project's logger setup
+from llm_eval.utils.prompt_template import (DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
+                                            DEFAULT_FEW_SHOT_INSTRUCTION)
+from llm_eval.utils.util import (  # _load_function for dynamic imports
+    EvaluationResult, _load_function)
 
 # Logger for this Evaluator.py module
 logger = get_logger(name=__name__, level=logging.INFO)
@@ -94,7 +99,7 @@ class Evaluator:
                 self.default_cot_parser = None
         else:
             self.default_cot_parser = default_cot_parser # Assign if already a callable or None
-            
+
         # Store default few-shot params
         self.default_num_few_shot = default_num_few_shot
         self.default_few_shot_split = default_few_shot_split
@@ -107,7 +112,7 @@ class Evaluator:
         model: Optional[str] = None,
         judge_model: Optional[str] = None,
         reward_model: Optional[str] = None,
-        dataset: str = "haerae_bench", 
+        dataset: str = "haerae_bench",
         subset: Union[str, List[str], None] = None,
         split: Optional[str] = None,
         scaling_method: Optional[str] = None,
@@ -118,8 +123,8 @@ class Evaluator:
         reward_params: Optional[Dict[str, Any]] = None,
         scaling_params: Optional[Dict[str, Any]] = None,
         evaluator_params: Optional[Dict[str, Any]] = None,
-        language_penalize: bool = True, 
-        target_lang: Optional[str] = "ko", 
+        language_penalize: bool = True,
+        target_lang: Optional[str] = "ko",
         custom_cot_parser: Optional[Union[Callable[[str], Tuple[str, str]], str]] = None,
         # --- New few-shot parameters for run method ---
         num_few_shot: Optional[int] = None,
@@ -158,11 +163,11 @@ class Evaluator:
             few_shot_split (Optional[str]): Split for sourcing few-shot examples. Overrides default.
             few_shot_instruction (Optional[str]): Instruction for few-shot block. Overrides default.
             few_shot_example_template (Optional[str]): Template for each few-shot example. Overrides default.
-        
+
         Returns:
             EvaluationResult: Object containing evaluation metrics, sample outputs, and run info.
         """
-        
+
         logger.info(f"Evaluator.run initiated. Dataset: '{dataset}', Model: '{model or self.default_model_backend}', Eval Method: '{evaluation_method or self.default_evaluation_method}'")
 
         # Determine final values for parameters, prioritizing run() arguments over defaults
@@ -173,24 +178,24 @@ class Evaluator:
         final_split = split if split is not None else self.default_split
         final_scaling = scaling_method if scaling_method is not None else self.default_scaling_method
         final_eval_method = evaluation_method if evaluation_method is not None else self.default_evaluation_method
-        
+
         # Determine custom_cot_parser: use argument if provided, else default.
         # PipelineRunner will handle loading if it's a string path.
         final_custom_cot_parser = custom_cot_parser
         if final_custom_cot_parser is None:
             final_custom_cot_parser = self.default_cot_parser
-        
+
         # Determine final few-shot parameters
         final_num_few_shot = num_few_shot if num_few_shot is not None else self.default_num_few_shot
         final_few_shot_split = few_shot_split if few_shot_split is not None else self.default_few_shot_split
         final_few_shot_instruction = few_shot_instruction if few_shot_instruction is not None else self.default_few_shot_instruction
         final_few_shot_example_template = few_shot_example_template if few_shot_example_template is not None else self.default_few_shot_example_template
-        
+
         logger.debug(f"Final few-shot params for PipelineRunner: num={final_num_few_shot}, split='{final_few_shot_split}'")
 
         current_model_params = model_params or {}
         # Note: custom_cot_parser is passed directly to PipelineRunner now, not via model_params here.
-        
+
         # Determine if MultiModel is needed based on whether judge or reward models are specified.
         use_multi = (judge_backend_name is not None) or (reward_backend_name is not None)
         if use_multi:
@@ -243,6 +248,78 @@ class Evaluator:
                 }
             )
 
+
+def run_from_config(config_path: str) -> EvaluationResult:
+    """Run the evaluation pipeline using a YAML/JSON configuration file.
+
+    The configuration file should define all components required for the
+    :class:`Evaluator` pipeline (dataset, model, evaluation method, etc.).
+    See ``examples/evaluator_config.yaml`` for a full template.
+
+    Args:
+        config_path: Path to a YAML or JSON file containing evaluator settings.
+
+    Returns:
+        EvaluationResult: The result of the evaluation run.
+    """
+
+    logger.info(f"Loading evaluator configuration from {config_path}")
+    with open(config_path, "r", encoding="utf-8") as f:
+        if config_path.endswith((".yaml", ".yml")):
+            config = yaml.safe_load(f)
+        else:
+            config = json.load(f)
+
+    dataset_cfg = config.get("dataset", {})
+    model_cfg = config.get("model", {})
+    judge_cfg = config.get("judge_model", {})
+    reward_cfg = config.get("reward_model", {})
+    scaling_cfg = config.get("scaling", {})
+    eval_cfg = config.get("evaluation", {})
+    few_shot_cfg = config.get("few_shot", {})
+
+    evaluator = Evaluator(
+        default_model_backend=model_cfg.get("name", "huggingface"),
+        default_judge_backend=judge_cfg.get("name"),
+        default_reward_backend=reward_cfg.get("name"),
+        default_scaling_method=scaling_cfg.get("name"),
+        default_evaluation_method=eval_cfg.get("method", "string_match"),
+        default_split=dataset_cfg.get("split", "test"),
+        default_cot_parser=config.get("custom_cot_parser"),
+        default_num_few_shot=few_shot_cfg.get("num", 0),
+        default_few_shot_split=few_shot_cfg.get("split"),
+        default_few_shot_instruction=few_shot_cfg.get(
+            "instruction", DEFAULT_FEW_SHOT_INSTRUCTION
+        ),
+        default_few_shot_example_template=few_shot_cfg.get(
+            "example_template", DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE
+        ),
+    )
+
+    return evaluator.run(
+        model=model_cfg.get("name"),
+        judge_model=judge_cfg.get("name"),
+        reward_model=reward_cfg.get("name"),
+        dataset=dataset_cfg.get("name", "haerae_bench"),
+        subset=dataset_cfg.get("subset"),
+        split=dataset_cfg.get("split"),
+        scaling_method=scaling_cfg.get("name"),
+        evaluation_method=eval_cfg.get("method"),
+        dataset_params=dataset_cfg.get("params"),
+        model_params=model_cfg.get("params"),
+        judge_params=judge_cfg.get("params"),
+        reward_params=reward_cfg.get("params"),
+        scaling_params=scaling_cfg.get("params"),
+        evaluator_params=eval_cfg.get("params"),
+        language_penalize=config.get("language_penalize", True),
+        target_lang=config.get("target_lang", "ko"),
+        custom_cot_parser=config.get("custom_cot_parser"),
+        num_few_shot=few_shot_cfg.get("num"),
+        few_shot_split=few_shot_cfg.get("split"),
+        few_shot_instruction=few_shot_cfg.get("instruction"),
+        few_shot_example_template=few_shot_cfg.get("example_template"),
+    )
+
 def main():
     """
     Command-line entry point for the Evaluator CLI.
@@ -254,7 +331,7 @@ def main():
         description="LLM Evaluator CLI. Supports Few-Shot, Judge/Reward models, and Custom CoT Parsers.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter # Show default values in help
     )
-    
+
     # --- Required arguments ---
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name (registry key). (e.g., haerae_bench)")
     parser.add_argument("--model", type=str, required=True, help="Main model backend name. (e.g., huggingface)")
@@ -263,14 +340,14 @@ def main():
     parser.add_argument("--subset", type=str, default=None, help="Dataset subset/config name. Use comma-separated values for multiple subsets if supported by the dataset loader. (e.g., csat_geo or csat_geo,csat_law)")
     parser.add_argument("--split", type=str, default="test", help="Dataset split to evaluate on.")
     parser.add_argument("--evaluation_method", type=str, default="string_match", help="Evaluation method (registry key).")
-    
+
     parser.add_argument("--judge_model", type=str, default=None, help="Judge model backend name (optional).")
     parser.add_argument("--reward_model", type=str, default=None, help="Reward model backend name (optional).")
     parser.add_argument("--scaling_method", type=str, default=None, help="Scaling method (registry key, optional).")
-    
+
     parser.add_argument("--output_file", type=str, default=None, help="File path to save JSON results. Prints to stdout if not set.")
     parser.add_argument("--cot_parser", type=str, default=None, help="Full Python path to a custom CoT parser function (e.g., 'my_package.my_module.my_parser'). This will be used as the default if not overridden in model_params.")
-    
+
     # JSON string parameters for finer control
     parser.add_argument("--dataset_params", type=str, default="{}", help="JSON string for dataset-specific parameters.")
     parser.add_argument("--model_params", type=str, default="{}", help="JSON string for main model parameters. Can include 'cot_parser' to override the default or CLI --cot_parser.")
@@ -278,7 +355,7 @@ def main():
     parser.add_argument("--reward_params", type=str, default="{}", help="JSON string for reward model parameters.")
     parser.add_argument("--scaling_params", type=str, default="{}", help="JSON string for scaling method parameters.")
     parser.add_argument("--evaluator_params", type=str, default="{}", help="JSON string for evaluator parameters.")
-    
+
     # Language penalizer: default is True, use --no-language-penalize to disable
     parser.add_argument('--language_penalize', action=argparse.BooleanOptionalAction, default=True, help="Enable language penalizer by default. Use --no-language-penalize to disable.")
     parser.add_argument("--target_lang", type=str, default="ko", help="Target language code for the penalizer.")
@@ -332,7 +409,7 @@ def main():
         default_few_shot_instruction=args.few_shot_instruction,
         default_few_shot_example_template=args.few_shot_example_template
     )
-    
+
     logger.info(f"Starting evaluation run with parsed arguments: {args}")
 
     # Call run() with parameters directly from CLI args.
@@ -360,9 +437,9 @@ def main():
         few_shot_instruction=args.few_shot_instruction,
         few_shot_example_template=args.few_shot_example_template,
     )
-    
+
     result_dict = eval_result.to_dict()
-    
+
     # Output results
     output_json_str = json.dumps(result_dict, ensure_ascii=False, indent=2)
     if args.output_file:

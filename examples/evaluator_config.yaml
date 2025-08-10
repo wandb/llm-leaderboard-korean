@@ -1,0 +1,59 @@
+# Evaluator Configuration File
+# This file defines every component required to reproduce an evaluation
+# pipeline using the Evaluator API.
+
+# Dataset settings
+# - name: dataset registry key
+# - subset: optional subset or list of subsets
+# - split: data split to evaluate on
+# - params: additional dataset-specific kwargs
+
+dataset:
+  name: "haerae_bench"
+  subset: null
+  split: "test"
+  params: {}
+
+# Generation model settings
+# - name: model backend registry key
+# - params: backend-specific options
+model:
+  name: "huggingface"
+  params:
+    model_name_or_path: "gpt2"
+
+# Judge model settings (optional)
+judge_model:
+  name: null
+  params: {}
+
+# Reward model settings (optional)
+reward_model:
+  name: null
+  params: {}
+
+# Test-time scaling method (optional)
+scaling:
+  name: null
+  params: {}
+
+# Evaluation method and its parameters
+# e.g., string_match, log_prob, llm_judge
+
+evaluation:
+  method: "string_match"
+  params: {}
+
+# Global evaluator options
+language_penalize: true
+target_lang: "ko"
+custom_cot_parser: null
+
+# Few-shot prompting configuration
+few_shot:
+  num: 0
+  split: null
+  instruction: "Use the following examples to answer the question."
+  example_template: |
+    Q: {input}
+    A: {reference}
