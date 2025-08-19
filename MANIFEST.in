@@ -1,0 +1,11 @@
+include README.md
+include LICENSE
+include CODEOWNERS
+include requirements.txt
+recursive-include assets *
+recursive-include docs *
+recursive-include examples *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * *.so
+recursive-exclude * .DS_Store
