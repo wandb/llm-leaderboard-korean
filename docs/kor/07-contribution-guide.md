@@ -128,3 +128,13 @@
 
 기여를 시작하기 전에 이 가이드를 숙지해 주시고, 궁금한 사항이나 개선 제안이 있으시면 프로젝트 관리자(quick_start.md 참고)에게 문의해 주시기 바랍니다.
 
+### 데이터셋 기여 안내
+
+새 데이터셋을 추가하려면 다음 문서를 우선 참고해 주세요:
+
+- `docs/kor/09-dataset-development-guide.md`
+- 출력 스키마는 최소 `input`, `reference`를 포함하고, 필요 시 `_subset_name`을 추가해 주세요.
+- `base_prompt_template` 기본값을 제공하고, `dataset_params`로 덮어쓰기를 허용해 주세요.
+- 가능하면 `examples/` 경로에 사용 예시 설정 파일을 추가해 주세요.
+
+
