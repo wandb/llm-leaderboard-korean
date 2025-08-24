@@ -1,7 +1,6 @@
+import asyncio
 import logging
-import time
-from typing import List, Dict, Any, Optional, Union, Callable, Tuple
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Dict, Any, Optional, Union
 
 import litellm
 from tqdm import tqdm
@@ -12,25 +11,24 @@ from llm_eval.utils.logging import get_logger
 
 logger = get_logger(name="litellm_judge", level=logging.INFO)
 
+
 @register_model("litellm_judge")
 class LiteLLMJudge(BaseJudge):
     """
-    A judge backend implementation using LiteLLM API.
+    Async judge backend using LiteLLM acompletion with retries.
 
-    This judge model is intended to evaluate generated answers by constructing judge prompts 
-    and calling the LiteLLM API. It supports:
-      - Basic retry logic with exponential backoff.
-      - Batch processing via multithreading.
-    
     Args:
-        provider (str): LLM provider (e.g., "openai", "anthropic", "bedrock", "azure").
-        model_name (str): Name of the judge model to use.
-        api_key (Optional[str]): API key for the provider.
-        api_base (Optional[str]): Base URL for the API.
-        max_new_tokens (int): Maximum tokens to generate in judge response.
-        temperature (float): Sampling temperature.
-        batch_size (int): Number of judge prompts to process concurrently.
-        **kwargs: Additional parameters.
+        provider: LLM provider (e.g., "openai", "azure", "bedrock").
+        model_name: Model/deployment name.
+        api_key: Provider API key.
+        api_base: Base URL.
+        api_version: API version (Azure).
+        max_new_tokens: Max tokens for judge response.
+        temperature: Sampling temperature.
+        batch_size: Concurrency for judge requests.
+        retry_max: Max retries per request.
+        retry_base_delay: Base backoff delay.
+        **kwargs: Extra LiteLLM params.
     """
 
     def __init__(
@@ -39,157 +37,108 @@ class LiteLLMJudge(BaseJudge):
         model_name: str,
         api_key: Optional[str] = None,
         api_base: Optional[str] = None,
-        aws_access_key_id: Optional[str] = None,
-        aws_secret_access_key: Optional[str] = None,
-        anthropic_api_key: Optional[str] = None,
+        api_version: Optional[str] = None,
         max_new_tokens: int = 64,
         temperature: float = 1.0,
         batch_size: int = 8,
-        **kwargs
+        retry_max: int = 3,
+        retry_base_delay: float = 1.0,
+        **kwargs,
     ):
         super().__init__(**kwargs)
-        logger.info(f"[LiteLLMJudge] Initializing judge model '{model_name}' for provider '{provider}'.")
-
-        self.provider = provider.lower()
+        self.provider = (provider or "").lower()
         self.model_name = model_name
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.batch_size = batch_size
-        self.extra_kwargs = kwargs
+        self.retry_max = max(0, retry_max)
+        self.retry_base_delay = max(0.0, retry_base_delay)
 
-        # Configure API settings
-        self.completion_kwargs = {
-            "api_key": api_key,
-            "api_base": api_base,
-        }
-        if self.provider == "bedrock":
-            self.completion_kwargs.update({
-                "aws_access_key_id": aws_access_key_id,
-                "aws_secret_access_key": aws_secret_access_key,
-            })
-        elif self.provider == "anthropic":
-            self.completion_kwargs["api_key"] = anthropic_api_key
+        self.common_params: Dict[str, Any] = {}
+        if api_key is not None:
+            self.common_params["api_key"] = api_key
+        if api_base is not None:
+            self.common_params["api_base"] = api_base
+        if api_version is not None:
+            self.common_params["api_version"] = api_version
 
-    def _prepare_completion_kwargs(self, prompt: str, until: Optional[Union[str, List[str]]] = None) -> Dict[str, Any]:
-        """
-        Prepares the completion parameters for the LiteLLM judge API.
+        self.extra_kwargs = kwargs or {}
+        self.model_identifier = self._make_model_identifier(self.provider, self.model_name)
+        logger.info(f"[LiteLLMJudge] Using provider='{self.provider}', model='{self.model_identifier}'")
 
-        Args:
-            prompt (str): Judge prompt text.
-            until (Optional[Union[str, List[str]]]): Optional stop sequence(s).
+    @staticmethod
+    def _make_model_identifier(provider: str, model_name: str) -> str:
+        if provider in {"azure", "bedrock"}:
+            return f"{provider}/{model_name}"
+        return model_name
 
-        Returns:
-            Dict[str, Any]: Dictionary of parameters for the LiteLLM API.
-        """
-        completion_kwargs = {
+    def _build_payload(self, prompt: str, until: Optional[Union[str, List[str]]] = None) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            "model": self.model_identifier,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": self.max_new_tokens,
             "temperature": self.temperature,
-            **self.completion_kwargs,
+            **self.common_params,
             **self.extra_kwargs,
         }
         if until is not None:
-            completion_kwargs["stop"] = until if isinstance(until, list) else [until]
+            payload["stop"] = until if isinstance(until, list) else [until]
+        return {k: v for k, v in payload.items() if v is not None}
 
-        if self.provider == "azure":
-            completion_kwargs.update({
-                "model": self.model_name,
-                "engine": self.model_name,
-            })
-        elif self.provider == "bedrock":
-            completion_kwargs["model"] = f"bedrock/{self.model_name}"
-        else:
-            completion_kwargs["model"] = self.model_name
+    async def _once(self, payload: Dict[str, Any]) -> str:
+        resp = await litellm.acompletion(**payload)
+        return resp.choices[0].message.content
 
-        logger.debug(f"[LiteLLMJudge] Prepared completion kwargs: {completion_kwargs}")
-        return completion_kwargs
-
-    def _generate_with_retry(
-        self, 
-        completion_kwargs: Dict[str, Any], 
-        max_attempts: int = 3,
-        initial_wait: int = 4
-    ) -> str:
-        """
-        Calls the LiteLLM judge API with retry logic.
-
-        Args:
-            completion_kwargs (Dict[str, Any]): Parameters for the API call.
-            max_attempts (int): Maximum retry attempts.
-            initial_wait (int): Initial wait time (seconds) for exponential backoff.
-
-        Returns:
-            str: Generated judge response.
-
-        Raises:
-            Exception: If all attempts fail.
-        """
+    async def _with_retries(self, payload: Dict[str, Any]) -> str:
         attempt = 0
-        last_exception = None
-        while attempt < max_attempts:
+        last_e: Optional[Exception] = None
+        while attempt <= self.retry_max:
             try:
-                response = litellm.completion(**completion_kwargs)
-                return response.choices[0].message.content
+                return await self._once(payload)
             except Exception as e:
+                last_e = e
+                if attempt == self.retry_max:
+                    break
+                delay = self.retry_base_delay * (2 ** attempt)
+                logger.warning(f"[LiteLLMJudge] attempt={attempt+1} failed: {e}. retrying in {delay:.1f}s")
+                await asyncio.sleep(delay)
                 attempt += 1
-                last_exception = e
-                if attempt < max_attempts:
-                    wait_time = initial_wait * (2 ** (attempt - 1))
-                    logger.warning(f"[LiteLLMJudge] Attempt {attempt} failed: {str(e)}. Retrying in {wait_time} seconds...")
-                    time.sleep(wait_time)
-        error_msg = f"[LiteLLMJudge] All {max_attempts} attempts failed. Last error: {str(last_exception)}"
-        logger.error(error_msg)
-        raise last_exception or Exception(error_msg)
+        raise last_e or RuntimeError("LiteLLMJudge: exhausted retries")
+
+    async def _judge_async(
+        self,
+        inputs: List[Dict[str, Any]],
+        until: Optional[Union[str, List[str]]] = None,
+        show_progress: bool = True,
+    ) -> List[Dict[str, Any]]:
+        sem = asyncio.Semaphore(self.batch_size if isinstance(self.batch_size, int) else 8)
+
+        async def _worker(item: Dict[str, Any]) -> Dict[str, Any]:
+            prompt = item.get("input", "")
+            payload = self._build_payload(prompt, until=until)
+            async with sem:
+                try:
+                    prediction = await self._with_retries(payload)
+                    return {"input": prompt, "prediction": prediction}
+                except Exception as e:
+                    logger.error(f"[LiteLLMJudge] Error: {e}")
+                    return {"input": prompt, "prediction": f"Error: {e}"}
+
+        tasks = [_worker(it) for it in inputs]
+        results: List[Dict[str, Any]] = []
+        for fut in tqdm(asyncio.as_completed(tasks), total=len(tasks), disable=not show_progress, desc="LiteLLM Judge Batch"):
+            try:
+                results.append(await fut)
+            except Exception as e:
+                logger.error(f"[LiteLLMJudge] Task failure: {e}")
+                results.append({"input": None, "prediction": f"Error: {e}"})
+        return results
 
     def judge_batch(
         self,
         inputs: List[Dict[str, Any]],
         until: Optional[Union[str, List[str]]] = None,
         show_progress: bool = True,
-        **kwargs
+        **kwargs,
     ) -> List[Dict[str, Any]]:
-        """
-        Processes a batch of judge prompts concurrently using multithreading.
-
-        Args:
-            inputs (List[Dict[str, Any]]): A list of judge prompt items.
-                Each item should have an "input" field containing the judge prompt.
-            until (Optional[Union[str, List[str]]]): Optional stopping conditions.
-            show_progress (bool): Whether to display a progress bar.
-            **kwargs: Additional parameters.
-
-        Returns:
-            List[Dict[str, Any]]: The input list with each item updated with a "prediction"
-            field containing the judge model's raw response.
-        """
-        results = []
-
-        # Define the per-item processing function.
-        def process_item(item: Dict[str, Any]) -> Dict[str, Any]:
-            prompt = item["input"]
-            completion_kwargs = self._prepare_completion_kwargs(prompt, until=until)
-            try:
-                prediction = self._generate_with_retry(completion_kwargs)
-                result_item = {
-                    "input": item["input"],
-                    "prediction": prediction
-                }
-                return result_item
-            except Exception as e:
-                logger.error(f"[LiteLLMJudge] Error generating judge response: {str(e)}")
-                return {
-                    "input": prompt,
-                    "prediction": f"Error: {str(e)}"
-                }
-
-        # Use ThreadPoolExecutor for concurrent processing
-        with ThreadPoolExecutor(max_workers=self.batch_size) as executor:
-            future_to_item = {executor.submit(process_item, item): item for item in inputs}
-            if show_progress:
-                for future in tqdm(as_completed(future_to_item), total=len(future_to_item), desc="LiteLLM Judge Batch"):
-                    results.append(future.result())
-            else:
-                for future in as_completed(future_to_item):
-                    results.append(future.result())
-
-        return results
+        return asyncio.run(self._judge_async(inputs, until=until, show_progress=show_progress))
