@@ -7,12 +7,9 @@ from tqdm import tqdm
 
 from . import register_model
 from .base import BaseJudge
-from typing import List, Dict, Any, Optional, Union
 from llm_eval.utils.logging import get_logger
 
 logger = get_logger(name="litellm_judge", level=logging.INFO)
-logger = get_logger(name="litellm_judge", level=logging.INFO)
-
 
 
 @register_model("litellm_judge")
