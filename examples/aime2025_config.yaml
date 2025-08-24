@@ -1,0 +1,62 @@
+# Example configuration for evaluating on OpenCompass AIME2025
+# Usage:
+#   python -m llm_eval.evaluator --config examples/aime2025_config.yaml
+
+# Dataset settings
+# - name: dataset registry key (see llm_eval/datasets/__init__.py)
+# - subset: "I" | "II" | "AIME2025-I" | "AIME2025-II" | null (both)
+# - split: split name on HF hub; loader will try fallbacks if unavailable
+# - params: dataset-specific kwargs (e.g., base_prompt_template)
+
+dataset:
+  name: "aime2025"
+  subset: null  # set to "I" or "II" to evaluate a single set
+  split: "test"
+  params:
+    # base_prompt_template: |
+    #   Solve the following AIME-style problem. Briefly show your reasoning,
+    #   then end with a single line in the form 'Answer: X'.
+    #   
+    #   {question}
+
+# Model backend
+model:
+  name: "huggingface"
+  params:
+    model_name_or_path: "gpt2"
+    max_new_tokens: 256
+
+# No judge or reward models
+judge_model:
+  name: null
+  params: {}
+
+reward_model:
+  name: null
+  params: {}
+
+# No scaling by default
+scaling:
+  name: null
+  params: {}
+
+# Evaluation method
+# For strict exact match, use string_match (default ignores case).
+# For math equivalence (LaTeX/expression), use math_match.
+evaluation:
+  method: "string_match"  # or "math_match"
+  params: {}
+
+# Global options
+language_penalize: false
+target_lang: "en"
+custom_cot_parser: null
+
+# Few-shot (optional)
+few_shot:
+  num: 0
+  split: null
+  instruction: "Use the following examples to answer the question."
+  example_template: |
+    Q: {input}
+    A: {reference}
