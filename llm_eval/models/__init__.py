@@ -44,6 +44,17 @@ from .multi import MultiModel
 from .huggingface_backend import HuggingFaceModel
 from .huggingface_judge import HuggingFaceJudge
 from .huggingface_reward import HuggingFaceReward
-from .litellm_backend import LiteLLMBackend
-from .litellm_judge import LiteLLMJudge
-from .vllm_backend import VLLMModel
+
+# Optional imports for backends that may have compatibility issues
+try:
+    from .litellm_backend import LiteLLMBackend
+    from .litellm_judge import LiteLLMJudge
+except ImportError as e:
+    import warnings
+    warnings.warn(f"LiteLLM backend not available: {e}", ImportWarning)
+
+try:
+    from .vllm_backend import VLLMModel
+except ImportError as e:
+    import warnings
+    warnings.warn(f"VLLM backend not available: {e}", ImportWarning)

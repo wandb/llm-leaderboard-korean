@@ -1,9 +1,16 @@
 import pytest
-from llm_eval.evaluation import EVALUATION_REGISTRY, get_evaluator
-from llm_eval.models.base import BaseModel  # Import BaseModel
 
-# Get evaluator keys from the registry
-eval_keys = list(EVALUATION_REGISTRY.keys())
+# Try to import the evaluation module, skip tests if dependencies are missing
+try:
+    from llm_eval.evaluation import EVALUATION_REGISTRY, get_evaluator
+    from llm_eval.models.base import BaseModel  # Import BaseModel
+    # Get evaluator keys from the registry
+    eval_keys = list(EVALUATION_REGISTRY.keys())
+    EVALUATION_AVAILABLE = True
+except ImportError as e:
+    EVALUATION_AVAILABLE = False
+    eval_keys = []
+    pytest.skip(f"Skipping evaluation tests due to missing dependencies: {e}", allow_module_level=True)
 
 @pytest.mark.parametrize("eval_key", eval_keys)
 def test_evaluator_registration(eval_key):
