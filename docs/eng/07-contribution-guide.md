@@ -128,3 +128,13 @@ This guide provides detailed instructions for developers who want to contribute 
 
 Please review this guide before starting your contribution. If you have any questions or suggestions, contact the project maintainers (refer to `quick_start.md`).
 
+### Dataset Contributions
+
+If you are adding a new dataset, please follow the Dataset Development Guide:
+
+- See: `docs/eng/09-dataset-development-guide.md`
+- Keep the output schema consistent: at least `input`, `reference`, and include `_subset_name` when applicable.
+- Prefer default `base_prompt_template` with an override via `dataset_params`.
+- Add an example configuration under `examples/` when relevant.
+
+
