@@ -250,7 +250,7 @@ tinycss2==1.2.1
 tokenizers==0.21.2
 tomli==2.0.1
 toolz==1.0.0
-torch==2.5.1
+torch==2.8.0
 torchaudio==2.5.1
 torchmetrics==0.10.3
 torchvision==0.20.1
