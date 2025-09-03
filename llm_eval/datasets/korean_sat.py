@@ -31,7 +31,12 @@ class KoreanSATDataset(BaseDataset):
 
     def info(self):
         return {
-            "description": "Korean SAT dataset from 2015-2025",
+            "description": (
+                            "Korean SAT dataset from 2015-2025. "
+                            "You can check the SAT exam year, problem number using metadata['query_id']."
+                            "metadata['score'] represents the score for each problem."
+                            "metadata['corpus_id'] is the identifier of the paragraph in the Korean SAT problem."
+            ),
             "evaluation_only": None,
             "citation": "Korean SAT dataset",
         }
