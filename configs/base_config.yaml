@@ -1,0 +1,64 @@
+# 기본 공통 설정 파일
+# 모든 실험에서 공통으로 사용되는 설정들
+
+# 실험 대상 데이터셋 설정 (True/False로 활성화/비활성화)
+# 각 모델별 config에서 필요에 따라 오버라이드 가능
+datasets:
+  haerae_bench: true      # HAE-RAE Bench (한국 문화, 지식 평가)
+  kmmlu: true             # Korean Massive Multitask Language Understanding
+  click: false            # CLiCK 데이터셋
+  hrm8k: false            # HRM8K 수학 문제
+  k2_eval: false          # K2-Eval 데이터셋
+  KUDGE: false            # KUDGE 데이터셋
+  benchhub: false         # BenchHub 데이터셋
+  hrc: false              # HRC 데이터셋
+  kbl: false              # KBL 데이터셋
+  kormedmcqa: false       # 한국어 의료 MCQ 데이터셋
+  aime2025: false         # AIME 2025 수학 문제
+  generic_file: false     # 커스텀 파일 데이터셋
+
+# Judge 모델 기본 설정 (대부분의 실험에서는 사용하지 않음)
+judge_model:
+  name: null
+  params: {}
+
+# Reward 모델 기본 설정 (대부분의 실험에서는 사용하지 않음)
+reward_model:
+  name: null
+  params: {}
+
+# 데이터셋 기본 설정
+dataset:
+  split: "test"
+  params: {}
+
+# 스케일링 방법 기본 설정 (대부분의 실험에서는 사용하지 않음)
+scaling:
+  name: null
+  params: {}
+
+# 평가 방법 설정
+# 주의: 평가 방법은 데이터셋별로 자동 최적화됩니다
+# - haerae_bench, kmmlu, kormedmcqa: string_match (객관식)
+# - hrm8k, aime2025: math_eval (수학 문제)  
+# - k2_eval, KUDGE: llm_judge (생성/판단 태스크)
+# - 기타: string_match (기본값)
+# 
+# 전역 평가 방법을 강제로 지정하려면 method 필드를 설정하세요
+evaluation:
+  # method: "string_match"  # 주석 해제하면 모든 데이터셋에 동일 방법 강제 적용
+  params: {}
+
+# 전역 설정
+language_penalize: true
+target_lang: "ko"
+custom_cot_parser: null
+
+# Few-shot 기본 설정
+few_shot:
+  num: 0
+  split: null
+  instruction: "다음 예시들을 참고하여 문제를 해결하세요."
+  example_template: |
+    질문: {input}
+    답변: {reference}

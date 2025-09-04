@@ -1,0 +1,46 @@
+# 평가 방법 데모 설정 파일
+# 데이터셋별 평가 방법 자동 선택과 수동 오버라이드 예시
+# 사용법: python run.py --config configs/evaluation_method_demo.yaml
+
+# 다양한 평가 방법이 필요한 데이터셋들 활성화
+datasets:
+  haerae_bench: true      # 자동: string_match (객관식)
+  hrm8k: true             # 자동: math_eval (수학 문제)
+  k2_eval: true           # 자동: llm_judge (생성 태스크)
+  aime2025: true          # 자동: math_eval (수학 문제)
+  kormedmcqa: true        # 자동: string_match (의료 객관식)
+
+# 모델 설정
+model:
+  name: "openai"
+  params:
+    model: "gpt-4-turbo-preview"
+    temperature: 0.0
+    max_tokens: 1024
+
+# 전역 평가 방법 설정 (모든 데이터셋에 강제 적용하려면 주석 해제)
+# evaluation:
+#   method: "string_match"  # 모든 데이터셋에 string_match 강제 적용
+
+# 데이터셋별 평가 방법 개별 오버라이드 예시
+dataset_specific:
+  haerae_bench:
+    subset: ["csat_geo"]  # 빠른 테스트용
+    # evaluation_method: "llm_judge"  # string_match 대신 llm_judge 사용하려면 주석 해제
+  
+  hrm8k:
+    subset: ["GSM8K"]  # 빠른 테스트용
+    # evaluation_method: "string_match"  # math_eval 대신 string_match 사용하려면 주석 해제
+  
+  k2_eval:
+    subset: null
+    # evaluation_method: "string_match"  # llm_judge 대신 string_match 사용하려면 주석 해제
+  
+  aime2025:
+    subset: ["AIME2025-I"]  # 하나의 서브셋만
+    # 자동으로 math_eval 사용됨
+  
+  kormedmcqa:
+    subset: ["doctor"]  # 의사 시험 문제만
+    # 자동으로 string_match 사용됨
+

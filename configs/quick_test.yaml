@@ -1,0 +1,27 @@
+# 빠른 테스트용 설정 파일 (작은 데이터셋으로 빠른 검증)
+# base_config.yaml을 기반으로 하며, 이 파일의 설정이 base_config를 오버라이드합니다.
+# 사용법: python run.py --config configs/quick_test.yaml
+
+# 테스트용으로 haerae_bench만 활성화, 나머지는 모두 비활성화
+datasets:
+  haerae_bench: true      # 테스트용으로 하나만 활성화 (자동으로 string_match 사용)
+  kmmlu: false            # 기본값에서 비활성화
+
+# 모델 설정 (가벼운 모델 사용)
+model:
+  name: "huggingface"
+  params:
+    model_name_or_path: "gpt2"  # 빠른 테스트용 작은 모델
+    max_new_tokens: 64
+    temperature: 0.0
+    pad_token_id: 50256
+
+# 빠른 테스트를 위한 설정 오버라이드
+language_penalize: false  # 빠른 테스트를 위해 비활성화
+
+# 작은 서브셋만 사용
+dataset_specific:
+  haerae_bench:
+    subset: ["csat_geo"]  # 단일 서브셋만 테스트
+    # 자동으로 string_match 평가 방법이 선택됨
+

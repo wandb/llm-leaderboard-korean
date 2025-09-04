@@ -1,0 +1,14 @@
+model:
+  name: "openai"
+  params:
+    model: "gpt-5-nano-2025-08-07"
+    temperature: 0.0
+    max_tokens: 1024
+
+dataset_specific:
+  haerae_bench:
+    subset: null
+  kmmlu:
+    subset: null
+  k2_eval:
+    subset: null

@@ -1,0 +1,39 @@
+# Claude 모델 실험 설정 파일
+# base_config.yaml을 기반으로 하며, 이 파일의 설정이 base_config를 오버라이드합니다.
+# 사용법: python run.py --config configs/claude_experiment.yaml
+
+# Claude 실험에서 추가로 활성화할 데이터셋
+datasets:
+  click: true             # CLiCK 데이터셋 활성화
+  hrm8k: true             # HRM8K 수학 문제 활성화 (math_eval 자동 적용)
+  k2_eval: true           # K2-Eval 데이터셋 활성화 (llm_judge 자동 적용)
+  kormedmcqa: true        # 한국어 의료 MCQ 데이터셋 활성화
+
+# Claude 모델 설정
+model:
+  name: "litellm"
+  params:
+    model: "claude-3-5-sonnet-20241022"
+    temperature: 0.0
+    max_tokens: 1024
+
+# Claude 실험에서는 2-shot 학습 사용
+few_shot:
+  num: 2  # 2-shot 학습 사용
+  split: null
+  instruction: "다음 예시들을 참고하여 문제를 해결하세요."
+  example_template: |
+    질문: {input}
+    답변: {reference}
+
+# 데이터셋별 설정 (전체 서브셋 사용)
+dataset_specific:
+  haerae_bench:
+    subset: null  # 전체 서브셋 사용
+  kmmlu:
+    subset: null  # 전체 서브셋 사용
+  hrm8k:
+    subset: null
+  kormedmcqa:
+    subset: null
+
