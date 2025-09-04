@@ -145,6 +145,14 @@ def get_llm_inference_engine():
             project="wandb-korea/llm-leaderboard3",
             **cfg.generator,
         )
+
+    elif api_type == "kakaocorp_private":
+        llm = ChatOpenAI(
+            model=cfg.model.pretrained_model_name_or_path,
+            api_key="EMPTY",
+            base_url=cfg.model.base_url,
+            **cfg.generator,
+        )
     
     elif api_type == "upstage":
         # use LangChain upstage integration
