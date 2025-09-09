@@ -10,3 +10,6 @@ __pycache__/
 *.pyc
 *.pyo
 .openhands/
+
+# BFCL dataset folder
+llm_eval/datasets/bfcl/
