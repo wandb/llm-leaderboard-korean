@@ -47,3 +47,5 @@ from .kbl import KBLDataset
 from .kormedqa import KorMedMCQADataset
 from .aime2025 import AIME2025Dataset
 from .korean_sat import KoreanSATDataset
+from .bfcl import BFCLDataset
+
