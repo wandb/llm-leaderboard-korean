@@ -1,10 +1,16 @@
 import os
 import pandas as pd
 import wandb
+import logging
 from llm_eval.datasets.base import BaseDataset
 from llm_eval.datasets import register_dataset
+from llm_eval.utils.logging import get_logger
+from dotenv import load_dotenv
 
-WANDB_PROJECT_NAME = 'horangi/horangi4-dev-<korean_sat>/korean_sat:v0'
+load_dotenv()
+
+WANDB_PROJECT_NAME = os.getenv("WANDB_KOREAN_SAT_PROJECT")
+logger = get_logger(name="korean_sat", level=logging.INFO)
 
 
 @register_dataset("korean_sat")
@@ -13,6 +19,8 @@ class KoreanSATDataset(BaseDataset):
         super().__init__(dataset_name='korean_sat', subset=subset, split=split, **kwargs)
 
     def load(self):
+        if not WANDB_PROJECT_NAME:
+            raise ValueError("WANDB_KOREAN_SAT_PROJECT environment variable is not set.")
         run = wandb.init()
         artifact = run.use_artifact(WANDB_PROJECT_NAME, type='dataset')
         artifact_dir = artifact.download()
@@ -32,10 +40,10 @@ class KoreanSATDataset(BaseDataset):
     def info(self):
         return {
             "description": (
-                            "Korean SAT dataset from 2015-2025. "
-                            "You can check the SAT exam year, problem number using metadata['query_id']."
-                            "metadata['score'] represents the score for each problem."
-                            "metadata['corpus_id'] is the identifier of the paragraph in the Korean SAT problem."
+                "Korean SAT dataset from 2015-2025. "
+                "You can check the SAT exam year, problem number using metadata['query_id'] and metadata['question_num']."
+                "metadata['score'] represents the score for each problem."
+                "metadata['corpus_id'] is the identifier of the paragraph in the Korean SAT problem."
             ),
             "evaluation_only": None,
             "citation": "Korean SAT dataset",
@@ -46,17 +54,27 @@ class KoreanSATDataset(BaseDataset):
 
         query_id = row['qid']
         corpus_id = row['corpus_id']
+        question_num = row['question_index']
 
-        answer = int(row['generation_gt'].split("(")[0])
-        score = int(row['generation_gt'].split("(")[1].split(")")[0])
-        assert answer in [1, 2, 3, 4, 5], "The choice_gt must be in [1, 2, 3, 4, 5]."
-        assert score in [2, 3], "The right score must be 2 or 3."
+        # Convert answers and scores to strings
+        answer = str(row['generation_gt'].split("(")[0]).strip()
+        score = str(row['generation_gt'].split("(")[1].split(")")[0]).strip()
+
+        # Validate the values
+        assert answer in ["1", "2", "3", "4", "5"], "The choice_gt must be in ['1', '2', '3', '4', '5']."
+        assert score in ["2", "3"], "The right score must be '2' or '3'."
 
         sample = {
             "input": prompt,
-            "reference": str(answer),
-            "_subset_name": 'Korean',  # TODO: If there are more subsets such as math, geo, science, etc, modify accordingly
-            "metadata": {"score": score, "query_id": query_id, "corpus_id": corpus_id},
+            "reference": answer,
+            "_subset_name": 'Korean',
+            "metadata": {
+                "score": score,
+                "query_id": query_id,
+                "question_num": question_num,
+                "corpus_id": corpus_id
+            },
+            "judge_type": "korean_sat_eval"  # Set the judge type for Korean SAT evaluation
         }
 
         return sample
