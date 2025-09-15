@@ -9,17 +9,20 @@ logger = get_logger(name="prompt_template", level=logging.INFO)
 DEFAULT_FEW_SHOT_INSTRUCTION = "다음은 문제와 정답의 몇 가지 예시입니다.\n\n"
 DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE = "{input}\n정답: {reference}\n\n"
 
+
 # 대신 직접 정의
 class JudgeType(Enum):
     RUBRIC_AND_RESPONSE = "rubric_and_response"
     RUBRIC_RESPONSE_AND_GOLD = "rubric_response_and_gold"
     RESPONSE_COMPARISON = "response_comparison"
     K2_EVAL = "k2_eval"
+    KOREAN_SAT = "korean_sat_eval"
+
 
 def format_few_shot_prompt_prefix(
-    few_shot_samples: List[Dict[str, Any]],
-    instruction: Optional[str] = DEFAULT_FEW_SHOT_INSTRUCTION,
-    example_template: str = DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
+        few_shot_samples: List[Dict[str, Any]],
+        instruction: Optional[str] = DEFAULT_FEW_SHOT_INSTRUCTION,
+        example_template: str = DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
 ) -> str:
     """
     Few-shot 예시들로부터 프롬프트 접두사(prefix)를 생성합니다.
@@ -52,7 +55,8 @@ def format_few_shot_prompt_prefix(
             sample_reference = str(sample.get('reference', ''))
 
             if not sample_input:
-                logger.warning(f"[FewShotFormatter] Skipping few-shot example {i+1} due to empty 'input'. Sample: {sample.get('id', sample)}")
+                logger.warning(
+                    f"[FewShotFormatter] Skipping few-shot example {i + 1} due to empty 'input'. Sample: {sample.get('id', sample)}")
                 continue
 
             current_example_str = example_template.format(
@@ -62,17 +66,22 @@ def format_few_shot_prompt_prefix(
             prefix_parts.append(current_example_str)
             valid_examples_count += 1
         except KeyError as e:
-            logger.warning(f"[FewShotFormatter] Skipping few-shot example {i+1} due to missing key '{e}' for template. Sample keys: {list(sample.keys())}")
+            logger.warning(
+                f"[FewShotFormatter] Skipping few-shot example {i + 1} due to missing key '{e}' for template. Sample keys: {list(sample.keys())}")
             continue
         except Exception as e:
-            logger.error(f"[FewShotFormatter] Unexpected error formatting few-shot example {i+1}: {e}. Sample: {sample}", exc_info=True)
+            logger.error(
+                f"[FewShotFormatter] Unexpected error formatting few-shot example {i + 1}: {e}. Sample: {sample}",
+                exc_info=True)
             continue
 
     if valid_examples_count == 0:
-        logger.warning("[FewShotFormatter] No valid few-shot examples were formatted. Returning empty prefix even if instruction was provided.")
+        logger.warning(
+            "[FewShotFormatter] No valid few-shot examples were formatted. Returning empty prefix even if instruction was provided.")
         return ""
 
     return "".join(prefix_parts)
+
 
 def extract_final_answer(raw_output: str) -> str:
     """
@@ -97,6 +106,7 @@ def extract_final_answer(raw_output: str) -> str:
     else:
         # If the pattern is not found, return the original raw output.
         return raw_output
+
 
 def default_cot_parser(raw_output: str) -> Tuple[str, str]:
     """
@@ -147,7 +157,7 @@ MULTILINGUAL_ANSWER_REGEXES = [
 ]
 
 MULTILINGUAL_ANSWER_PATTERN = (
-    r"(?i)(" + "|".join(MULTILINGUAL_ANSWER_REGEXES) + r")\s*(?P<content>.+)"
+        r"(?i)(" + "|".join(MULTILINGUAL_ANSWER_REGEXES) + r")\s*(?P<content>.+)"
 )
 
 # llm_eval/utils/prompt_template.py
@@ -208,5 +218,27 @@ Below is the question and the model's response. Please evaluate the response bas
 **Model's Response:**
 {response}
 
-[[End of conversation. Begin evaluation.]]"""
-    }
+[[End of conversation. Begin evaluation.]]""",
+
+    JudgeType.KOREAN_SAT: """
+당신은 객관식 시험을 채점하는 채점관입니다. 학생이 몇 번을 선택하였는지 구분하세요. 모든 답변은 1~5번 중에 하나입니다. 학생이 선택한 답변을 반환하세요. 만약 학생이 답변을 하지 못했다면 0번을 반환하세요.
+
+## 출력 형식
+반드시 숫자 하나만 반환하세요: 0, 1, 2, 3, 4, 또는 5
+
+## 예시들
+
+**예시 1:**
+학생 답변: "해당 문제는 뉴진스에 대하여 묻는 문제입니다. 뉴진스는 유명하지만 지금은 활동을 하지 못하므로 가장 적합한 선택지는 3번입니다."
+채점 결과: 3
+
+이제 다음 학생의 답변을 채점하세요:
+
+[학생 답변]
+{response}
+
+[채점 결과]
+
+"""
+
+}
