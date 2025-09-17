@@ -1,12 +1,7 @@
-from dotenv import load_dotenv
-
 from llm_eval.datasets import load_datasets
 from llm_eval.evaluation.llm_judge import LLMJudgeEvaluator
-from llm_eval.evaluator import Evaluator
 from llm_eval.models.multi import MultiModel
 import pytest
-import openai
-import os
 
 
 @pytest.mark.integration
