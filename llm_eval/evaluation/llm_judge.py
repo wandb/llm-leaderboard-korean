@@ -146,6 +146,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
         total_correct = 0
         total_items = len(samples)
 
+        ksat_scores = {}
         batch_inputs = []
         batch_indices = []
 
@@ -213,6 +214,27 @@ class LLMJudgeEvaluator(BaseEvaluator):
                                 sample["judge_score"] = score
                                 total_score += score
                                 score_count += 1
+                    elif j_type == JudgeType.KOREAN_SAT:
+                        query_id = sample['metadata']['query_id']
+                        question_num = sample['metadata']['question_num']
+                        score_value = float(sample["metadata"]['score'])  # Ensure score is numeric
+
+                        # init ksat_score_each year
+                        if query_id not in ksat_scores:
+                            ksat_scores[query_id] = {'common_score': 0, 'choice_score': 0}
+                        if sample['judge_evaluation'] == sample['reference']:
+                            total_score += score_value
+                            score_count += 1
+
+                            year = int(query_id[:4])
+                            # 2022년 이후 공통과목 선택과목 분리로 점수 배분이 다름
+                            if year > 2021:
+                                if question_num < 34:
+                                    ksat_scores[query_id]['common_score'] += score_value
+                                else:
+                                    ksat_scores[query_id]['choice_score'] += score_value
+                            else:
+                                ksat_scores[query_id]['common_score'] += score_value
                     elif j_type == JudgeType.RESPONSE_COMPARISON:
                         # Use a pairwise comparison parser.
                         parser = self.parsers.get(JudgeType.RESPONSE_COMPARISON)
@@ -247,6 +269,9 @@ class LLMJudgeEvaluator(BaseEvaluator):
         metrics = {}
         if score_count > 0:
             metrics["average_judge_score"] = total_score / score_count
+        if (score_count > 0) and (total_items > 0) and (self.default_judge_type == JudgeType.KOREAN_SAT):
+            metrics["average_score_per_item"] = total_score / total_items  # Ensure this metric is calculated
+            metrics['korean_sat_result'] = ksat_scores
         if total_items > 0 and any(
             sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value 
             for sample in samples
