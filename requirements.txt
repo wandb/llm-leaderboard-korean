@@ -17,3 +17,6 @@ scikit-learn>=1.1.0
 # Development dependencies
 pre-commit==4.0.1
 pytest>=7.3.0
+
+# Evaluation dependencies
+wandb==0.21.3
