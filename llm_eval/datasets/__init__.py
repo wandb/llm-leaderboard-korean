@@ -50,3 +50,4 @@ from .kmmlu_pro import KMMLUProDataset
 from .kobalt_700 import KoBALT700Dataset
 from .kmmlu_hard import KMMLUHardDataset
 from .bfcl import BFCLDataset
+from .korean_sat import KoreanSATDataset
