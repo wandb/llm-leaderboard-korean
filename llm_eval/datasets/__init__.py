@@ -46,6 +46,8 @@ from .hrc import HRCDataset
 from .kbl import KBLDataset
 from .kormedqa import KorMedMCQADataset
 from .aime2025 import AIME2025Dataset
-from .korean_sat import KoreanSATDataset
+from .kmmlu_pro import KMMLUProDataset
+from .kobalt_700 import KoBALT700Dataset
+from .kmmlu_hard import KMMLUHardDataset
 from .bfcl import BFCLDataset
-
+from .korean_sat import KoreanSATDataset
