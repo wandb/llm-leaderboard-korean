@@ -39,7 +39,7 @@ class IFEvalKoDataset(BaseDataset):
         base_prompt_template: Optional[str] = None,
         **kwargs
     ):
-        super().__init__(dataset_name, split=split, subset=None, base_prompt_template=base_prompt_template, **kwargs)
+        super().__init__(dataset_name, split=split, base_prompt_template=base_prompt_template, **kwargs)
 
     def load(self) -> List[Dict[str, Any]]:
         """
@@ -62,6 +62,7 @@ class IFEvalKoDataset(BaseDataset):
                 "reference": "",
                 "metadata": {
                     "key": item.get("key"),
+                    "prompt": prompt,
                     "instruction_id_list": item.get("instruction_id_list", []),
                     "kwargs": item.get("kwargs", []),
                 },
@@ -86,6 +87,5 @@ class IFEvalKoDataset(BaseDataset):
             "description": (
                 "IFEval-Ko: Korean instruction-following benchmark. "
                 "Fields: prompt, instruction_id_list, kwargs."
-            ),
-            "evaluation_only": None
+            )
         }
