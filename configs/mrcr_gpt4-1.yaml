@@ -1,0 +1,22 @@
+dataset:
+  name: mrcr
+  split: train
+  params:
+    filename: 2needle.parquet        # 4needle/8needle 등으로 변경 가능
+    dev: false
+model:
+  name: openai
+  params:
+    model_name: gpt-4.1               # 긴 컨텍스트 대응 모델 권장
+    api_base: https://api.openai.com/v1
+    batch_size: 32
+    max_tokens: 10000                # 필요에 맞게 조절
+    temperature: 0.0                 # 일관된 Needle 복원에 권장
+evaluation:
+  method: sequence_match
+  params:
+    prefix_key: random_string_to_prepend
+    require_prefix: true
+    strip_prefix: true
+language_penalize: false             # 필요한 경우 true
+output_file: mrcr_gpt4-1_results.json # 결과 저장 경로

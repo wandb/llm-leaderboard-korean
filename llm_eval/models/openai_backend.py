@@ -269,34 +269,22 @@ class OpenAIModel(BaseModel):
     ) -> List[Dict[str, Any]]:
         """Internal async helper for batch generation."""
         logger.info(f"Starting batch generation for {len(inputs)} items.")
-        results: List[Dict[str, Any]] = []
         async with self.client as client:
-            tasks = [
-                self._send_single_request_async(
-                    client,
-                    item,
-                    return_logits,
-                    until,
-                    cot=cot,
-                    max_retries=max_retries,
-                    **kwargs,
-                )
-                for item in inputs
-            ]
-            for item, task in zip(
-                inputs,
-                tqdm(
-                    asyncio.as_completed(tasks),
-                    total=len(tasks),
-                    desc="Generating outputs",
-                    disable=not show_progress,
-                ),
-            ):
+
+            async def run_single(idx: int, item: Dict[str, Any]):
                 try:
-                    res = await task
+                    res = await self._send_single_request_async(
+                        client,
+                        item,
+                        return_logits,
+                        until,
+                        cot=cot,
+                        max_retries=max_retries,
+                        **kwargs,
+                    )
                     merged = deepcopy(item)
                     merged.update(res)
-                    results.append(merged)
+                    return idx, merged
                 except Exception as e:
                     logger.error(f"OpenAI error: {str(e)}")
                     error_item = deepcopy(item)
@@ -305,7 +293,25 @@ class OpenAIModel(BaseModel):
                         "prediction": None,
                         "finish_reason": "error",
                     })
-                    results.append(error_item)
+                    return idx, error_item
+
+            tasks = [
+                asyncio.create_task(run_single(idx, item))
+                for idx, item in enumerate(inputs)
+            ]
+
+            ordered_results: List[Optional[Dict[str, Any]]] = [None] * len(inputs)
+
+            for future in tqdm(
+                asyncio.as_completed(tasks),
+                total=len(tasks),
+                desc="Generating outputs",
+                disable=not show_progress,
+            ):
+                idx, merged = await future
+                ordered_results[idx] = merged
+
+            results = [res for res in ordered_results if res is not None]
         logger.info("Batch generation completed.")
         return results
 
