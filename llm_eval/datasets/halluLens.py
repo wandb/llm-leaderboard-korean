@@ -14,7 +14,7 @@ logger = get_logger(name="HalluLens", level=logging.INFO)
 
 
 @register_dataset("halluLens")
-class KoHalluLensDataset(BaseDataset):
+class HalluLensDataset(BaseDataset):
     def __init__(self, subset: Optional[List[str]] = None, split: str = "test", **kwargs):
         """
         This dataset class downloads and loads the HalluLens dataset from Weights & Biases (wandb) artifacts.
