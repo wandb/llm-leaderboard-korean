@@ -118,7 +118,7 @@ langchain-core==0.3.68
 langchain-google-genai==2.0.10
 langchain-mistralai==0.2.10
 langchain-openai==0.3.27
-langchain-text-splitters==0.3.8
+langchain-text-splitters==1.0.0a1
 langsmith==0.4.4
 lark==1.2.2
 launchpadlib==1.10.16
