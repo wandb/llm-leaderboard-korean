@@ -56,6 +56,8 @@ class IFEvalStrictEvaluator(BaseEvaluator):
         else:
             metrics["instruction_level_strict_accuracy"] = 0.0
 
+        metrics["AVG"] = (metrics["prompt_level_strict_accuracy"] + metrics["instruction_level_strict_accuracy"]) / 2
+
         return metrics
 
 
@@ -108,5 +110,7 @@ class IFEvalLooseEvaluator(BaseEvaluator):
             metrics["instruction_level_loose_accuracy"] = inst_correct / inst_total
         else:
             metrics["instruction_level_loose_accuracy"] = 0.0
+
+        metrics["AVG"] = (metrics["prompt_level_loose_accuracy"] + metrics["instruction_level_loose_accuracy"]) / 2
 
         return metrics
