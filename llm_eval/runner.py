@@ -630,16 +630,22 @@ class PipelineRunner:
 
     def _log_to_wandb(self, result: EvaluationResult) -> None:
         import wandb
+        import pandas as pd
         """Log evaluation summary to Weights & Biases if configured."""
         table_name = self.config.dataset_name + "_" + self.config.dataset_params.get("task")+"_leaderboard_table"
-
-        table = wandb.Table(columns = ["model_name", "AVG"])
-        table.add_data(self.config.model_backend_params.get("model_name"), result.metrics.get("AVG"))
+        data = {k: result.metrics.get(k) for k in {"model_name", "AVG", *result.metrics.keys()}}
+        data["model_name"] = self.config.model_backend_params.get("model_name")
+        df = pd.DataFrame([data])
+        
+        cols = ["model_name", "AVG"] + sorted([c for c in df.columns if c not in ["model_name", "AVG"]])
+        df = df[cols]
+        leaderboard_table = wandb.Table(dataframe=df)
         with wandb.init(
             entity=self.config.wandb_params.get("entity"),
             project=self.config.wandb_params.get("project"),
+            name=self.config.model_backend_params.get("model_name")
             ) as run:
-            run.log({table_name: table})
+            run.log({table_name: leaderboard_table})
 
     def _create_error_result(self, error_msg: str) -> EvaluationResult:
         """Create an error result for pipeline failures."""
