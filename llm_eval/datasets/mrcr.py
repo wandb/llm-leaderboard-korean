@@ -40,7 +40,7 @@ system/user/assistant 역할 정보를 활용한 프롬프트 구성에 참고�
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from datasets import load_dataset
 
@@ -52,6 +52,24 @@ DEFAULT_REPO_ID = "openai/mrcr"
 DEFAULT_FILENAME = "default.parquet"
 
 
+TOKEN_BUCKETS: Dict[str, Tuple[int, int]] = {
+    "4k": (4096, 8192),
+    "8k": (8192, 16384),
+    "16k": (16384, 32768),
+    "32k": (32768, 65536),
+    "128k": (65536, 131072),  # OpenAI MRCR naming convention
+    "256k": (131072, 262144),
+    "512k": (262144, 524288),
+    "1m": (524288, 1048576),
+}
+
+
+try:  # Optional dependency for precise token counting
+    import tiktoken  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    tiktoken = None  # type: ignore
+
+
 @register_dataset("mrcr")
 class MRCRDataset(BaseDataset):
     """MRCR 벤치마크용 데이터셋 로더."""
@@ -61,12 +79,46 @@ class MRCRDataset(BaseDataset):
         dataset_name: str = DEFAULT_REPO_ID,
         split: str = "train",
         filename: str = DEFAULT_FILENAME,
+        token_scale: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         # MRCR은 subset 개념이 없으므로 BaseDataset.subset은 사용하지 않는다.
         self.dev_mode = kwargs.pop("dev", False)
         super().__init__(dataset_name, split=split, **kwargs)
         self.filename = filename
+        self.token_scale = token_scale.lower() if token_scale else None
+        if self.token_scale and self.token_scale not in TOKEN_BUCKETS:
+            valid = ", ".join(sorted(TOKEN_BUCKETS))
+            raise ValueError(
+                f"Unsupported token_scale '{token_scale}'. Choose one of: {valid}"
+            )
+        self._encoder = None
+
+    def _get_token_bounds(self) -> Optional[Tuple[int, int]]:
+        if not self.token_scale:
+            return None
+        return TOKEN_BUCKETS[self.token_scale]
+
+    def _ensure_encoder(self) -> None:
+        if self._encoder is not None:
+            return
+        if tiktoken is None:
+            raise ImportError(
+                "token_scale filtering requires the 'tiktoken' package."
+                " Install via 'pip install tiktoken'."
+            )
+        self._encoder = tiktoken.get_encoding("o200k_base")
+
+    def _count_tokens(self, messages: List[Dict[str, Any]]) -> int:
+        self._ensure_encoder()
+        assert self._encoder is not None
+        count = 0
+        for message in messages:
+            content = message.get("content", "")
+            if not isinstance(content, str):
+                content = str(content)
+            count += len(self._encoder.encode(content))
+        return count
 
     def load(self) -> List[Dict[str, Any]]:
         """HF Hub에서 MRCR Parquet 파일을 불러와 파이프라인 표준 포맷으로 변환."""
@@ -79,6 +131,8 @@ class MRCRDataset(BaseDataset):
         )
 
         samples: List[Dict[str, Any]] = []
+        token_bounds = self._get_token_bounds()
+
         for row in dataset:
             prompt_raw = row.get("prompt")
             answer = row.get("answer", "")
@@ -91,15 +145,24 @@ class MRCRDataset(BaseDataset):
             except json.JSONDecodeError as exc:
                 raise ValueError("Failed to parse MRCR prompt JSON") from exc
 
+            token_count = None
+            if token_bounds:
+                token_count = self._count_tokens(messages)
+                lower, upper = token_bounds
+                if not (lower <= token_count <= upper):
+                    continue
+
             metadata = {
                 "random_string_to_prepend": row.get("random_string_to_prepend", ""),
                 "n_needles": row.get("n_needles"),
                 "desired_msg_index": row.get("desired_msg_index"),
                 "total_messages": row.get("total_messages"),
                 "n_chars": row.get("n_chars"),
-                "bin_index": row.get("bin_index"),
                 "filename": self.filename,
             }
+            if token_count is not None:
+                metadata["token_count"] = token_count
+                metadata["token_bounds"] = token_bounds
 
             # 예제 스크립트와 동일하게 messages 자체를 모델에 사용하고,
             # input에는 JSON 문자열 형태로 보관하여 로깅 및 few-shot 로직과 호환되도록 한다.
@@ -112,7 +175,7 @@ class MRCRDataset(BaseDataset):
 
             samples.append(sample)
 
-            if self.dev_mode and len(samples) >= 2:
+            if self.dev_mode and len(samples) >= 10:
                 break
 
         return samples
