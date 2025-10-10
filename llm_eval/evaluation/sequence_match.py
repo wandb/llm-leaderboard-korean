@@ -102,6 +102,8 @@ class SequenceMatchEvaluator(BaseEvaluator):
 
         if self.prefix_key:
             metrics["sequence_match_prefix_miss_rate"] = prefix_miss / len(samples)
+        
+        metrics["AVG"] = avg_ratio
 
         return metrics
 
