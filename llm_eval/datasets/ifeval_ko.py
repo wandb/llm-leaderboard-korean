@@ -39,6 +39,7 @@ class IFEvalKoDataset(BaseDataset):
         base_prompt_template: Optional[str] = None,
         **kwargs
     ):
+        self.dev_mode = kwargs.pop("dev", False)
         super().__init__(dataset_name, split=split, base_prompt_template=base_prompt_template, **kwargs)
 
     def load(self) -> List[Dict[str, Any]]:
@@ -48,6 +49,9 @@ class IFEvalKoDataset(BaseDataset):
         """
         raw_data = load_dataset(self.dataset_name, split=self.split, **self.kwargs)
         result: List[Dict[str, Any]] = []
+
+        if self.dev_mode:
+            raw_data = raw_data.select(range(min(2, len(raw_data))))
 
         for item in raw_data:
             prompt = str(item.get("prompt", "")).strip()
