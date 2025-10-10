@@ -79,32 +79,32 @@ class MRCRDataset(BaseDataset):
         dataset_name: str = DEFAULT_REPO_ID,
         split: str = "train",
         filename: str = DEFAULT_FILENAME,
-        token_scale: Optional[str] = None,
+        task: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         # MRCR은 subset 개념이 없으므로 BaseDataset.subset은 사용하지 않는다.
         self.dev_mode = kwargs.pop("dev", False)
         super().__init__(dataset_name, split=split, **kwargs)
         self.filename = filename
-        self.token_scale = token_scale.lower() if token_scale else None
-        if self.token_scale and self.token_scale not in TOKEN_BUCKETS:
+        self.task = task.lower() if task else None
+        if self.task and self.task not in TOKEN_BUCKETS:
             valid = ", ".join(sorted(TOKEN_BUCKETS))
             raise ValueError(
-                f"Unsupported token_scale '{token_scale}'. Choose one of: {valid}"
+                f"Unsupported task '{task}'. Choose one of: {valid}"
             )
         self._encoder = None
 
     def _get_token_bounds(self) -> Optional[Tuple[int, int]]:
-        if not self.token_scale:
+        if not self.task:
             return None
-        return TOKEN_BUCKETS[self.token_scale]
+        return TOKEN_BUCKETS[self.task]
 
     def _ensure_encoder(self) -> None:
         if self._encoder is not None:
             return
         if tiktoken is None:
             raise ImportError(
-                "token_scale filtering requires the 'tiktoken' package."
+                "task filtering requires the 'tiktoken' package."
                 " Install via 'pip install tiktoken'."
             )
         self._encoder = tiktoken.get_encoding("o200k_base")
@@ -175,7 +175,7 @@ class MRCRDataset(BaseDataset):
 
             samples.append(sample)
 
-            if self.dev_mode and len(samples) >= 10:
+            if self.dev_mode and len(samples) >= 2:
                 break
 
         return samples
