@@ -110,3 +110,11 @@ class IFEvalKoDataset(BaseDataset):
                 "Fields: prompt, instruction_id_list, kwargs."
             )
         }
+
+if __name__ == "__main__":
+    # create artifact
+    ifeval = IFEvalKoDataset()
+    ifeval.create_artifact()
+    # load dataset
+    dt = ifeval.load()
+    print(dt)
