@@ -16,3 +16,4 @@ __pycache__/
 llm_eval/datasets/bfcl/
 
 wandb/
+artifacts/

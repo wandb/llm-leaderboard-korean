@@ -1,7 +1,8 @@
 from typing import List, Dict, Any, Optional
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from .base import BaseDataset
 from . import register_dataset
+import wandb
 
 @register_dataset("ifeval_ko")
 class IFEvalKoDataset(BaseDataset):
@@ -42,12 +43,28 @@ class IFEvalKoDataset(BaseDataset):
         self.dev_mode = kwargs.pop("dev", False)
         super().__init__(dataset_name, split=split, base_prompt_template=base_prompt_template, **kwargs)
 
+    def create_artifact(self):
+        with wandb.init(entity="horangi", project="horangi4-dataset") as run:
+            raw_data = load_dataset(self.dataset_name, split=self.split, **self.kwargs)
+            raw_data.save_to_disk("./ifeval_ko")
+            artifact = wandb.Artifact("ifeval_ko", type="dataset")
+            artifact.add_dir("./ifeval_ko")
+            run.log_artifact(artifact)
+
+    def load_artifact(self):
+        with wandb.init(entity="horangi", project="horangi4-dataset") as run:
+            artifact = run.use_artifact('horangi/horangi4-dataset/ifeval_ko:latest', type='dataset')
+            artifact_dir = artifact.download()
+            raw_data = load_from_disk(artifact_dir)
+            return raw_data
+
     def load(self) -> List[Dict[str, Any]]:
         """
         Load HF dataset and convert to standardized format:
         [{"input": ..., "reference": "", "metadata": {...}}, ...]
         """
-        raw_data = load_dataset(self.dataset_name, split=self.split, **self.kwargs)
+        # raw_data = load_dataset(self.dataset_name, split=self.split, **self.kwargs)
+        raw_data = self.load_artifact()
         result: List[Dict[str, Any]] = []
 
         if self.dev_mode:
