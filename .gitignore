@@ -1,6 +1,7 @@
 /.venv
 /venv
 __pycache__/
+.env
 
 # Build artifacts
 build/
@@ -14,4 +15,6 @@ __pycache__/
 # BFCL dataset folder
 llm_eval/datasets/bfcl/
 
+# WandB
 wandb/
+artifacts/
