@@ -1,4 +1,5 @@
 import asyncio
+import threading
 import json
 import logging
 import time
@@ -63,6 +64,7 @@ class OpenAIModel(BaseModel):
         max_retries: int = 3,
         timeout: Optional[float] = 30.0,
         cot: bool = False,
+        sequential_mode: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -75,6 +77,7 @@ class OpenAIModel(BaseModel):
         self.max_retries = max_retries
         self.timeout = timeout
         self.cot = cot
+        self.sequential_mode = sequential_mode
 
         self.model_name = model_name
         self.system_message = system_message
@@ -269,34 +272,22 @@ class OpenAIModel(BaseModel):
     ) -> List[Dict[str, Any]]:
         """Internal async helper for batch generation."""
         logger.info(f"Starting batch generation for {len(inputs)} items.")
-        results: List[Dict[str, Any]] = []
         async with self.client as client:
-            tasks = [
-                self._send_single_request_async(
-                    client,
-                    item,
-                    return_logits,
-                    until,
-                    cot=cot,
-                    max_retries=max_retries,
-                    **kwargs,
-                )
-                for item in inputs
-            ]
-            for item, task in zip(
-                inputs,
-                tqdm(
-                    asyncio.as_completed(tasks),
-                    total=len(tasks),
-                    desc="Generating outputs",
-                    disable=not show_progress,
-                ),
-            ):
+
+            async def run_single(idx: int, item: Dict[str, Any]):
                 try:
-                    res = await task
+                    res = await self._send_single_request_async(
+                        client,
+                        item,
+                        return_logits,
+                        until,
+                        cot=cot,
+                        max_retries=max_retries,
+                        **kwargs,
+                    )
                     merged = deepcopy(item)
                     merged.update(res)
-                    results.append(merged)
+                    return idx, merged
                 except Exception as e:
                     logger.error(f"OpenAI error: {str(e)}")
                     error_item = deepcopy(item)
@@ -305,7 +296,34 @@ class OpenAIModel(BaseModel):
                         "prediction": None,
                         "finish_reason": "error",
                     })
-                    results.append(error_item)
+                    return idx, error_item
+
+            ordered_results: List[Optional[Dict[str, Any]]] = [None] * len(inputs)
+
+            if self.sequential_mode:
+                iterator = enumerate(inputs)
+            else:
+                tasks = [
+                    asyncio.create_task(run_single(idx, item))
+                    for idx, item in enumerate(inputs)
+                ]
+                iterator = enumerate(
+                    tqdm(
+                        asyncio.as_completed(tasks),
+                        total=len(tasks),
+                        desc="Generating outputs",
+                        disable=not show_progress,
+                    )
+                )
+
+            for idx, entry in tqdm(iterator, total=len(inputs), desc="Generating outputs", disable=not show_progress):
+                if self.sequential_mode:
+                    res_idx, merged = await run_single(idx, entry)
+                else:
+                    res_idx, merged = await entry
+                ordered_results[res_idx] = merged
+
+            results = [res for res in ordered_results if res is not None]
         logger.info("Batch generation completed.")
         return results
 
@@ -320,8 +338,8 @@ class OpenAIModel(BaseModel):
         **kwargs,
     ) -> List[Dict[str, Any]]:
         """Public API for batch generation using asyncio."""
-        return asyncio.run(
-            self._generate_batch_async(
+        async def runner() -> List[Dict[str, Any]]:
+            return await self._generate_batch_async(
                 inputs,
                 return_logits=return_logits,
                 until=until,
@@ -330,4 +348,26 @@ class OpenAIModel(BaseModel):
                 show_progress=show_progress,
                 **kwargs,
             )
-        )
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(runner())
+
+        result_container: Dict[str, Any] = {}
+        exception_container: Dict[str, BaseException] = {}
+
+        def run_in_thread() -> None:
+            try:
+                result_container["result"] = asyncio.run(runner())
+            except BaseException as exc:  # pragma: no cover - defensive catch
+                exception_container["exception"] = exc
+
+        thread = threading.Thread(target=run_in_thread, name="OpenAIModelAsyncRunner")
+        thread.start()
+        thread.join()
+
+        if exception_container:
+            raise exception_container["exception"]
+
+        return result_container["result"]
