@@ -119,6 +119,7 @@ class Evaluator:
         evaluation_method: Optional[str] = None,
         dataset_params: Optional[Dict[str, Any]] = None,
         model_params: Optional[Dict[str, Any]] = None,
+        wandb_params: Optional[Dict[str, Any]] = None,
         judge_params: Optional[Dict[str, Any]] = None,
         reward_params: Optional[Dict[str, Any]] = None,
         scaling_params: Optional[Dict[str, Any]] = None,
@@ -151,6 +152,7 @@ class Evaluator:
             evaluation_method (Optional[str]): Evaluation method name (registry key).
             dataset_params (Optional[Dict[str, Any]]): Additional parameters for dataset loading.
             model_params (Optional[Dict[str, Any]]): Additional parameters for the main model.
+            wandb_params (Optional[Dict[str, Any]]): Additional parameters for the wandb.
             judge_params (Optional[Dict[str, Any]]): Additional parameters for the judge model.
             reward_params (Optional[Dict[str, Any]]): Additional parameters for the reward model.
             scaling_params (Optional[Dict[str, Any]]): Additional parameters for the scaling method.
@@ -218,6 +220,7 @@ class Evaluator:
                 split=final_split,
                 model_backend_name=runner_model_backend_name,
                 model_backend_params=runner_model_backend_params,
+                wandb_params=wandb_params or {},
                 scaling_method_name=final_scaling,
                 scaling_params=scaling_params or {},
                 evaluation_method_name=final_eval_method,
@@ -272,6 +275,7 @@ def run_from_config(config_path: str) -> EvaluationResult:
 
     dataset_cfg = config.get("dataset", {})
     model_cfg = config.get("model", {})
+    wandb_cfg = config.get("wandb", {})
     judge_cfg = config.get("judge_model", {})
     reward_cfg = config.get("reward_model", {})
     scaling_cfg = config.get("scaling", {})
@@ -311,6 +315,7 @@ def run_from_config(config_path: str) -> EvaluationResult:
         reward_params=reward_cfg.get("params"),
         scaling_params=scaling_cfg.get("params"),
         evaluator_params=eval_cfg.get("params"),
+        wandb_params=wandb_cfg.get("params"),
         language_penalize=config.get("language_penalize", True),
         target_lang=config.get("target_lang", "ko"),
         custom_cot_parser=config.get("custom_cot_parser"),

@@ -46,6 +46,7 @@ class PipelineConfig:
     evaluation_method_name: str = "string_match"
     dataset_params: Optional[Dict[str, Any]] = None
     model_backend_params: Optional[Dict[str, Any]] = None
+    wandb_params: Optional[Dict[str, Any]] = None
     scaling_params: Optional[Dict[str, Any]] = None
     evaluator_params: Optional[Dict[str, Any]] = None
     language_penalize: bool = True
@@ -60,6 +61,7 @@ class PipelineConfig:
         """Validate and normalize configuration after initialization."""
         self.dataset_params = self.dataset_params or {}
         self.model_backend_params = self.model_backend_params or {}
+        self.wandb_params = self.wandb_params or {}
         self.scaling_params = self.scaling_params or {}
         self.evaluator_params = self.evaluator_params or {}
         
@@ -419,6 +421,7 @@ class PipelineRunner:
         evaluation_method_name: str = "string_match",
         dataset_params: Optional[Dict[str, Any]] = None,
         model_backend_params: Optional[Dict[str, Any]] = None,
+        wandb_params: Optional[Dict[str, Any]] = None,
         scaling_params: Optional[Dict[str, Any]] = None,
         evaluator_params: Optional[Dict[str, Any]] = None,
         language_penalize: bool = True,
@@ -461,6 +464,7 @@ class PipelineRunner:
             evaluation_method_name=evaluation_method_name,
             dataset_params=dataset_params,
             model_backend_params=model_backend_params,
+            wandb_params=wandb_params,
             scaling_params=scaling_params,
             evaluator_params=evaluator_params,
             language_penalize=language_penalize,
@@ -599,11 +603,14 @@ class PipelineRunner:
         existing_info = eval_dict.get("info", {})
         merged_info = {**existing_info, **pipeline_info}
 
-        return EvaluationResult(
+        result = EvaluationResult(
             metrics=eval_dict.get("metrics", {}),
             samples=final_samples,
             info=merged_info
         )
+
+        self._log_to_wandb(result)
+        return result
 
     def _create_empty_result(self, few_shot_prefix: str, error_msg: str) -> EvaluationResult:
         """Create an empty result for cases with no evaluation samples."""
@@ -620,6 +627,25 @@ class PipelineRunner:
                 "error": error_msg
             }
         )
+
+    def _log_to_wandb(self, result: EvaluationResult) -> None:
+        import wandb
+        import pandas as pd
+        """Log evaluation summary to Weights & Biases if configured."""
+        table_name = self.config.dataset_name + "_" + self.config.dataset_params.get("task")+"_leaderboard_table"
+        data = {k: result.metrics.get(k) for k in {"model_name", "AVG", *result.metrics.keys()}}
+        data["model_name"] = self.config.model_backend_params.get("model_name")
+        df = pd.DataFrame([data])
+        
+        cols = ["model_name", "AVG"] + sorted([c for c in df.columns if c not in ["model_name", "AVG"]])
+        df = df[cols]
+        leaderboard_table = wandb.Table(dataframe=df)
+        with wandb.init(
+            entity=self.config.wandb_params.get("entity"),
+            project=self.config.wandb_params.get("project"),
+            name=self.config.model_backend_params.get("model_name")
+            ) as run:
+            run.log({table_name: leaderboard_table})
 
     def _create_error_result(self, error_msg: str) -> EvaluationResult:
         """Create an error result for pipeline failures."""
