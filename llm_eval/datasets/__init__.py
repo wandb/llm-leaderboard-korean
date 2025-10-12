@@ -51,5 +51,6 @@ from .kobalt_700 import KoBALT700Dataset
 from .kmmlu_hard import KMMLUHardDataset
 from .bfcl import BFCLDataset
 from .korean_sat import KoreanSATDataset
+from .ifeval_ko import IFEvalKoDataset
 from .mrcr import MRCRDataset
 from .halluLens import HalluLensDataset

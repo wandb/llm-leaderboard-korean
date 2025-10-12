@@ -39,4 +39,5 @@ from .llm_judge import LLMJudgeEvaluator
 from .math_eval import MathMatchEvaluator
 from .partial_match import PartialMatchEvaluator
 from .log_prob import LogProbEvaluator
+from .ifeval import IFEvalStrictEvaluator, IFEvalLooseEvaluator
 from .sequence_match import SequenceMatchEvaluator
