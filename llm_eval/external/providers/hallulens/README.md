@@ -24,7 +24,7 @@
   - **(한국어) 데이터 다운로드**
 
       - **⭐️ 중요\!\!**: `donwload.sh`로 데이터 다운로드 시 `.db` 파일이 정상적으로 받아지지 않을 수 있습니다.
-      - `script/download_data.sh` 스크립트로 다운로드를 시도하거나, **[이 링크](https://www.google.com/search?q=%EC%88%98%EB%8F%99_%EB%8B%A4%EC%9A%B4%EB%A1%9C%EB%93%9C_%EB%A7%81%ED%81%AC_%EC%82%BD%EC%9E%85)** 에서 직접 다운로드해 주세요.
+      - 실패시 **[이 링크](https://drive.google.com/uc?id=1mekls6OGOKLmt7gYtHs0WGf5oTamTNat)** 에서 직접 다운로드해 주세요.  20GB로 매우 큽니다. 
       - 다운로드한 파일은 반드시 다음 경로에 저장해야 합니다.
           - **경로**: `llm_eval/external/providers/hallulens/data/wiki_data/.cache/enwiki-20230401.db`
 
