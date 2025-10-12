@@ -13,7 +13,7 @@ model:
     batch_size: 32
     max_tokens: 10000                # 필요에 맞게 조절
     temperature: 0.0                 # 일관된 Needle 복원에 권장
-    sequential_mode: true
+    sequential_mode: false
 evaluation:
   method: sequence_match
   params:
