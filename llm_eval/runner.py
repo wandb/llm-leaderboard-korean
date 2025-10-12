@@ -632,7 +632,7 @@ class PipelineRunner:
         import wandb
         import pandas as pd
         """Log evaluation summary to Weights & Biases if configured."""
-        table_name = self.config.dataset_name + "_" + self.config.dataset_params.get("task")+"_leaderboard_table"
+        table_name = self.config.dataset_name + "_leaderboard_table"
         data = {k: result.metrics.get(k) for k in {"model_name", "AVG", *result.metrics.keys()}}
         data["model_name"] = self.config.model_backend_params.get("model_name")
         df = pd.DataFrame([data])
