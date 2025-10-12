@@ -9,7 +9,7 @@ import os
 import argparse
 import subprocess
 # from datasets import load_dataset
-from data.wiki_data.wikidata import wikiData
+from llm_eval.external.providers.hallulens.data.wiki_data.wikidata import wikiData
 ################################################################################
 WIKI_DATA_PATH = f"data/wiki_data"
 REFUSAL_PATH = "data/nonexistent_refusal"
