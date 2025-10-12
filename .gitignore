@@ -15,5 +15,6 @@ __pycache__/
 # BFCL dataset folder
 llm_eval/datasets/bfcl/
 
+# WandB
 wandb/
 artifacts/
