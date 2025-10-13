@@ -79,13 +79,6 @@ class KoreanSATDataset(BaseDataset):
 
         return sample
 
-    def info(self):
-        return {
-            "description": "Korean SAT dataset from 2015-2025",
-            "evaluation_only": None,
-            "citation": "Korean SAT dataset",
-        }
-
     def get_raw_samples(self):
         run = wandb.init()
         artifact = run.use_artifact(WANDB_PROJECT_NAME, type='dataset')
