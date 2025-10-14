@@ -123,7 +123,7 @@ class SequenceMatchEvaluator(BaseEvaluator):
             for sname, st in subset_stats.items():
                 cnt = st["count"]
                 s_avg = (st["sum_ratio"] / cnt) if cnt > 0 else 0.0
-                metrics[f"{sname}/AVG"] = s_avg
+                metrics[f"{sname}/sequence_match_score"] = s_avg
         return metrics
 
     @staticmethod

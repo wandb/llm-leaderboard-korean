@@ -310,11 +310,11 @@ class LLMJudgeEvaluator(BaseEvaluator):
                 avg_score = st["sum_score"] / denom if st["sum_score"] > 0 else None
                 acc = st["correct"] / denom if st["correct"] > 0 else None
                 if avg_score is not None:
-                    metrics[f"{sname}/AVG"] = avg_score
+                    metrics[f"{sname}/average_judge_score"] = avg_score
                 elif acc is not None:
-                    metrics[f"{sname}/AVG"] = acc
+                    metrics[f"{sname}/judge_accuracy"] = acc
                 else:
-                    metrics[f"{sname}/AVG"] = 0.0
+                    metrics[f"{sname}/judge_accuracy"] = 0.0
 
         # 전체 AVG는 항상 포함: 점수 평균 우선, 없으면 정확도, 없으면 0.0
         if score_count > 0:

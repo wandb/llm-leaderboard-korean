@@ -93,7 +93,7 @@ class IFEvalStrictEvaluator(BaseEvaluator):
                 s_prompt_acc = (st["prompt_correct"] / st["total_prompts"]) if st["total_prompts"] > 0 else 0.0
                 s_inst_acc = (st["inst_correct"] / st["inst_total"]) if st["inst_total"] > 0 else 0.0
                 s_avg = (s_prompt_acc + s_inst_acc) / 2
-                metrics[f"{sname}/AVG"] = s_avg
+                metrics[f"{sname}/strict_accuracy"] = s_avg
 
         return metrics
 
@@ -184,6 +184,6 @@ class IFEvalLooseEvaluator(BaseEvaluator):
                 s_prompt_acc = (st["prompt_correct"] / st["total_prompts"]) if st["total_prompts"] > 0 else 0.0
                 s_inst_acc = (st["inst_correct"] / st["inst_total"]) if st["inst_total"] > 0 else 0.0
                 s_avg = (s_prompt_acc + s_inst_acc) / 2
-                metrics[f"{sname}/AVG"] = s_avg
+                metrics[f"{sname}/loose_accuracy"] = s_avg
 
         return metrics
