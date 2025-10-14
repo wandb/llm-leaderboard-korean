@@ -549,7 +549,6 @@ class PipelineRunner:
                 WeaveSampleLogger.log_samples(
                     op_name=(self.config.model_backend_params or {}).get("model_name") or self.config.model_backend_name,
                     dataset_name=self.config.dataset_name,
-                    subset_name=self.config.subset,
                     samples=eval_dict.get("samples", []) or [],
                 )
             except Exception:
