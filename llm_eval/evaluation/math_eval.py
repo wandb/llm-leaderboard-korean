@@ -220,5 +220,5 @@ class MathMatchEvaluator(BaseEvaluator):
                 s_total = st["total"]
                 s_correct = st["correct"]
                 s_acc = (s_correct / s_total) if s_total > 0 else 0.0
-                metrics[f"{sname}/AVG"] = s_acc
+                metrics[f"{sname}/accuracy"] = s_acc
         return metrics

@@ -81,7 +81,7 @@ class CharF1Evaluator(BaseEvaluator):
             for sname, st in stats.items():
                 if sname == "all":
                     continue
-                metrics[f"{sname}/AVG"] = st["sum_f1"] / st["count"] if st["count"] > 0 else 0.0
+                metrics[f"{sname}/char_f1"] = st["sum_f1"] / st["count"] if st["count"] > 0 else 0.0
 
         return metrics
 
