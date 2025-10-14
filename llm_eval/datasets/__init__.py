@@ -54,3 +54,5 @@ from .korean_sat import KoreanSATDataset
 from .ifeval_ko import IFEvalKoDataset
 from .mrcr import MRCRDataset
 from .halluLens import HalluLensDataset
+from .squad_kor_v1 import SQuADKorV1
+from .haerae_v1 import HaeraeDatasetV1
