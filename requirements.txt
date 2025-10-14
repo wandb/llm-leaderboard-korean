@@ -13,6 +13,7 @@ vllm>=0.4.0
 accelerate>=0.20.0
 spacy>=3.4.0
 scikit-learn>=1.1.0
+fuzzywuzzy>=0.18.0
 
 # Development dependencies
 pre-commit==4.0.1
