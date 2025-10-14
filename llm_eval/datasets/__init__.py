@@ -57,3 +57,4 @@ from .halluLens import HalluLensDataset
 from .squad_kor_v1 import SQuADKorV1
 from .haerae_v1 import HaeraeDatasetV1
 from .kobbq import KobbqDataset
+from .komoral import KomoralDataset
