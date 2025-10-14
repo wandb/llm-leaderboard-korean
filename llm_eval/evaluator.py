@@ -109,7 +109,6 @@ class Evaluator:
         self.default_few_shot_example_template = default_few_shot_example_template
         logger.debug(f"Evaluator initialized with default few-shot params: num={self.default_num_few_shot}, split='{self.default_few_shot_split}'")
 
-    @weave.op()
     def run(
         self,
         model: Optional[str] = None,

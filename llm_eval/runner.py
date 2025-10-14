@@ -13,6 +13,7 @@ This module encapsulates the entire LLM evaluation pipeline:
 This runner can be used via CLI or integrated into an API.
 """
 
+import weave
 import logging
 import time
 from dataclasses import dataclass
@@ -34,6 +35,24 @@ from llm_eval.utils.metrics import language_penalizer
 
 logger = get_logger(name="runner", level=logging.INFO)
 
+
+def make_log_inference_item_op(op_name: str):
+    """Create a per-sample logger op with a dynamic display name (op name).
+
+    The returned callable has signature:
+        (item: Dict[str, Any], dataset_name: str, subset_name: Any, model_name: str) -> Dict[str, Any]
+    so dataset/subset/model are captured as Inputs in Weave without mutating the item.
+    """
+    @weave.op(name=op_name)
+    def _dynamic_log_inference_item(
+        model_name: str,
+        dataset_name: str,
+        subset_name: Any,
+        item: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        return item
+
+    return _dynamic_log_inference_item
 
 @dataclass
 class PipelineConfig:
@@ -396,7 +415,24 @@ class InferenceEngine:
                 predictions = self.components.model.generate_batch(samples)
             
             logger.info(f"Inference completed for {len(predictions)} items.")
-            return predictions
+            # Log each prediction as its own weave trace for backend-agnostic per-sample tracing
+            try:
+                ds_name = self.components.config.dataset_name
+                subset = self.components.config.subset
+                # Prefer concrete model identifier from backend params, fallback to backend name
+                model_display_name = (
+                    (self.components.config.model_backend_params or {}).get("model_name")
+                    or self.components.config.model_backend_name
+                )
+
+                dynamic_logger = make_log_inference_item_op(op_name=str(model_display_name))
+                return [
+                    dynamic_logger(p, ds_name, subset, model_display_name)
+                    for p in predictions
+                ]
+            except Exception:
+                # Fallback to original predictions if logging fails
+                return predictions
             
         except Exception as e:
             logger.error(f"Error during model inference or scaling: {e}", exc_info=True)
