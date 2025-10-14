@@ -5,7 +5,7 @@ wandb:
     project: horangi4-dev
 
 # testmode configurations
-testmode: false
+testmode: true
 
 # dataset configurations
 kobalt_700:
@@ -25,57 +25,57 @@ hrm8k:
   evaluation:
     method: math_match
 
-# kmmlu:
-#   split: test
-#   evaluation:
-#     method: string_match
+kmmlu:
+  split: test
+  evaluation:
+    method: string_match
     
-# kmmlu_pro:
-#   split: test
-#   evaluation:
-#     method: string_match
+kmmlu_pro:
+  split: test
+  evaluation:
+    method: string_match
 
-# kmmlu_hard:
-#   split: test
-#   evaluation:
-#     method: string_match
+kmmlu_hard:
+  split: test
+  evaluation:
+    method: string_match
 
-# haerae_bench_v1:
-#   subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history, reading_comprehension]
-#   split: test
-#   evaluation:
-#     method: string_match
+haerae_bench_v1:
+  subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history, reading_comprehension]
+  split: test
+  evaluation:
+    method: string_match
 
-# komoral:
-#   split: validation
-#   evaluation:
-#     method: string_match
+komoral:
+  split: validation
+  evaluation:
+    method: string_match
 
-# kobbq:
-#   split: test
-#   evaluation:
-#     method: string_match
+kobbq:
+  split: test
+  evaluation:
+    method: string_match
 
-# squad_kor_v1:
-#   split: validation
-#   evaluation:
-#     method: char_f1
+squad_kor_v1:
+  split: validation
+  evaluation:
+    method: char_f1
 
-# ifeval_ko:
-#   split: train
-#   evaluation:
-#     method: ifeval_strict
+ifeval_ko:
+  split: train
+  evaluation:
+    method: ifeval_strict
 
-# mrcr:
-#   split: train
-#   params:
-#     filename: 2needle.parquet        # 4needle/8needle 등으로 변경 가능
-#     dev: false
-#     task: 128k                # 예: 128k, 256k, 1m 등
-#   evaluation:
-#     method: sequence_match
-#     params:
-#       prefix_key: random_string_to_prepend
-#       require_prefix: true
-#       strip_prefix: true
+mrcr:
+  split: train
+  params:
+    filename: 2needle.parquet        # 4needle/8needle 등으로 변경 가능
+    dev: false
+    task: 128k                # 예: 128k, 256k, 1m 등
+  evaluation:
+    method: sequence_match
+    params:
+      prefix_key: random_string_to_prepend
+      require_prefix: true
+      strip_prefix: true
 
