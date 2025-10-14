@@ -32,7 +32,7 @@ from llm_eval.utils.prompt_template import (
     DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
 )
 from llm_eval.utils.metrics import language_penalizer
-from llm_eval.wandb_controller import WeaveSampleLogger
+from llm_eval.wandb_controller import WeaveSampleLogger, WeaveEvalsController
 
 logger = get_logger(name="runner", level=logging.INFO)
 
@@ -544,15 +544,35 @@ class PipelineRunner:
             # Step 5: Apply language penalization if enabled
             self.language_penalizer.apply_penalization(eval_dict)
 
-            # Step 5.5: Log evaluated samples so evaluation columns appear in Weave per-sample traces
-            try:
-                WeaveSampleLogger.log_samples(
-                    op_name=(self.config.model_backend_params or {}).get("model_name") or self.config.model_backend_name,
-                    dataset_name=self.config.dataset_name,
-                    samples=eval_dict.get("samples", []) or [],
-                )
-            except Exception:
-                pass
+            # # Step 5.5: Log evaluated samples so evaluation columns appear in Weave per-sample traces
+            # try:
+            #     WeaveSampleLogger.log_samples(
+            #         op_name=(self.config.model_backend_params or {}).get("model_name") or self.config.model_backend_name,
+            #         dataset_name=self.config.dataset_name,
+            #         samples=eval_dict.get("samples", []) or [],
+            #     )
+            # except Exception:
+            #     pass
+
+            # Step 5.6: Log to Weave Evals using EvaluationLogger via controller
+            # try:
+            WeaveEvalsController.log(
+                dataset_name=self.config.dataset_name,
+                subset=self.config.subset,
+                split=self.config.split,
+                model_backend_name=self.config.model_backend_name,
+                model_name=(self.config.model_backend_params or {}).get("model_name"),
+                scaling_method_name=self.config.scaling_method_name,
+                evaluation_method_name=self.config.evaluation_method_name,
+                language_penalize=self.config.language_penalize,
+                target_lang=self.config.target_lang,
+                samples=eval_dict.get("samples", []) or [],
+                metrics=eval_dict.get("metrics", {}) or {},
+                wandb_params=self.config.wandb_params or {},
+            )
+            # except Exception:
+            #     # Best-effort logging; do not fail the pipeline on evals logging issues
+            #     logger.debug("Weave Evals logging skipped due to an exception.", exc_info=True)
 
             # Step 6: Create final result
             return self._create_final_result(eval_dict, few_shot_prefix, start_time)

@@ -63,8 +63,8 @@ class IFEvalKoDataset(BaseDataset):
         Load HF dataset and convert to standardized format:
         [{"input": ..., "reference": "", "metadata": {...}}, ...]
         """
-        # raw_data = load_dataset(self.dataset_name, split=self.split, **self.kwargs)
-        raw_data = self.load_artifact()
+        raw_data = load_dataset(self.dataset_name, split=self.split, **self.kwargs)
+        # raw_data = self.load_artifact()
         result: List[Dict[str, Any]] = []
 
         if self.dev_mode:
