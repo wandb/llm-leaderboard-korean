@@ -9,7 +9,7 @@ model:
   params:
     model_name: gpt-4o               # 긴 컨텍스트 대응 모델 권장
     api_base: https://api.openai.com/v1
-    batch_size: 128
+    batch_size: 512
     max_tokens: 10000                # 필요에 맞게 조절
     temperature: 0.0                 # 일관된 Needle 복원에 권장
     sequential_mode: false
