@@ -89,8 +89,6 @@ class WeaveEvalsController:
         wandb_params: Dict[str, Any],
     ) -> None:
         from weave import EvaluationLogger 
-        weave.init(f"{wandb_params.get('entity')}/{wandb_params.get('project')}")
-
         # Build evaluation name
         if isinstance(subset, list):
             subset_repr = "+".join(map(str, subset)) if subset else "all"
