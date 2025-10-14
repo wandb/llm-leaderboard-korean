@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from .base import BaseEvaluator
 from . import register_evaluator
 from llm_eval.utils.logging import get_logger
@@ -22,10 +22,17 @@ class LogProbEvaluator(BaseEvaluator):
     name = "log_prob_mcqa"
     requires_logits = True
 
-    def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
         correct = 0
         total = 0
+        # 요청된 subsets 기준 초기화 + all 집계
+        stats: Dict[str, Dict[str, int]] = {}
+        if subsets:
+            for subset in subsets:
+                stats[subset] = {"total": 0, "correct": 0}
+        stats["all"] = {"total": 0, "correct": 0}
         for sample in samples:
+            subset_name = sample.get("_subset_name")
             options = sample.get("options", [])
             reference = sample.get("reference", "").strip()
             logits_info = sample.get("logits", {})
@@ -40,6 +47,20 @@ class LogProbEvaluator(BaseEvaluator):
 
             if predicted_option == reference:
                 correct += 1
+                if subset_name:
+                    stats[subset_name]["correct"] += 1
+                stats["all"]["correct"] += 1
             total += 1
-        accuracy = correct / total if total > 0 else 0.0
-        return {"accuracy": accuracy}
+            if subset_name:
+                stats[subset_name]["total"] += 1
+            stats["all"]["total"] += 1
+        # 전체 메트릭 유지 (accuracy/AVG)
+        overall_acc = correct / total if total > 0 else 0.0
+        metrics: Dict[str, float] = {"AVG": overall_acc, "accuracy": overall_acc}
+        if subsets:
+            for sname, st in stats.items():
+                s_total = st["total"]
+                s_correct = st["correct"]
+                s_acc = (s_correct / s_total) if s_total > 0 else 0.0
+                metrics[f"{sname}/AVG"] = s_acc
+        return metrics
