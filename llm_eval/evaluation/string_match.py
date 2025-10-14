@@ -179,15 +179,12 @@ class StringMatchEvaluator(BaseEvaluator):
                 "options": sample.get("options", None)
             }
 
-        # subsets 전달 여부에 따라 분기: 존재하면 subset별 AVG만, 없으면 전체 AVG
-        metrics: Dict[str, float] = {"AVG": 0.0}
+        # 전체 AVG는 항상 포함
+        metrics: Dict[str, float] = {"AVG": (correct / total if total > 0 else 0.0)}
         if subsets:
             for sname, st in stats.items():
                 s_total = st["total"]
                 s_correct = st["correct"]
                 s_acc = (s_correct / s_total) if s_total > 0 else 0.0
                 metrics[f"{sname}/AVG"] = s_acc
-        else:
-            accuracy = correct / total if total > 0 else 0.0
-            metrics["AVG"] = accuracy
         return metrics

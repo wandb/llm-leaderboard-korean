@@ -74,12 +74,12 @@ class CharF1Evaluator(BaseEvaluator):
                 "char_f1": f1,
             }
 
-        metrics: Dict[str, float] = {"AVG": 0.0}
+        # 전체 AVG는 항상 포함
+        overall = stats["all"]["sum_f1"] / stats["all"]["count"] if stats["all"]["count"] > 0 else 0.0
+        metrics: Dict[str, float] = {"AVG": overall}
         if subsets:
             for sname, st in stats.items():
                 metrics[f"{sname}/AVG"] = st["sum_f1"] / st["count"] if st["count"] > 0 else 0.0
-        else:
-            metrics["AVG"] = stats["all"]["sum_f1"] / stats["all"]["count"] if stats["all"]["count"] > 0 else 0.0
 
         return metrics
 

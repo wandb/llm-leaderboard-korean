@@ -279,14 +279,22 @@ class LLMJudgeEvaluator(BaseEvaluator):
         ):
             metrics["judge_accuracy"] = total_correct / total_items
 
-        # subset 별 AVG만 추가 (subset 없는 샘플은 제외)
+        # subset 별 AVG만 추가 (subset 없는 샘플은 제외) + all 집계
         subset_stats: Dict[str, Dict[str, float]] = {}
         if subsets:
             for s in subsets:
                 subset_stats[s] = {"total": 0.0, "sum_score": 0.0, "correct": 0.0}
+            subset_stats["all"] = {"total": 0.0, "sum_score": 0.0, "correct": 0.0}
         for sample in samples:
             sname = sample.get("_subset_name")
             if not sname:
+                # subsets 지정이고 subset 미지정 샘플은 per-subset 계산에서 제외, all에는 포함
+                if subsets and "all" in subset_stats:
+                    subset_stats["all"]["total"] += 1
+                    if "judge_score" in sample and isinstance(sample.get("judge_score"), (int, float)):
+                        subset_stats["all"]["sum_score"] += float(sample["judge_score"])
+                    if sample.get("judge_correct") is True:
+                        subset_stats["all"]["correct"] += 1
                 continue
             if sname not in subset_stats:
                 subset_stats[sname] = {"total": 0.0, "sum_score": 0.0, "correct": 0.0}
@@ -301,6 +309,14 @@ class LLMJudgeEvaluator(BaseEvaluator):
             if sample.get("judge_correct") is True:
                 subset_stats[sname]["correct"] += 1
 
+            # all 집계
+            if subsets and "all" in subset_stats:
+                subset_stats["all"]["total"] += 1
+                if "judge_score" in sample and isinstance(sample.get("judge_score"), (int, float)):
+                    subset_stats["all"]["sum_score"] += float(sample["judge_score"])
+                if sample.get("judge_correct") is True:
+                    subset_stats["all"]["correct"] += 1
+
         if subsets:
             for sname, st in subset_stats.items():
                 denom = st["total"] if st["total"] > 0 else 1.0
@@ -313,5 +329,16 @@ class LLMJudgeEvaluator(BaseEvaluator):
                     metrics[f"{sname}/AVG"] = acc
                 else:
                     metrics[f"{sname}/AVG"] = 0.0
+
+        # 전체 AVG는 항상 포함: 점수 평균 우선, 없으면 정확도, 없으면 0.0
+        if score_count > 0:
+            metrics["AVG"] = total_score / score_count
+        elif total_items > 0 and any(
+            sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value 
+            for sample in samples
+        ):
+            metrics["AVG"] = total_correct / total_items
+        else:
+            metrics["AVG"] = 0.0
 
         return metrics
