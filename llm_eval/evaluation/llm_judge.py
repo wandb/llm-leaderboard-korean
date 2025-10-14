@@ -284,17 +284,10 @@ class LLMJudgeEvaluator(BaseEvaluator):
         if subsets:
             for s in subsets:
                 subset_stats[s] = {"total": 0.0, "sum_score": 0.0, "correct": 0.0}
-            subset_stats["all"] = {"total": 0.0, "sum_score": 0.0, "correct": 0.0}
         for sample in samples:
             sname = sample.get("_subset_name")
             if not sname:
-                # subsets 지정이고 subset 미지정 샘플은 per-subset 계산에서 제외, all에는 포함
-                if subsets and "all" in subset_stats:
-                    subset_stats["all"]["total"] += 1
-                    if "judge_score" in sample and isinstance(sample.get("judge_score"), (int, float)):
-                        subset_stats["all"]["sum_score"] += float(sample["judge_score"])
-                    if sample.get("judge_correct") is True:
-                        subset_stats["all"]["correct"] += 1
+                # subsets 지정이고 subset 미지정 샘플은 per-subset 계산에서 제외
                 continue
             if sname not in subset_stats:
                 subset_stats[sname] = {"total": 0.0, "sum_score": 0.0, "correct": 0.0}
@@ -309,13 +302,6 @@ class LLMJudgeEvaluator(BaseEvaluator):
             if sample.get("judge_correct") is True:
                 subset_stats[sname]["correct"] += 1
 
-            # all 집계
-            if subsets and "all" in subset_stats:
-                subset_stats["all"]["total"] += 1
-                if "judge_score" in sample and isinstance(sample.get("judge_score"), (int, float)):
-                    subset_stats["all"]["sum_score"] += float(sample["judge_score"])
-                if sample.get("judge_correct") is True:
-                    subset_stats["all"]["correct"] += 1
 
         if subsets:
             for sname, st in subset_stats.items():

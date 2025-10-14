@@ -132,12 +132,11 @@ class StringMatchEvaluator(BaseEvaluator):
         """
         total = len(samples)
         correct = 0
-        # subset 별 집계를 위한 통계 구조 (요청된 subsets 기준으로 초기화) + all 집계
+        # subset 별 집계를 위한 통계 구조 (요청된 subsets 기준으로 초기화)
         stats: Dict[str, Dict[str, int]] = {}
         if subsets:
             for subset in subsets:
                 stats[subset] = {"total": 0, "correct": 0}
-        stats["all"] = {"total": 0, "correct": 0}
 
         # Log information when evaluating MCQA tasks with provided options.
         if self.mcqa and "options" in samples[0] and isinstance(samples[0]["options"], list) and samples[0]["options"]:
@@ -166,10 +165,6 @@ class StringMatchEvaluator(BaseEvaluator):
                     stats[subset_name]["correct"] += 1
             if subset_name:
                 stats[subset_name]["total"] += 1
-            # always update 'all'
-            stats["all"]["total"] += 1
-            if is_correct:
-                stats["all"]["correct"] += 1
 
             # Record detailed evaluation info within the sample for debugging and analysis.
             sample["evaluation"] = {

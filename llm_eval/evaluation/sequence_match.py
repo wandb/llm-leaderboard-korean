@@ -73,12 +73,11 @@ class SequenceMatchEvaluator(BaseEvaluator):
 
         total_ratio = 0.0
         prefix_miss = 0
-        # 요청된 subsets 기준 초기화 + all 집계
+        # 요청된 subsets 기준 초기화
         subset_stats: Dict[str, Dict[str, float]] = {}
         if subsets:
             for s in subsets:
                 subset_stats[s] = {"sum_ratio": 0.0, "count": 0.0, "prefix_miss": 0.0}
-        subset_stats["all"] = {"sum_ratio": 0.0, "count": 0.0, "prefix_miss": 0.0}
 
         for sample in samples:
             subset_name = sample.get("_subset_name")
@@ -101,9 +100,6 @@ class SequenceMatchEvaluator(BaseEvaluator):
                     if subset_name:
                         subset_stats[subset_name]["sum_ratio"] += ratio
                         subset_stats[subset_name]["count"] += 1
-                    # all 집계
-                    subset_stats["all"]["sum_ratio"] += ratio
-                    subset_stats["all"]["count"] += 1
                     continue
 
             if self.strip_prefix and prefix:
@@ -116,9 +112,6 @@ class SequenceMatchEvaluator(BaseEvaluator):
             if subset_name:
                 subset_stats[subset_name]["sum_ratio"] += ratio
                 subset_stats[subset_name]["count"] += 1
-            # all 집계
-            subset_stats["all"]["sum_ratio"] += ratio
-            subset_stats["all"]["count"] += 1
 
         # 전체 메트릭 유지 (sequence_match_score, prefix_miss_rate, AVG)
         avg_ratio = total_ratio / len(samples)

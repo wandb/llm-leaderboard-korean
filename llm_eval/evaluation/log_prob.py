@@ -25,12 +25,11 @@ class LogProbEvaluator(BaseEvaluator):
     def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
         correct = 0
         total = 0
-        # 요청된 subsets 기준 초기화 + all 집계
+        # 요청된 subsets 기준 초기화
         stats: Dict[str, Dict[str, int]] = {}
         if subsets:
             for subset in subsets:
                 stats[subset] = {"total": 0, "correct": 0}
-        stats["all"] = {"total": 0, "correct": 0}
         for sample in samples:
             subset_name = sample.get("_subset_name")
             options = sample.get("options", [])
@@ -49,11 +48,9 @@ class LogProbEvaluator(BaseEvaluator):
                 correct += 1
                 if subset_name:
                     stats[subset_name]["correct"] += 1
-                stats["all"]["correct"] += 1
             total += 1
             if subset_name:
                 stats[subset_name]["total"] += 1
-            stats["all"]["total"] += 1
         # 전체 메트릭 유지 (accuracy/AVG)
         overall_acc = correct / total if total > 0 else 0.0
         metrics: Dict[str, float] = {"AVG": overall_acc, "accuracy": overall_acc}

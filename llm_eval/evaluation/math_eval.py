@@ -157,12 +157,11 @@ class MathMatchEvaluator(BaseEvaluator):
         correct = 0
         parse_failures = 0
         verify_failures = 0
-        # 요청된 subsets 기준 초기화 + all 집계
+        # 요청된 subsets 기준 초기화
         subset_stats: Dict[str, Dict[str, int]] = {}
         if subsets:
             for s in subsets:
                 subset_stats[s] = {"total": 0, "correct": 0}
-        subset_stats["all"] = {"total": 0, "correct": 0}
 
         for sample in tqdm(samples, desc="Math-Match Evaluation"):
             subset_name = sample.get("_subset_name")
@@ -196,10 +195,8 @@ class MathMatchEvaluator(BaseEvaluator):
                 correct += 1
                 if subset_name:
                     subset_stats[subset_name]["correct"] += 1
-                subset_stats["all"]["correct"] += 1
             if subset_name:
                 subset_stats[subset_name]["total"] += 1
-            subset_stats["all"]["total"] += 1
 
             sample["evaluation"] = {
                 "extracted_pred": extracted_pred,
