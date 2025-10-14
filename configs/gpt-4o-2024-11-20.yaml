@@ -1,0 +1,8 @@
+model:
+  name: openai
+  params:
+    model_name: gpt-4o-2024-11-20
+    api_base: https://api.openai.com/v1
+    batch_size: 32
+    max_tokens: 1024
+    temperature: 0.0

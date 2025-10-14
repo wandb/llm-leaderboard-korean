@@ -555,7 +555,6 @@ class PipelineRunner:
             #     pass
 
             # Step 5.6: Log to Weave Evals using EvaluationLogger via controller
-            # try:
             WeaveEvalsController.log(
                 dataset_name=self.config.dataset_name,
                 subset=self.config.subset,
@@ -570,10 +569,7 @@ class PipelineRunner:
                 metrics=eval_dict.get("metrics", {}) or {},
                 wandb_params=self.config.wandb_params or {},
             )
-            # except Exception:
-            #     # Best-effort logging; do not fail the pipeline on evals logging issues
-            #     logger.debug("Weave Evals logging skipped due to an exception.", exc_info=True)
-
+            
             # Step 6: Create final result
             return self._create_final_result(eval_dict, few_shot_prefix, start_time)
 
@@ -663,6 +659,8 @@ class PipelineRunner:
     def _log_to_wandb(self, result: EvaluationResult) -> None:
         import wandb
         import pandas as pd
+        from llm_eval.wandb_singleton import WandbConfigSingleton  # optional import
+
         """Log evaluation summary to Weights & Biases if configured."""
         table_name = self.config.dataset_name + "_leaderboard_table"
         data = {k: result.metrics.get(k) for k in {"model_name", "AVG", *result.metrics.keys()}}
@@ -672,12 +670,7 @@ class PipelineRunner:
         cols = ["model_name", "AVG"] + sorted([c for c in df.columns if c not in ["model_name", "AVG"]])
         df = df[cols]
         leaderboard_table = wandb.Table(dataframe=df)
-        with wandb.init(
-            entity=self.config.wandb_params.get("entity"),
-            project=self.config.wandb_params.get("project"),
-            name=self.config.model_backend_params.get("model_name")
-            ) as run:
-            run.log({table_name: leaderboard_table})
+        WandbConfigSingleton.get_instance().run.log({table_name: leaderboard_table})
 
     def _create_error_result(self, error_msg: str) -> EvaluationResult:
         """Create an error result for pipeline failures."""
