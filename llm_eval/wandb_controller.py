@@ -1,6 +1,8 @@
 import wandb
 import pandas as pd
+from typing import Any, Dict, List, Tuple
 from llm_eval.utils.util import EvaluationResult
+import weave
 
 class WandbController:
     def __init__(self, wandb_params: dict, dataset_name: str, model_name: str):
@@ -24,3 +26,38 @@ class WandbController:
             name=self.model_name
             ) as run:
             run.log({table_name: leaderboard_table})
+
+
+class WeaveSampleLogger:
+    """Minimal helper to keep Weave Inputs and Outputs clean for per-sample traces.
+
+    - Inputs: dataset_name, subset_name, input_text
+    - Outputs: every field except 'input' (e.g., prediction, reference, evaluation columns)
+    """
+
+    _cache: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+
+    @staticmethod
+    def cache_sample(dataset_name: Any, subset_name: Any, item: Dict[str, Any]) -> None:
+        input_text = str(item.get("input", ""))
+        key = (str(dataset_name), str(subset_name), input_text)
+        WeaveSampleLogger._cache[key] = item
+
+    @staticmethod
+    def make_op(op_name: str):
+        @weave.op(name=op_name)
+        def _op(dataset_name: str, subset_name: Any, input_text: str) -> Dict[str, Any]:
+            key = (str(dataset_name), str(subset_name), str(input_text))
+            item = WeaveSampleLogger._cache.get(key, {})
+            if not isinstance(item, dict):
+                return {}
+            return {k: v for k, v in item.items() if k != "input"}
+
+        return _op
+
+    @staticmethod
+    def log_samples(op_name: str, dataset_name: Any, subset_name: Any, samples: List[Dict[str, Any]]) -> None:
+        op = WeaveSampleLogger.make_op(op_name=str(op_name))
+        for s in samples or []:
+            WeaveSampleLogger.cache_sample(dataset_name, subset_name, s)
+            op(dataset_name, subset_name, str(s.get("input", "")))
