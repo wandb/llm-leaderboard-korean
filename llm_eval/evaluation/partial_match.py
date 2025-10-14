@@ -101,7 +101,7 @@ class PartialMatchEvaluator(BaseEvaluator):
             raw_output = lines[0]
         return self._normalize_text(raw_output)
 
-    def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
         """
         Computes accuracy based on partial matching between the prediction and the reference.
         
@@ -124,9 +124,18 @@ class PartialMatchEvaluator(BaseEvaluator):
         """
         total = len(samples)
         correct = 0
+        # 요청된 subsets 기준 초기화 + all 집계
+        subset_stats: Dict[str, Dict[str, int]] = {}
+        if subsets:
+            for s in subsets:
+                subset_stats[s] = {"total": 0, "correct": 0}
+        subset_stats["all"] = {"total": 0, "correct": 0}
         logger.info("Evaluating outputs using partial (containment) match with mcqa={}".format(self.mcqa))
 
         for sample in tqdm(samples, desc="Partial-Match Evaluation"):
+            subset_name = sample.get("_subset_name")
+            if subset_name and subset_name not in subset_stats:
+                subset_stats[subset_name] = {"total": 0, "correct": 0}
             pred_norm = self.parse_prediction(sample.get("prediction", ""))
             ref_norm = self.parse_prediction(sample.get("reference", ""))
 
@@ -142,6 +151,12 @@ class PartialMatchEvaluator(BaseEvaluator):
 
             if is_correct:
                 correct += 1
+                if subset_name:
+                    subset_stats[subset_name]["correct"] += 1
+                subset_stats["all"]["correct"] += 1
+            if subset_name:
+                subset_stats[subset_name]["total"] += 1
+            subset_stats["all"]["total"] += 1
 
             sample["evaluation"] = {
                 "normalized_pred": pred_norm,
@@ -150,5 +165,13 @@ class PartialMatchEvaluator(BaseEvaluator):
                 "options": sample.get("options", None)
             }
 
+        # 전체 메트릭 유지 (accuracy)
         accuracy = correct / total if total > 0 else 0.0
-        return {"accuracy": accuracy}
+        metrics: Dict[str, float] = {"AVG": accuracy, "accuracy": accuracy}
+        if subsets:
+            for sname, st in subset_stats.items():
+                s_total = st["total"]
+                s_correct = st["correct"]
+                s_acc = (s_correct / s_total) if s_total > 0 else 0.0
+                metrics[f"{sname}/AVG"] = s_acc
+        return metrics

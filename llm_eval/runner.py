@@ -564,7 +564,7 @@ class PipelineRunner:
         """Run evaluation on the predictions."""
         logger.info(f"Starting evaluation with '{self.config.evaluation_method_name}'.")
         try:
-            return self.components.evaluator.evaluate(predictions, model=self.components.model)
+            return self.components.evaluator.evaluate(predictions, model=self.components.model, subsets=self.config.subset)
         except Exception as e:
             logger.error(f"Error during evaluation with '{self.config.evaluation_method_name}': {e}", exc_info=True)
             raise
