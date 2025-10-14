@@ -94,6 +94,8 @@ class KoBALT700Dataset(BaseDataset):
                     "metadata": {"original_gold": gold_letter},
                 }
             )
+            if getattr(self, "dev_mode", False) and len(processed_list) >= 10:
+                break
         return processed_list
 
     def get_raw_samples(self) -> Any:
