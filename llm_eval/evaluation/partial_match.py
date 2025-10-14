@@ -124,12 +124,11 @@ class PartialMatchEvaluator(BaseEvaluator):
         """
         total = len(samples)
         correct = 0
-        # 요청된 subsets 기준 초기화 + all 집계
+        # 요청된 subsets 기준 초기화
         subset_stats: Dict[str, Dict[str, int]] = {}
         if subsets:
             for s in subsets:
                 subset_stats[s] = {"total": 0, "correct": 0}
-        subset_stats["all"] = {"total": 0, "correct": 0}
         logger.info("Evaluating outputs using partial (containment) match with mcqa={}".format(self.mcqa))
 
         for sample in tqdm(samples, desc="Partial-Match Evaluation"):
@@ -153,10 +152,8 @@ class PartialMatchEvaluator(BaseEvaluator):
                 correct += 1
                 if subset_name:
                     subset_stats[subset_name]["correct"] += 1
-                subset_stats["all"]["correct"] += 1
             if subset_name:
                 subset_stats[subset_name]["total"] += 1
-            subset_stats["all"]["total"] += 1
 
             sample["evaluation"] = {
                 "normalized_pred": pred_norm,

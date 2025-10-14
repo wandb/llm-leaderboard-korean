@@ -24,7 +24,7 @@ class IFEvalStrictEvaluator(BaseEvaluator):
         inst_total = 0
 
         # subset 별 집계를 위한 통계 구조
-        # 요청된 subsets 기준 초기화 + all 집계
+        # 요청된 subsets 기준 초기화
         subset_stats = {}
         if subsets:
             for s in subsets:
@@ -34,7 +34,6 @@ class IFEvalStrictEvaluator(BaseEvaluator):
                     "inst_correct": 0,
                     "inst_total": 0,
                 }
-        subset_stats["all"] = {"prompt_correct": 0, "total_prompts": 0, "inst_correct": 0, "inst_total": 0}
 
         for sample in samples:
             subset_name = sample.get("_subset_name")
@@ -71,11 +70,6 @@ class IFEvalStrictEvaluator(BaseEvaluator):
                 subset_stats[subset_name]["total_prompts"] += 1
                 subset_stats[subset_name]["inst_correct"] += sum(out.follow_instruction_list)
                 subset_stats[subset_name]["inst_total"] += len(out.follow_instruction_list)
-            # all 집계
-            subset_stats["all"]["prompt_correct"] += 1 if out.follow_all_instructions else 0
-            subset_stats["all"]["total_prompts"] += 1
-            subset_stats["all"]["inst_correct"] += sum(out.follow_instruction_list)
-            subset_stats["all"]["inst_total"] += len(out.follow_instruction_list)
 
             sample["evaluation"] = {
                 "prompt_level_strict_acc": out.follow_all_instructions,
@@ -121,7 +115,7 @@ class IFEvalLooseEvaluator(BaseEvaluator):
         inst_total = 0
 
         # subset 별 집계를 위한 통계 구조
-        # 요청된 subsets 기준 초기화 + all 집계
+        # 요청된 subsets 기준 초기화
         subset_stats = {}
         if subsets:
             for s in subsets:
@@ -131,7 +125,6 @@ class IFEvalLooseEvaluator(BaseEvaluator):
                     "inst_correct": 0,
                     "inst_total": 0,
                 }
-        subset_stats["all"] = {"prompt_correct": 0, "total_prompts": 0, "inst_correct": 0, "inst_total": 0}
 
         for sample in samples:
             subset_name = sample.get("_subset_name")
@@ -167,11 +160,6 @@ class IFEvalLooseEvaluator(BaseEvaluator):
                 subset_stats[subset_name]["total_prompts"] += 1
                 subset_stats[subset_name]["inst_correct"] += sum(out.follow_instruction_list)
                 subset_stats[subset_name]["inst_total"] += len(out.follow_instruction_list)
-            # all 집계
-            subset_stats["all"]["prompt_correct"] += 1 if out.follow_all_instructions else 0
-            subset_stats["all"]["total_prompts"] += 1
-            subset_stats["all"]["inst_correct"] += sum(out.follow_instruction_list)
-            subset_stats["all"]["inst_total"] += len(out.follow_instruction_list)
 
             sample["evaluation"] = sample.get("evaluation", {})
             sample["evaluation"].update({
