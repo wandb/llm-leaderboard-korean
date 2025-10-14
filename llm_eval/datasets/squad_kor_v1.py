@@ -34,7 +34,6 @@ class SQuADKorV1(BaseDataset):
         base_prompt_template: Optional[str] = None,
         **kwargs
     ):
-        self.dev_mode = kwargs.pop("dev", False)
         if base_prompt_template is None:
             base_prompt_template = (
                 "다음 지문과 질문을 읽고, 질문에 대한 정답을 한 단어 또는 짧은 구로 추출해 주세요."
@@ -87,7 +86,9 @@ class SQuADKorV1(BaseDataset):
                 "_subset_name": subset_name,
             })
 
-            if self.dev_mode and len(processed_list) >= 10:
+            if getattr(self, "dev_mode", False) and len(processed_list) >= 10:
+                break
+            if getattr(self, "limit", None) and len(processed_list) >= self.limit:
                 break
         return processed_list
 

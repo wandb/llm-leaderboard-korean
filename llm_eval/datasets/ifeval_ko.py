@@ -40,7 +40,6 @@ class IFEvalKoDataset(BaseDataset):
         base_prompt_template: Optional[str] = None,
         **kwargs
     ):
-        self.dev_mode = kwargs.pop("dev", False)
         super().__init__(dataset_name, split=split, base_prompt_template=base_prompt_template, **kwargs)
 
     def create_artifact(self):
@@ -89,6 +88,9 @@ class IFEvalKoDataset(BaseDataset):
                 },
             }
             result.append(sample)
+
+            if getattr(self, "dev_mode", False) and len(result) >= 10:
+                break
 
         return result
 

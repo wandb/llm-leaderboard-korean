@@ -39,7 +39,6 @@ class HaeraeDatasetV1(BaseDataset):
         base_prompt_template: Optional[str] = None,
         **kwargs
     ):
-        self.dev_mode = kwargs.pop("dev", False)
         if base_prompt_template is None:
             base_prompt_template = (
                 "주어진 질문과 선택지 중에서 정답이 될 수 있는 선택지의 알파벳을 선택하여 답변하십시오. 답변에는 오직 (A), (B), (C), (D), (E) 중 하나만 포함해야 합니다. 마침표(.), 쉼표(,), 공백, 줄바꿈 등 어떤 추가 문자나 텍스트도 절대 포함하지 마십시오. 예시: B (틀림), (B) (올바름), (B). (틀림), (B)) (틀림)\n\n{query}"
