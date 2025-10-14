@@ -32,27 +32,10 @@ from llm_eval.utils.prompt_template import (
     DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
 )
 from llm_eval.utils.metrics import language_penalizer
+from llm_eval.wandb_controller import WeaveSampleLogger
 
 logger = get_logger(name="runner", level=logging.INFO)
 
-
-def make_log_inference_item_op(op_name: str):
-    """Create a per-sample logger op with a dynamic display name (op name).
-
-    The returned callable has signature:
-        (item: Dict[str, Any], dataset_name: str, subset_name: Any, model_name: str) -> Dict[str, Any]
-    so dataset/subset/model are captured as Inputs in Weave without mutating the item.
-    """
-    @weave.op(name=op_name)
-    def _dynamic_log_inference_item(
-        model_name: str,
-        dataset_name: str,
-        subset_name: Any,
-        item: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        return item
-
-    return _dynamic_log_inference_item
 
 @dataclass
 class PipelineConfig:
@@ -415,25 +398,8 @@ class InferenceEngine:
                 predictions = self.components.model.generate_batch(samples)
             
             logger.info(f"Inference completed for {len(predictions)} items.")
-            # Log each prediction as its own weave trace for backend-agnostic per-sample tracing
-            try:
-                ds_name = self.components.config.dataset_name
-                subset = self.components.config.subset
-                # Prefer concrete model identifier from backend params, fallback to backend name
-                model_display_name = (
-                    (self.components.config.model_backend_params or {}).get("model_name")
-                    or self.components.config.model_backend_name
-                )
+            return predictions
 
-                dynamic_logger = make_log_inference_item_op(op_name=str(model_display_name))
-                return [
-                    dynamic_logger(p, ds_name, subset, model_display_name)
-                    for p in predictions
-                ]
-            except Exception:
-                # Fallback to original predictions if logging fails
-                return predictions
-            
         except Exception as e:
             logger.error(f"Error during model inference or scaling: {e}", exc_info=True)
             raise
@@ -577,6 +543,17 @@ class PipelineRunner:
 
             # Step 5: Apply language penalization if enabled
             self.language_penalizer.apply_penalization(eval_dict)
+
+            # Step 5.5: Log evaluated samples so evaluation columns appear in Weave per-sample traces
+            try:
+                WeaveSampleLogger.log_samples(
+                    op_name=(self.config.model_backend_params or {}).get("model_name") or self.config.model_backend_name,
+                    dataset_name=self.config.dataset_name,
+                    subset_name=self.config.subset,
+                    samples=eval_dict.get("samples", []) or [],
+                )
+            except Exception:
+                pass
 
             # Step 6: Create final result
             return self._create_final_result(eval_dict, few_shot_prefix, start_time)
