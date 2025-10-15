@@ -127,6 +127,8 @@ class KobbqDataset(BaseDataset):
             category_counts[category] = current_count + 1
             if getattr(self, "dev_mode", False) and len(processed_list) >= 10:
                 break
+            if getattr(self, "limit", None) and len(processed_list) >= self.limit:
+                break
         return processed_list
 
     def get_raw_samples(self) -> Any:
