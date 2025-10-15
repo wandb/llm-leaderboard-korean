@@ -5,9 +5,14 @@ wandb:
     project: horangi4-dev
 
 # testmode configurations
-testmode: true
+testmode: false
 
 # dataset configurations
+korean_hate_speech:
+  split: test
+  evaluation:
+    method: string_match
+
 kobalt_700:
   split: test
   subset: KoBALT-700
