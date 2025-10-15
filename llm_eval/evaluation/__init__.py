@@ -43,3 +43,4 @@ from .ifeval import IFEvalStrictEvaluator, IFEvalLooseEvaluator
 from .sequence_match import SequenceMatchEvaluator
 from .char_f1 import CharF1Evaluator
 from .kobbq import KoBBQEvaluator
+from .comet_score import COMETEvaluator

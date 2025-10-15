@@ -59,3 +59,4 @@ from .haerae_v1 import HaeraeDatasetV1
 from .kobbq import KobbqDataset
 from .komoral import KomoralDataset
 from .korean_hate_speech import KoreanHateSpeechDataset
+from .korean_parallel_corpora import KoreanParallelCorporaDataset

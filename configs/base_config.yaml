@@ -8,6 +8,13 @@ wandb:
 testmode: false
 
 # dataset configurations
+korean_parallel_corpora:
+  subset: [e2k, k2e]
+  split: test
+  limit: 100
+  evaluation:
+    method: comet_score
+
 korean_hate_speech:
   split: test
   evaluation:
