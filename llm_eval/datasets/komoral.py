@@ -27,7 +27,6 @@ class KomoralDataset(BaseDataset):
         split: str = "validation",
         base_prompt_template: Optional[str] = None,
         artifact_ref: str = "horangi/horangi4-dataset/komoral:v0",
-        limit: Optional[int] = None,
         **kwargs,
     ):
         if base_prompt_template is None:
