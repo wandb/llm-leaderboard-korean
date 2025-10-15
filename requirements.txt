@@ -21,6 +21,7 @@ pytest>=7.3.0
 
 # Evaluation dependencies
 wandb==0.21.3
+unbabel-comet>=2.2.0
 
 # --------- For HalluLens Evaluator ---------
 # general

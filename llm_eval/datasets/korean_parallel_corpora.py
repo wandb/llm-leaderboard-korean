@@ -70,31 +70,45 @@ class KoreanParallelCorporaDataset(BaseDataset):
     def load(self) -> List[Dict[str, Any]]:
         raw = self._download_and_load()
         split_key = self._normalize_split(self.split)
-        samples1 = raw.get(split_key, []).get(self.subset[0], [])
-        samples2 = raw.get(split_key, []).get(self.subset[1], [])
-        samples = samples1 + samples2
-        if not isinstance(samples, list):
-            raise ValueError(f"Invalid '{split_key}' split format: expected a list")
+        split_data = raw.get(split_key, {})
+        if not isinstance(split_data, dict):
+            raise ValueError(
+                f"Invalid '{split_key}' split format: expected an object keyed by subsets"
+            )
+
+        subset_list = (
+            list(self.subset)
+            if isinstance(self.subset, (list, tuple))
+            else [self.subset]
+        )
 
         results: List[Dict[str, Any]] = []
-        for item in samples:
-            text = (item.get("input") or "")
-            formatted_input = (
-                self.base_prompt_template.format(query=text)
-                if self.base_prompt_template
-                else text
-            )
-            reference = item.get("output", "")
-            results.append({
-                "input": formatted_input,
-                "reference": reference,
-            })
+        for subset_name in subset_list:
+            items = split_data.get(subset_name, [])
+            if not isinstance(items, list):
+                continue
+            # Determine per-subset limit
+            subset_limit = getattr(self, "limit", None)
+            if getattr(self, "dev_mode", False):
+                subset_limit = 10 if subset_limit is None else min(subset_limit, 10)
 
-            if getattr(self, "dev_mode", False) and len(results) >= 10:
-                break
-
-            if getattr(self, "limit", None) and len(results) >= self.limit:
-                break
+            added_count = 0
+            for item in items:
+                text = (item.get("input") or "")
+                formatted_input = (
+                    self.base_prompt_template.format(query=text)
+                    if self.base_prompt_template
+                    else text
+                )
+                reference = item.get("output", "")
+                results.append({
+                    "input": formatted_input,
+                    "reference": reference,
+                    "_subset_name": subset_name,
+                })
+                added_count += 1
+                if subset_limit is not None and added_count >= subset_limit:
+                    break
 
         return results
 
