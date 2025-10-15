@@ -33,7 +33,7 @@ def run_all_from_configs(
 
     WandbConfigSingleton.initialize(run, model_name)
 
-    run_multiple_from_configs(
+    result = run_multiple_from_configs(
         base_config_path=base_config_path,
         model_config_path=model_config_path,
         selected_datasets=selected_datasets,
@@ -41,15 +41,25 @@ def run_all_from_configs(
         target_lang=target_lang,
     )
     run.finish()
+    return result
 
 
 if __name__ == "__main__":
-    run_all_from_configs(
-        base_config_path="configs/base_config.yaml",
-        model_config_path="configs/gpt-4o-2024-11-20.yaml",
+    # make parser
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_config_path", type=str, default="configs/gpt-4o-2024-11-20.yaml")
+    parser.add_argument("--base_config_path", type=str, default="configs/base_config.yaml")
+    args = parser.parse_args()
+
+    result = run_all_from_configs(
+        base_config_path=args.base_config_path,
+        model_config_path=args.model_config_path,
         selected_datasets=[
             "haerae_bench_v1", "ifeval_ko", "komoral", "squad_kor_v1", "mrcr", "kobbq",
-            "aime2025", "hrm8k", "kmmlu", "kmmlu_pro", "kmmlu_hard",
-            "kobalt_700"
+            "korean_hate_speech", "korean_parallel_corpora"
+            # "aime2025", "hrm8k",
+            # "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700", 
         ],
     )
+    print(result)
