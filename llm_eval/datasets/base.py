@@ -34,6 +34,7 @@ class BaseDataset:
         self.split = split
         self.subset = subset
         self.base_prompt_template = base_prompt_template
+        self.limit = kwargs.pop("limit", None)
         self.dev_mode = kwargs.pop("dev", False)
         self.kwargs = kwargs  # Store additional parameters for extensibility
 

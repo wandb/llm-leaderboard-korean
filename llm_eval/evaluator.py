@@ -328,6 +328,7 @@ def run_multiple_from_configs(
 
         subset = ds_cfg.get("subset")
         split = ds_cfg.get("split", "test")
+        limit = ds_cfg.get("limit", None)
 
         # dataset-specific params
         dataset_params = ds_cfg.get("params") or {}
@@ -336,6 +337,8 @@ def run_multiple_from_configs(
         if "dev" not in dataset_params:
             # most datasets in this repo accept 'dev' kwarg (popped in __init__)
             dataset_params["dev"] = bool(testmode)
+        if "limit" not in dataset_params:
+            dataset_params["limit"] = limit
 
         # evaluation configuration
         eval_cfg = ds_cfg.get("evaluation") or {}
@@ -353,6 +356,9 @@ def run_multiple_from_configs(
             eval_method = "string_match"
 
         logger.info(f"Running dataset '{ds_key}' with split='{split}', subset='{subset}', eval='{eval_method}'")
+
+        print("dataset_params", dataset_params)
+        print("--------------------")
 
         result = evaluator.run(
             model=model_name,
