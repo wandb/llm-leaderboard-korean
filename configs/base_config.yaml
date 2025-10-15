@@ -8,68 +8,22 @@ wandb:
 testmode: false
 
 # dataset configurations
-korean_parallel_corpora:
-  subset: [e2k, k2e]
-  split: test
-  limit: 100
-  evaluation:
-    method: comet_score
-
-korean_hate_speech:
-  split: test
-  evaluation:
-    method: string_match
-
-kobalt_700:
-  split: test
-  subset: KoBALT-700
-  evaluation:
-    method: string_match
-
-aime2025:
-  split: test
-  subset: ["AIME2025-I", "AIME2025-II"]
-  evaluation:
-    method: math_match
-
-hrm8k:
-  split: test
-  evaluation:
-    method: math_match
-
-kmmlu:
-  split: test
-  evaluation:
-    method: string_match
-    
-kmmlu_pro:
-  split: test
-  evaluation:
-    method: string_match
-
-kmmlu_hard:
-  split: test
-  evaluation:
-    method: string_match
-
-haerae_bench_v1:
-  subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history, reading_comprehension]
-  split: test
-  evaluation:
-    method: string_match
 
 komoral:
   split: validation
+  limit: 1000
   evaluation:
     method: string_match
 
 kobbq:
   split: test
+  limit: 1000
   evaluation:
     method: string_match
 
 squad_kor_v1:
   split: validation
+  limit: 1000
   evaluation:
     method: char_f1
 
@@ -91,3 +45,52 @@ mrcr:
       require_prefix: true
       strip_prefix: true
 
+haerae_bench_v1:
+  subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history, reading_comprehension]
+  split: test
+  evaluation:
+    method: string_match
+
+korean_parallel_corpora:
+  subset: [e2k, k2e]
+  split: test
+  limit: 1000
+  evaluation:
+    method: comet_score
+
+korean_hate_speech:
+  split: test
+  evaluation:
+    method: string_match
+
+kmmlu:
+  split: test
+  evaluation:
+    method: string_match
+    
+kmmlu_pro:
+  split: test
+  evaluation:
+    method: string_match
+
+kmmlu_hard:
+  split: test
+  evaluation:
+    method: string_match
+
+kobalt_700:
+  split: test
+  subset: KoBALT-700
+  evaluation:
+    method: string_match
+
+aime2025:
+  split: test
+  subset: ["AIME2025-I", "AIME2025-II"]
+  evaluation:
+    method: math_match
+
+hrm8k:
+  split: test
+  evaluation:
+    method: math_match
