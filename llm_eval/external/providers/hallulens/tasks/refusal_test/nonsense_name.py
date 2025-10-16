@@ -19,12 +19,13 @@ def remove_file(file_path):
 
 class NonsenseNameInference:
     """method = together, openai, vllm, custom"""
-    def __init__(self, output_base_dir, generate_model, prompt_path, seed, method='together'):
+    def __init__(self, output_base_dir, generate_model, prompt_path, seed, method='together', limit=None):
         self.output_base_dir = output_base_dir
         self.generate_model = generate_model
         self.inference_method = method
         self.prompt_path = prompt_path
         self.seed = seed
+        self.limit = limit
         self.TASKNAME = prompt_path.split('/')[-1].replace('_all_not_exist.csv', '') #  f"{seed}_{BUSINESS_N}_{EVENT_N}_{PRODUCT_N}"
         print('INFER TASKNAME', self.TASKNAME)
     
@@ -34,6 +35,11 @@ class NonsenseNameInference:
         TASKNAME = self.TASKNAME
         # prompt_path = f"{self.root_path}/save/{self.seed}_{self.BUSINESS_N}_{self.EVENT_N}_{self.PRODUCT_N}_all_not_exist.csv"
         all_prompts = pd.read_csv(self.prompt_path)
+        # apply random subsampling if limit is provided
+        import os
+        env_seed = int(os.environ.get('RANDOM_SEED', str(self.seed)))
+        if self.limit is not None and len(all_prompts) > self.limit:
+            all_prompts = all_prompts.sample(n=self.limit, random_state=env_seed)
 
         # This assertion is to check if generated prompts are Korean.
         assert any(re.search('[가-힣]', str(value)) for _, row in all_prompts.iterrows() for value in row), (

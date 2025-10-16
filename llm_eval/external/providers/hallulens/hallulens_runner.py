@@ -30,6 +30,7 @@ def precise_wikiqa_runner(
         max_inference_tokens: int = 256,
         inf_batch_size: int = 64,
         N: int = 5000,
+        limit: int = None,
 ):
     """
     Args:
@@ -46,8 +47,15 @@ def precise_wikiqa_runner(
 
     QAs_df = None
 
-    QAs = [line for line in jsonlines.open(qa_dataset_path, 'r')][:N]
+    import os
+    seed = int(os.environ.get('RANDOM_SEED', '42'))
+    # load all then apply limit if provided; otherwise keep legacy N behavior
+    QAs = [line for line in jsonlines.open(qa_dataset_path, 'r')]
     QAs_df = pd.DataFrame(QAs)
+    if limit is not None and len(QAs_df) > limit:
+        QAs_df = QAs_df.sample(n=limit, random_state=seed)
+    elif N is not None and len(QAs_df) > N:
+        QAs_df = QAs_df.head(N)
 
     print(f"Starting Inference for [{model}], Testset_N: {QAs_df.shape}")
     exp.run_exp(
@@ -80,7 +88,8 @@ def longwiki_runner(
         N: int = 250,
         k: int = 32,
         max_tokens: int = 1024,
-        max_workers: int = 64
+        max_workers: int = 64,
+        limit: int = None,
 ):
     TASKNAME = "longwiki"
 
@@ -92,9 +101,14 @@ def longwiki_runner(
     model_name = model.split("/")[-1]
 
     # RUN INFERENCE
+    import os
+    seed = int(os.environ.get('RANDOM_SEED', '42'))
     all_prompts = pd.read_json(benchmark_dataset_path, lines=True)
-
-    assert len(all_prompts) == N
+    # apply limit if provided, else keep legacy N semantics
+    if limit is not None and len(all_prompts) > limit:
+        all_prompts = all_prompts.sample(n=limit, random_state=seed)
+    elif N is not None and len(all_prompts) > N:
+        all_prompts = all_prompts.head(N)
 
     print(f"Start Inference for {model} ", "dynamic", N)
 
@@ -141,7 +155,8 @@ def non_mixed_entity_runner(
         tested_model='meta-llama/Llama-3.1-405B-Instruct-FP8',
         N=2000,
         seed=1,
-        inference_method='together'
+        inference_method='together',
+        limit: int = None,
 ):
     # set variables
     EXP = exp  # nonsense_medicine
@@ -152,7 +167,7 @@ def non_mixed_entity_runner(
 
     # run inference
     inference = NonsenseMixedInference(TASKNAME, output_base_dir, tested_model, prompt_path, seed,
-                                       inference_method)
+                                       inference_method, limit=limit)
     if infer_overwrite:
         inference.remove_existing_files()
     inference.run_inference()
@@ -180,12 +195,13 @@ def non_generated_entity_runner(
         prompt_path=None,
         generate_model='meta-llama/Llama-3.1-8B-Instruct',
         inference_method='together',
-        seed=0
+        seed=0,
+        limit: int = None,
 ):
     if prompt_path == None:
         raise Exception("No prompt path provided")
 
-    inference = NonsenseNameInference(output_base_dir, generate_model, prompt_path, seed, inference_method)
+    inference = NonsenseNameInference(output_base_dir, generate_model, prompt_path, seed, inference_method, limit=limit)
     if infer_overwrite:
         inference.remove_existing_files()
     inference.run_inference()
@@ -230,7 +246,8 @@ def _log_to_wandb(result_df: pd.DataFrame, model_task_name: str) -> None:
     """Log evaluation summary to Weights & Biases if configured."""
     leaderboard_table = wandb.Table(dataframe=result_df)
     with wandb.init(
-            project="horangi4-dev-hallulens",
-            name=model_task_name
+        entity="horangi",
+        project="horangi4-dev-hallulens",
+        name=model_task_name
     ) as run:
         run.log({model_task_name: leaderboard_table})

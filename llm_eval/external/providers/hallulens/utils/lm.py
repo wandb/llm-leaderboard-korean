@@ -138,3 +138,14 @@ def openai_generate(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
     )
 
     return chat_completion.choices[0].message.content
+
+def claude_generate(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
+    from anthropic import Anthropic
+    client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    msg = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return "".join([b.text for b in (msg.content or []) if getattr(b, "type", "") == "text"]) or ""
