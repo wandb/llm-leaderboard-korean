@@ -126,18 +126,25 @@ def call_vllm_api(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512, por
 
 
 def openai_generate(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
-    client = openai.OpenAI(
-        api_key=os.environ["OPENAI_API_KEY"],
-    )
+    client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+    model_name = str(model).lower()
+    # gpt-5 계열은 Responses API를 사용 (max_output_tokens)
+    if model_name.startswith("gpt-5"):
+        resp = client.responses.create(
+            model=model,
+            input=prompt,
+            max_output_tokens=max_tokens,
+        )
+        return getattr(resp, "output_text", "") or ""
+    # 그 외 모델은 Chat Completions 사용 (max_tokens 지원)
     chat_completion = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=max_tokens,
         temperature=temperature,
-        top_p=top_p
+        top_p=top_p,
     )
-
-    return chat_completion.choices[0].message.content
+    return (chat_completion.choices[0].message.content or "")
 
 def claude_generate(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
     from anthropic import Anthropic
