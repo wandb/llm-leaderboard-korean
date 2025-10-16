@@ -38,7 +38,7 @@ class HalluLensDataset(BaseDataset):
             raise ValueError("WANDB_HALLULENS_PROJECT environment variable is not set.")
 
         logger.info("Initializing wandb run...")
-        run = wandb.init(project=WANDB_PROJECT_NAME, job_type="dataset-loading")
+        run = wandb.init(entity="horangi", project=WANDB_PROJECT_NAME, job_type="dataset-loading")
 
         try:
             logger.info("Downloading precise_wikiqa artifact...")
