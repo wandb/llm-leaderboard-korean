@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-WANDB_PROJECT_NAME = os.getenv("WANDB_HALLULENS_PROJECT")
 logger = get_logger(name="HalluLens", level=logging.INFO)
 
 
@@ -34,36 +33,21 @@ class HalluLensDataset(BaseDataset):
         Returns:
             dict: Dictionary mapping subset names to file paths
         """
-        if not WANDB_PROJECT_NAME:
-            raise ValueError("WANDB_HALLULENS_PROJECT environment variable is not set.")
-
         logger.info("Initializing wandb run...")
-        run = wandb.init(entity="horangi", project=WANDB_PROJECT_NAME, job_type="dataset-loading")
+        run = wandb.init(entity="horangi", project="horangi4-dataset", job_type="dataset-loading")
 
         try:
-            logger.info("Downloading precise_wikiqa artifact...")
-            precise_wikiqa_artifact_dir = run.use_artifact(
-                f'{WANDB_PROJECT_NAME}/precise_wikiqa:v0',
-                type='dataset'
-            ).download()
-
-            logger.info("Downloading longwiki artifact...")
-            long_wiki_artifact_dir = run.use_artifact(
-                f'{WANDB_PROJECT_NAME}/longwiki:v0',
-                type='dataset'
-            ).download()
-
-            logger.info("Downloading non_entity_refusal artifact...")
-            non_entity_refusal_artifact_dir = run.use_artifact(
-                f'{WANDB_PROJECT_NAME}/non_entity_refusal:v0',
+            logger.info("Downloading halluLens artifact...")
+            halluLens_artifact_dir = run.use_artifact(
+                f'horangi/horangi4-dataset/halluLens:latest',
                 type='dataset'
             ).download()
 
             hallulens_path_set = {
-                'precise_wikiqa': os.path.join(precise_wikiqa_artifact_dir, "precise_wikiqa.jsonl"),
-                'longwiki': os.path.join(long_wiki_artifact_dir, "longwiki.jsonl"),
-                'mixed_entities': os.path.join(non_entity_refusal_artifact_dir, "mixed_entity_2000.csv"),
-                'generated_entities': os.path.join(non_entity_refusal_artifact_dir, "generated_entity_1950.csv")
+                'precise_wikiqa': os.path.join(halluLens_artifact_dir, "precise_wikiqa/precise_wikiqa.jsonl"),
+                'longwiki': os.path.join(halluLens_artifact_dir, "longwiki/longwiki.jsonl"),
+                'mixed_entities': os.path.join(halluLens_artifact_dir, "non_entity_refusal/mixed_entity_2000.csv"),
+                'generated_entities': os.path.join(halluLens_artifact_dir, "non_entity_refusal/generated_entity_1950.csv")
             }
 
             # Filter by subset if specified

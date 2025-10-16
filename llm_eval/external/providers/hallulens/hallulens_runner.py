@@ -10,6 +10,7 @@ import pandas as pd
 import os
 import json
 from pathlib import Path
+import wandb
 
 from llm_eval.external.providers.hallulens.tasks.longwiki.longwiki_main import run_eval
 
@@ -31,6 +32,8 @@ def precise_wikiqa_runner(
         inf_batch_size: int = 64,
         N: int = 5000,
         limit: int = None,
+        evaluator_abstention_model: str | None = None,
+        evaluator_halu_model: str | None = None,
 ):
     """
     Args:
@@ -68,7 +71,13 @@ def precise_wikiqa_runner(
     print('Inference completed')
 
     print(f"Starting Evaluation for {model}")
-    eval_result = PreciseQAEval(model_path=model, TASKNAME=TASKNAME).run_eval()
+    # evaluator 모델을 동적으로 지정: PreciseQAEval 내부 속성 재설정
+    pq = PreciseQAEval(model_path=model, TASKNAME=TASKNAME)
+    if evaluator_abstention_model:
+        pq.abtention_evaluator = evaluator_abstention_model
+    if evaluator_halu_model:
+        pq.halu_evaluator = evaluator_halu_model
+    eval_result = pq.run_eval()
     print(f'{TASKNAME} Evaluation completed')
 
     _log_to_wandb(pd.DataFrame([eval_result]), TASKNAME)
@@ -101,7 +110,6 @@ def longwiki_runner(
     model_name = model.split("/")[-1]
 
     # RUN INFERENCE
-    import os
     seed = int(os.environ.get('RANDOM_SEED', '42'))
     all_prompts = pd.read_json(benchmark_dataset_path, lines=True)
     # apply limit if provided, else keep legacy N semantics
@@ -180,7 +188,6 @@ def non_mixed_entity_runner(
     else:
         eval = NonsenseMixedEval(TASKNAME, output_base_dir, tested_model, prompt_path)
     res, task_path = eval.run_eval(eval_overwrite)
-    print(res)
 
     # Log to evaluation result to wandb
     _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
@@ -242,12 +249,8 @@ def _log_non_refusal_result_to_wandb(task_path: str, task_name: str):
 
 
 def _log_to_wandb(result_df: pd.DataFrame, model_task_name: str) -> None:
-    import wandb
     """Log evaluation summary to Weights & Biases if configured."""
+    from llm_eval.wandb_singleton import WandbConfigSingleton
     leaderboard_table = wandb.Table(dataframe=result_df)
-    with wandb.init(
-        entity="horangi",
-        project="horangi4-dev-hallulens",
-        name=model_task_name
-    ) as run:
-        run.log({model_task_name: leaderboard_table})
+    run = WandbConfigSingleton.get_instance().run
+    run.log({model_task_name+'_leaderboard_table': leaderboard_table})

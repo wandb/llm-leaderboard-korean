@@ -72,11 +72,17 @@ class NonsenseMixedEval(NonsenseNameEval):
                 for gen_obj in generations
             ]
         
+        # Route by evaluator name: llama* -> together, gpt-5* -> openai
+        eval_name = str(self.evaluator).lower()
+        if "gpt" in eval_name:
+            gen_fn = lambda p: lm.openai_generate(p, self.evaluator)
+        else:
+            gen_fn = lambda p: lm.generate(p, self.evaluator)
         abstains_eval_raw = thread_map(
-            lambda p: lm.generate(p, self.evaluator),
-                    abstain_prompts,
-                    max_workers=50,
-                    desc=f"using {self.evaluator}")
+            gen_fn,
+            abstain_prompts,
+            max_workers=50,
+            desc=f"using {self.evaluator}")
         
         if self.med_safety_filtered_model:
             for i, gen_obj in enumerate(generations):

@@ -8,6 +8,15 @@ wandb:
 testmode: false
 
 # dataset configurations
+halluLens:
+  split: test
+  subset: [precise_wikiqa, mixed_entities, generated_entities]
+  limit: 1000
+  evaluation:
+    abstention:
+      model: gpt-4o-mini
+    hallucination:
+      model: gpt-4o
 
 komoral:
   split: validation

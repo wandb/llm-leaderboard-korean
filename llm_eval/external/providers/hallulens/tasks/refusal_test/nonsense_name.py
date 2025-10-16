@@ -93,10 +93,16 @@ class NonsenseNameEval:
                 )
                 for generation in generations
             ]
-        abstains_eval_raw = thread_map(lambda p: lm.generate(p, self.evaluator),
-                                        abstain_prompts,
-                                        max_workers=50,
-                                        desc=f"using {self.evaluator}")
+        # Route by evaluator name: llama* -> together, gpt-5* -> openai
+        eval_name = str(self.evaluator).lower()
+        if "gpt" in eval_name:
+            gen_fn = lambda p: lm.openai_generate(p, self.evaluator)
+        else:
+            gen_fn = lambda p: lm.generate(p, self.evaluator)
+        abstains_eval_raw = thread_map(gen_fn,
+                                       abstain_prompts,
+                                       max_workers=50,
+                                       desc=f"using {self.evaluator}")
                         
         eval_utils.save_eval_raw(abstains_eval_raw, self.eval_raw_path)
 

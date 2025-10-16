@@ -53,12 +53,18 @@ class PreciseQAEval:
             with open(abs_path, "r") as f:
                 abstains_eval_raw = [json.loads(line)["eval_res"] for line in f]
         else:
+            # Route by evaluator name: llama* -> together, gpt-5* -> openai
+            eval_name = str(evaluator).lower()
+            if "gpt" in eval_name:
+                gen_fn = lambda p: lm.openai_generate(p, evaluator)
+            else:
+                gen_fn = lambda p: lm.generate(p, evaluator)
             abstains_eval_raw = thread_map(
-                lambda p: lm.generate(p, evaluator),
+                gen_fn,
                 abstain_prompts,
                 max_workers=32,
-                desc=f"using {evaluator}")
-
+                desc=f"using {evaluator}"
+            )
             eval_utils.save_eval_raw(abstains_eval_raw, abs_path)
 
         ABSTAIN_JSON_KEY = 'is_abstaining'
@@ -85,15 +91,17 @@ class PreciseQAEval:
             ) for _, g in self.test_df.iterrows()
         ]
 
-        if evaluator == "meta-llama/Llama-3.1-70B-Instruct":
-            halu_eval_raw = thread_map(
-                lambda p: lm.generate(p, evaluator),
-                halu_prompts,
-                max_workers=8,
-                desc=f"using {evaluator}"
-            )
+        eval_name = str(evaluator).lower()
+        if "gpt" in eval_name:
+            gen_fn = lambda p: lm.openai_generate(p, evaluator)
         else:
-            raise ValueError(f"Invalid evaluator: {evaluator}")
+            gen_fn = lambda p: lm.generate(p, evaluator)
+        halu_eval_raw = thread_map(
+            gen_fn,
+            halu_prompts,
+            max_workers=8,
+            desc=f"using {evaluator}"
+        )
 
         return halu_eval_raw
 
@@ -121,15 +129,15 @@ class PreciseQAEval:
     def run_eval(self):
         abstantion_res, abstantion_raw_gen = self.eval_abstention(self.abtention_evaluator)
         halu_test_raw_gen = self.judge_hallucination(self.halu_evaluator)
-        # save abstantion_raw_gen as jsonl
-        with open(f'{self.output_path}/abstantion_raw_gen.jsonl', 'w') as f:
-            for abstantion in abstantion_raw_gen:
-                f.write(json.dumps({"abstantion_raw_gen": abstantion}) + '\n')
+        # # save abstantion_raw_gen as jsonl
+        # with open(f'{self.output_path}/abstantion_raw_gen.jsonl', 'w') as f:
+        #     for abstantion in abstantion_raw_gen:
+        #         f.write(json.dumps({"abstantion_raw_gen": abstantion}) + '\n')
         
-        # save halu_eval_raw as jsonl
-        with open(f'{self.output_path}/halu_eval_raw.jsonl', 'w') as f:
-            for halu_eval in halu_test_raw_gen:
-                f.write(json.dumps({"halu_eval_raw": halu_eval}) + '\n')
+        # # save halu_eval_raw as jsonl
+        # with open(f'{self.output_path}/halu_eval_raw.jsonl', 'w') as f:
+        #     for halu_eval in halu_test_raw_gen:
+        #         f.write(json.dumps({"halu_eval_raw": halu_eval}) + '\n')
         abstantion_res, halu_test_res = self.process_res(abstantion_raw_gen, halu_test_raw_gen)
 
         not_abstained = sum([1 for x in abstantion_res if x == False])
