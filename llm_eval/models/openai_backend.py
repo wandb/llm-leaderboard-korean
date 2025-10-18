@@ -303,8 +303,15 @@ class OpenAIModel(BaseModel):
             if self.sequential_mode:
                 iterator = enumerate(inputs)
             else:
+                # Limit concurrency to self.batch_size using a semaphore
+                semaphore = asyncio.Semaphore(max(1, self.batch_size))
+
+                async def limited_run_single(idx: int, item: Dict[str, Any]):
+                    async with semaphore:
+                        return await run_single(idx, item)
+
                 tasks = [
-                    asyncio.create_task(run_single(idx, item))
+                    asyncio.create_task(limited_run_single(idx, item))
                     for idx, item in enumerate(inputs)
                 ]
                 iterator = enumerate(

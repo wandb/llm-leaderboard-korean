@@ -1,6 +1,6 @@
 dataset:
-  name: ifeval_ko
-  split: train
+  name: kobbq
+  split: test
   params:
     dev: false
 model:
@@ -13,8 +13,8 @@ model:
     temperature: 0.0                 # 일관된 Needle 복원에 권장
     sequential_mode: false
 evaluation:
-  method: ifeval_strict
-wandb:
+  method: kobbq
+wandb:  
   params:
     entity: horangi
     project: horangi4-dev

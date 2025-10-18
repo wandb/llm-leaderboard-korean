@@ -112,7 +112,7 @@ class StringMatchEvaluator(BaseEvaluator):
 
         return self._normalize_text(raw_output)
 
-    def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
         """
         Computes accuracy by comparing the normalized prediction against the normalized reference.
         
@@ -132,12 +132,18 @@ class StringMatchEvaluator(BaseEvaluator):
         """
         total = len(samples)
         correct = 0
+        # subset 별 집계를 위한 통계 구조 (요청된 subsets 기준으로 초기화)
+        stats: Dict[str, Dict[str, int]] = {}
+        if subsets:
+            for subset in subsets:
+                stats[subset] = {"total": 0, "correct": 0}
 
         # Log information when evaluating MCQA tasks with provided options.
         if self.mcqa and "options" in samples[0] and isinstance(samples[0]["options"], list) and samples[0]["options"]:
             logger.info(f"Evaluating outputs using string match with mcqa={self.mcqa}")
 
         for sample in tqdm(samples, desc="String-Match Evaluation"):
+            subset_name = sample.get("_subset_name")
             # Normalize the prediction and reference texts.
             pred_norm = self.parse_prediction(sample["prediction"])
             ref_norm = self.parse_prediction(sample["reference"])
@@ -155,6 +161,10 @@ class StringMatchEvaluator(BaseEvaluator):
 
             if is_correct:
                 correct += 1
+                if subset_name:
+                    stats[subset_name]["correct"] += 1
+            if subset_name:
+                stats[subset_name]["total"] += 1
 
             # Record detailed evaluation info within the sample for debugging and analysis.
             sample["evaluation"] = {
@@ -164,5 +174,12 @@ class StringMatchEvaluator(BaseEvaluator):
                 "options": sample.get("options", None)
             }
 
-        accuracy = correct / total if total > 0 else 0.0
-        return {"accuracy": accuracy}
+        # 전체 AVG는 항상 포함
+        metrics: Dict[str, float] = {"AVG": (correct / total if total > 0 else 0.0)}
+        if subsets:
+            for sname, st in stats.items():
+                s_total = st["total"]
+                s_correct = st["correct"]
+                s_acc = (s_correct / s_total) if s_total > 0 else 0.0
+                metrics[f"{sname}/accuracy"] = s_acc
+        return metrics
