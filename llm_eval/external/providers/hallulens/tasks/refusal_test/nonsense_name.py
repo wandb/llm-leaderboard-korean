@@ -19,12 +19,13 @@ def remove_file(file_path):
 
 class NonsenseNameInference:
     """method = together, openai, vllm, custom"""
-    def __init__(self, output_base_dir, generate_model, prompt_path, seed, method='together'):
+    def __init__(self, output_base_dir, generate_model, prompt_path, seed, method='together', limit=None):
         self.output_base_dir = output_base_dir
         self.generate_model = generate_model
         self.inference_method = method
         self.prompt_path = prompt_path
         self.seed = seed
+        self.limit = limit
         self.TASKNAME = prompt_path.split('/')[-1].replace('_all_not_exist.csv', '') #  f"{seed}_{BUSINESS_N}_{EVENT_N}_{PRODUCT_N}"
         print('INFER TASKNAME', self.TASKNAME)
     
@@ -34,6 +35,11 @@ class NonsenseNameInference:
         TASKNAME = self.TASKNAME
         # prompt_path = f"{self.root_path}/save/{self.seed}_{self.BUSINESS_N}_{self.EVENT_N}_{self.PRODUCT_N}_all_not_exist.csv"
         all_prompts = pd.read_csv(self.prompt_path)
+        # apply random subsampling if limit is provided
+        import os
+        env_seed = int(os.environ.get('RANDOM_SEED', str(self.seed)))
+        if self.limit is not None and len(all_prompts) > self.limit:
+            all_prompts = all_prompts.sample(n=self.limit, random_state=env_seed)
 
         # This assertion is to check if generated prompts are Korean.
         assert any(re.search('[가-힣]', str(value)) for _, row in all_prompts.iterrows() for value in row), (
@@ -57,7 +63,7 @@ class NonsenseNameInference:
         remove_file(results_file_path)
 
 class NonsenseNameEval:
-    def __init__(self, output_base_dir, model_path, prompt_path, language='kor'):
+    def __init__(self, output_base_dir, model_path, prompt_path, language='kor', evaluator: str | None = None):
         self.prompt_path = prompt_path
         self.language = language
         self.TASKNAME = prompt_path.split('/')[-1].replace('_all_not_exist.csv', '') #  f"{seed}_{BUSINESS_N}_{EVENT_N}_{PRODUCT_N}"
@@ -67,7 +73,7 @@ class NonsenseNameEval:
         self.generations_file_path = f'{self.task_output_dir}/generation.jsonl'
         self.res_path = f'{self.task_output_dir}/eval_results.json'
         self.eval_raw_path = f'{self.task_output_dir}/raw_eval_res.jsonl'
-        self.evaluator = "meta-llama/Llama-3.1-70B-Instruct"
+        self.evaluator = evaluator or "meta-llama/Llama-3.1-70B-Instruct"
 
         if self.language == 'kor':
             import llm_eval.external.providers.hallulens.tasks.refusal_test.ko_prompt as prompt_templates
@@ -87,10 +93,16 @@ class NonsenseNameEval:
                 )
                 for generation in generations
             ]
-        abstains_eval_raw = thread_map(lambda p: lm.generate(p, self.evaluator),
-                                        abstain_prompts,
-                                        max_workers=50,
-                                        desc=f"using {self.evaluator}")
+        # Route by evaluator name: llama* -> together, gpt-5* -> openai
+        eval_name = str(self.evaluator).lower()
+        if "gpt" in eval_name:
+            gen_fn = lambda p: lm.openai_generate(p, self.evaluator)
+        else:
+            gen_fn = lambda p: lm.generate(p, self.evaluator)
+        abstains_eval_raw = thread_map(gen_fn,
+                                       abstain_prompts,
+                                       max_workers=50,
+                                       desc=f"using {self.evaluator}")
                         
         eval_utils.save_eval_raw(abstains_eval_raw, self.eval_raw_path)
 

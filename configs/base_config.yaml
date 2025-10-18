@@ -3,32 +3,43 @@ wandb:
   params:
     entity: horangi
     project: horangi4-dev
+    project_dataset: horangi4-dataset
 
 # testmode configurations
 testmode: false
 
 # dataset configurations
+halluLens:
+  split: test
+  subset: [precise_wikiqa, mixed_entities, generated_entities]
+  limit: 10
+  evaluation:
+    abstention:
+      model: gpt-4o-mini
+    hallucination:
+      model: gpt-4o
 
 komoral:
   split: validation
-  limit: 1000
+  limit: 10
   evaluation:
     method: string_match
 
 kobbq:
   split: test
-  limit: 1000
+  limit: 10
   evaluation:
     method: string_match
 
 squad_kor_v1:
   split: validation
-  limit: 1000
+  limit: 10
   evaluation:
     method: char_f1
 
 ifeval_ko:
   split: train
+  limit: 10
   evaluation:
     method: ifeval_strict
 
@@ -54,12 +65,13 @@ haerae_bench_v1:
 korean_parallel_corpora:
   subset: [e2k, k2e]
   split: test
-  limit: 1000
+  limit: 10
   evaluation:
     method: comet_score
 
 korean_hate_speech:
   split: test
+  limit: 10
   evaluation:
     method: string_match
 

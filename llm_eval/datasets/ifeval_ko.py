@@ -42,20 +42,11 @@ class IFEvalKoDataset(BaseDataset):
     ):
         super().__init__(dataset_name, split=split, base_prompt_template=base_prompt_template, **kwargs)
 
-    def create_artifact(self):
-        with wandb.init(entity="horangi", project="horangi4-dataset") as run:
-            raw_data = load_dataset(self.dataset_name, split=self.split, **self.kwargs)
-            raw_data.save_to_disk("./ifeval_ko")
-            artifact = wandb.Artifact("ifeval_ko", type="dataset")
-            artifact.add_dir("./ifeval_ko")
-            run.log_artifact(artifact)
-
     def load_artifact(self):
-        with wandb.init(entity="horangi", project="horangi4-dataset") as run:
-            artifact = run.use_artifact('horangi/horangi4-dataset/ifeval_ko:latest', type='dataset')
-            artifact_dir = artifact.download()
-            raw_data = load_from_disk(artifact_dir)
-            return raw_data
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        artifact_path = WandbConfigSingleton.download_artifact(self.dataset_name)
+        raw_data = load_from_disk(artifact_path)
+        return raw_data
 
     def load(self) -> List[Dict[str, Any]]:
         """

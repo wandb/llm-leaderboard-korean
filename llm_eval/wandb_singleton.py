@@ -1,5 +1,7 @@
 from typing import Optional, Any
 from types import SimpleNamespace
+import weave
+import wandb
 
 try:
     from omegaconf import OmegaConf  # type: ignore
@@ -17,7 +19,7 @@ class WandbConfigSingleton:
         return cls._instance
 
     @classmethod
-    def initialize(cls, run, llm: Optional[Any] = None):
+    def initialize(cls, run, llm: Optional[Any] = None, wandb_params: Optional[Any] = None):
         if cls._instance is not None:
             raise Exception("WandbConfigSingleton has already been initialized")
         config_dict = dict(getattr(run, "config", {}) or {})
@@ -25,6 +27,11 @@ class WandbConfigSingleton:
             config = OmegaConf.create(config_dict)
         else:
             config = config_dict
-        cls._instance = SimpleNamespace(run=run, config=config, blend_config=None, llm=llm)
+        cls._instance = SimpleNamespace(run=run, config=config, blend_config=None, llm=llm, wandb_params=wandb_params)
 
-
+    @classmethod
+    def download_artifact(cls, dataset_name: str):
+        api = wandb.Api()
+        artifact = api.artifact(f"{cls._instance.wandb_params.get('entity')}/{cls._instance.wandb_params.get('project_dataset')}/{dataset_name}:latest")
+        artifact_path = artifact.download()
+        return artifact_path

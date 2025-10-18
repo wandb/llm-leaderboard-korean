@@ -9,6 +9,7 @@ from together import Together
 from dotenv import load_dotenv
 import time
 from functools import wraps
+import weave
 
 '''
 NOTE: 
@@ -73,6 +74,7 @@ together_model_map = {
 
 ########################################################################################################
 
+@weave.op()
 def call_together_api(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
     try:
         together_model = together_model_map.get(model, model)
@@ -88,7 +90,7 @@ def call_together_api(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512)
         print(f"TogetherAI API 호출 실패: {e}")
         return ""
 
-
+@weave.op()
 def call_vllm_api(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512, port=None, i=0):
     CUSTOM_SERVER = "0.0.0.0"
 
@@ -125,16 +127,36 @@ def call_vllm_api(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512, por
     return chat_completion.choices[0].message.content
 
 
+@weave.op()
 def openai_generate(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
-    client = openai.OpenAI(
-        api_key=os.environ["OPENAI_API_KEY"],
-    )
+    client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+    model_name = str(model).lower()
+    # gpt-5 계열은 Responses API를 사용 (max_output_tokens)
+    if model_name.startswith("gpt-5"):
+        resp = client.responses.create(
+            model=model,
+            input=prompt,
+            max_output_tokens=max_tokens,
+        )
+        return getattr(resp, "output_text", "") or ""
+    # 그 외 모델은 Chat Completions 사용 (max_tokens 지원)
     chat_completion = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=max_tokens,
         temperature=temperature,
-        top_p=top_p
+        top_p=top_p,
     )
+    return (chat_completion.choices[0].message.content or "")
 
-    return chat_completion.choices[0].message.content
+@weave.op()
+def claude_generate(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
+    from anthropic import Anthropic
+    client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    msg = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return "".join([b.text for b in (msg.content or []) if getattr(b, "type", "") == "text"]) or ""

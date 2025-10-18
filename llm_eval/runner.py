@@ -170,7 +170,7 @@ class ComponentManager:
         """Validate that the evaluation method is allowed for this dataset."""
         ds_info = self.dataset.info()
         evaluation_only = ds_info.get("evaluation_only", None)
-        
+
         if evaluation_only is None:
             return
             
