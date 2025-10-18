@@ -28,10 +28,8 @@ def run_all_from_configs(
         base_cfg = yaml.safe_load(f) or {}
     wandb_params: Dict[str, Any] = ((base_cfg.get("wandb") or {}).get("params") or {})
 
-    weave.init(f"{wandb_params.get('entity')}/{wandb_params.get('project')}")
-    run = wandb.init(entity=wandb_params.get("entity"), project=wandb_params.get("project"), name=model_name)
-
-    WandbConfigSingleton.initialize(run, model_name)
+    run = wandb.init(entity=wandb_params.get("entity"), project=wandb_params.get("project"), name=model_name, reinit="create_new")
+    WandbConfigSingleton.initialize(run, model_name, wandb_params)
 
     result = run_multiple_from_configs(
         base_config_path=base_config_path,
@@ -56,8 +54,9 @@ if __name__ == "__main__":
         base_config_path=args.base_config_path,
         model_config_path=args.model_config_path,
         selected_datasets=[
+            "halluLens",
             "haerae_bench_v1", "ifeval_ko", "komoral", "squad_kor_v1", "mrcr", "kobbq",
-            "korean_hate_speech", "korean_parallel_corpora"
+            "korean_hate_speech", "korean_parallel_corpora", 
             # "aime2025", "hrm8k",
             # "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700", 
         ],

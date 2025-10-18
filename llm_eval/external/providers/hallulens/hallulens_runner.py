@@ -11,6 +11,7 @@ import os
 import json
 from pathlib import Path
 import wandb
+import weave
 
 from llm_eval.external.providers.hallulens.tasks.longwiki.longwiki_main import run_eval
 
@@ -20,6 +21,8 @@ from llm_eval.external.providers.hallulens.tasks.refusal_test.nonsense_mixed_ent
     NonsenseMixedInference
 from llm_eval.external.providers.hallulens.tasks.refusal_test.round_robin_nonsense_name import NonsenseNameEval, \
     NonsenseNameInference
+from typing import Any, Dict, List
+from llm_eval.wandb_controller import WeaveEvalsController
 
 
 HALLULENS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -81,6 +84,49 @@ def precise_wikiqa_runner(
     print(f'{TASKNAME} Evaluation completed')
 
     _log_to_wandb(pd.DataFrame([eval_result]), TASKNAME)
+
+    # Weave Evals logging
+    try:
+        model_name = model.split("/")[-1]
+        gen_path = f"output/{TASKNAME}/{model_name}/generation.jsonl"
+        gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
+        # zip evaluation flags per index
+        abstentions: List[bool] = eval_result.get("abstantion", []) or []
+        halus: List[bool] = eval_result.get("halu_test_res", []) or []
+        samples: List[Dict[str, Any]] = []
+        for i, g in enumerate(gens):
+            ev: Dict[str, Any] = {}
+            if i < len(abstentions):
+                ev["refusal"] = bool(abstentions[i])
+            if i < len(halus):
+                ev["is_hallucinated"] = bool(halus[i])
+            sample = {
+                "input": g.get("prompt", ""),
+                "prediction": g.get("generation", ""),
+                "reference": g.get("answer", None),
+                "evaluation": ev,
+            }
+            samples.append(sample)
+
+        metrics = {
+            k: v for k, v in eval_result.items() if isinstance(v, (int, float))
+        }
+        WeaveEvalsController.log(
+            dataset_name=TASKNAME,
+            subset=None,
+            split="test",
+            model_backend_name=inference_method,
+            model_name=model,
+            scaling_method_name=None,
+            evaluation_method_name="HalluLens-PreciseQAEval",
+            language_penalize=False,
+            target_lang="ko",
+            samples=samples,
+            metrics=metrics,
+            wandb_params={},
+        )
+    except Exception as e:
+        print(f"[Weave] precise_wikiqa logging skipped: {e}")
 
 
 
@@ -153,6 +199,41 @@ def longwiki_runner(
     _log_to_wandb(pd.DataFrame([eval_result]), TASKNAME)
     _log_to_wandb(overall_result_df, TASKNAME + "_detailed" + model_name)
 
+    # Weave Evals logging
+    try:
+        # Build per-sample entries from overall_result_df
+        samples: List[Dict[str, Any]] = []
+        for _, row in (overall_result_df or pd.DataFrame()).iterrows():
+            eval_fields: Dict[str, Any] = {}
+            for key in ["is_supported", "precision", "recall", "f1", "k", "n_claims"]:
+                if key in row and pd.notna(row[key]):
+                    eval_fields[key] = row[key]
+            sample = {
+                "input": row.get("prompt", ""),
+                "prediction": str(row.get("sentence", "")),
+                "reference": row.get("claim", None),
+                "evaluation": eval_fields,
+            }
+            samples.append(sample)
+
+        metrics = {k: v for k, v in (eval_result or {}).items() if isinstance(v, (int, float))}
+        WeaveEvalsController.log(
+            dataset_name=TASKNAME,
+            subset="dynamic",
+            split="test",
+            model_backend_name=inference_method,
+            model_name=model,
+            scaling_method_name=None,
+            evaluation_method_name="HalluLens-LongWiki-FactHalu",
+            language_penalize=False,
+            target_lang="ko",
+            samples=samples,
+            metrics=metrics,
+            wandb_params={},
+        )
+    except Exception as e:
+        print(f"[Weave] longwiki logging skipped: {e}")
+
 
 def non_mixed_entity_runner(
         exp='nonsense_all',
@@ -165,6 +246,7 @@ def non_mixed_entity_runner(
         seed=1,
         inference_method='together',
         limit: int = None,
+        evaluator_model: str = "gpt-4o",
 ):
     # set variables
     EXP = exp  # nonsense_medicine
@@ -184,13 +266,45 @@ def non_mixed_entity_runner(
     if 'gemma' in tested_model:
         med_safety_filtered_model = True
         eval = NonsenseMixedEval(TASKNAME, output_base_dir, tested_model, prompt_path,
-                                 med_safety_filtered_model)
+                                 med_safety_filtered_model, evaluator=evaluator_model)
     else:
-        eval = NonsenseMixedEval(TASKNAME, output_base_dir, tested_model, prompt_path)
+        eval = NonsenseMixedEval(TASKNAME, output_base_dir, tested_model, prompt_path, evaluator=evaluator_model)
     res, task_path = eval.run_eval(eval_overwrite)
 
     # Log to evaluation result to wandb
     _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
+
+    # Weave Evals logging
+    try:
+        gen_path = f"{task_path}/generation.jsonl"
+        gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
+        refusals: List[bool] = res.get("refusal_eval_raw", []) or []
+        samples: List[Dict[str, Any]] = []
+        for i, g in enumerate(gens):
+            ev: Dict[str, Any] = {"refusal": bool(refusals[i])} if i < len(refusals) else {}
+            samples.append({
+                "input": g.get("prompt", ""),
+                "prediction": g.get("generation", ""),
+                "reference": None,
+                "evaluation": ev,
+            })
+        metrics = {k: v for k, v in (res or {}).items() if isinstance(v, (int, float))}
+        WeaveEvalsController.log(
+            dataset_name=inference.TASKNAME,
+            subset=None,
+            split="test",
+            model_backend_name=inference_method,
+            model_name=tested_model,
+            scaling_method_name=None,
+            evaluation_method_name="HalluLens-NonMixedEntity",
+            language_penalize=False,
+            target_lang="ko",
+            samples=samples,
+            metrics=metrics,
+            wandb_params={},
+        )
+    except Exception as e:
+        print(f"[Weave] non_mixed_entity logging skipped: {e}")
 
     return res
 
@@ -204,6 +318,7 @@ def non_generated_entity_runner(
         inference_method='together',
         seed=0,
         limit: int = None,
+        evaluator_model: str = "gpt-4o",
 ):
     if prompt_path == None:
         raise Exception("No prompt path provided")
@@ -213,7 +328,7 @@ def non_generated_entity_runner(
         inference.remove_existing_files()
     inference.run_inference()
 
-    eval = NonsenseNameEval(output_base_dir, generate_model, prompt_path)
+    eval = NonsenseNameEval(output_base_dir, generate_model, prompt_path, evaluator=evaluator_model)
     res, task_path = eval.run_eval(eval_overwrite)
     N = len(res['refusal_eval_raw'])
     refusal_rate = sum(res['refusal_eval_raw']) / N * 100
@@ -221,6 +336,38 @@ def non_generated_entity_runner(
 
     # Log to evaluation result to wandb
     _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
+
+    # Weave Evals logging
+    try:
+        gen_path = f"{task_path}/generation.jsonl"
+        gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
+        refusals: List[bool] = res.get("refusal_eval_raw", []) or []
+        samples: List[Dict[str, Any]] = []
+        for i, g in enumerate(gens):
+            ev: Dict[str, Any] = {"refusal": bool(refusals[i])} if i < len(refusals) else {}
+            samples.append({
+                "input": g.get("prompt", ""),
+                "prediction": g.get("generation", ""),
+                "reference": None,
+                "evaluation": ev,
+            })
+        metrics = {k: v for k, v in (res or {}).items() if isinstance(v, (int, float))}
+        WeaveEvalsController.log(
+            dataset_name=inference.TASKNAME,
+            subset=None,
+            split="test",
+            model_backend_name=inference_method,
+            model_name=generate_model,
+            scaling_method_name=None,
+            evaluation_method_name="HalluLens-NonGeneratedEntity",
+            language_penalize=False,
+            target_lang="ko",
+            samples=samples,
+            metrics=metrics,
+            wandb_params={},
+        )
+    except Exception as e:
+        print(f"[Weave] non_generated_entity logging skipped: {e}")
 
     return res
 

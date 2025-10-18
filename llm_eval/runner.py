@@ -170,7 +170,7 @@ class ComponentManager:
         """Validate that the evaluation method is allowed for this dataset."""
         ds_info = self.dataset.info()
         evaluation_only = ds_info.get("evaluation_only", None)
-        
+
         if evaluation_only is None:
             return
             
@@ -534,6 +534,9 @@ class PipelineRunner:
                 evaluation_samples, few_shot_prefix
             )
             logger.info(f"Prepared {len(inference_samples)} samples for model inference.")
+            
+            from llm_eval.wandb_singleton import WandbConfigSingleton
+            WandbConfigSingleton.init_weave()
 
             # Step 3: Run inference
             predictions = self.inference_engine.run_inference(inference_samples)
