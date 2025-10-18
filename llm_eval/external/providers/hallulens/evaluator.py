@@ -80,6 +80,8 @@ def run_hallulens_from_configs(
     # }
 
     # 모델 문자열 결정
+    from llm_eval.wandb_singleton import WandbConfigSingleton
+    WandbConfigSingleton.init_weave()
     hl_model = (model_params or {}).get("model_name") or model_name
 
     # subset 순회 (리스트가 아니면 paths_dict 키 기준 실행)
@@ -120,6 +122,7 @@ def run_hallulens_from_configs(
                 tested_model=hl_model,
                 limit=dataset_params.get("limit"),
                 inference_method=inference_method_global,
+                evaluator_model=abstention_eval_model or "gpt-4o",
             )
         elif subset_name == "generated_entities":
             non_generated_entity_runner(
@@ -127,6 +130,7 @@ def run_hallulens_from_configs(
                 generate_model=hl_model,
                 limit=dataset_params.get("limit"),
                 inference_method=inference_method_global,
+                evaluator_model=abstention_eval_model or "gpt-4o",
             )
         else:
             logger.warning(f"[HalluLens] Unknown subtask '{subset_name}', skipping.")

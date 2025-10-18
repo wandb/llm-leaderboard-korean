@@ -9,6 +9,7 @@ from together import Together
 from dotenv import load_dotenv
 import time
 from functools import wraps
+import weave
 
 '''
 NOTE: 
@@ -73,6 +74,7 @@ together_model_map = {
 
 ########################################################################################################
 
+@weave.op()
 def call_together_api(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
     try:
         together_model = together_model_map.get(model, model)
@@ -88,7 +90,7 @@ def call_together_api(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512)
         print(f"TogetherAI API 호출 실패: {e}")
         return ""
 
-
+@weave.op()
 def call_vllm_api(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512, port=None, i=0):
     CUSTOM_SERVER = "0.0.0.0"
 
@@ -125,6 +127,7 @@ def call_vllm_api(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512, por
     return chat_completion.choices[0].message.content
 
 
+@weave.op()
 def openai_generate(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
     client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
     model_name = str(model).lower()
@@ -146,6 +149,7 @@ def openai_generate(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
     )
     return (chat_completion.choices[0].message.content or "")
 
+@weave.op()
 def claude_generate(prompt, model, temperature=0.0, top_p=1.0, max_tokens=512):
     from anthropic import Anthropic
     client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])

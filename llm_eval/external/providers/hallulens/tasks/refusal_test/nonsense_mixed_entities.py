@@ -28,7 +28,7 @@ class NonsenseMixedInference(NonsenseNameInference):
         print('INFER TASKNAME', self.TASKNAME)
 
 class NonsenseMixedEval(NonsenseNameEval):
-    def __init__(self, taskname, output_base_dir, model_path, prompt_path, med_safety_filtered_model=False, language='kor'):
+    def __init__(self, taskname, output_base_dir, model_path, prompt_path, med_safety_filtered_model=False, language='kor', evaluator: str | None = None):
         super().__init__(output_base_dir, model_path, prompt_path)
 
         self.prompt_path = prompt_path
@@ -41,7 +41,7 @@ class NonsenseMixedEval(NonsenseNameEval):
         self.eval_raw_path = f'{self.task_output_dir}/raw_eval_res.jsonl'
 
         self.med_safety_filtered_model = med_safety_filtered_model
-        self.evaluator = "meta-llama/Llama-3.1-8B-Instruct"
+        self.evaluator = evaluator or "meta-llama/Llama-3.1-8B-Instruct"
 
         print('EVAL TASKNAME', self.TASKNAME)
 

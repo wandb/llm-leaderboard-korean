@@ -63,7 +63,7 @@ class NonsenseNameInference:
         remove_file(results_file_path)
 
 class NonsenseNameEval:
-    def __init__(self, output_base_dir, model_path, prompt_path, language='kor'):
+    def __init__(self, output_base_dir, model_path, prompt_path, language='kor', evaluator: str | None = None):
         self.prompt_path = prompt_path
         self.language = language
         self.TASKNAME = prompt_path.split('/')[-1].replace('_all_not_exist.csv', '') #  f"{seed}_{BUSINESS_N}_{EVENT_N}_{PRODUCT_N}"
@@ -73,7 +73,7 @@ class NonsenseNameEval:
         self.generations_file_path = f'{self.task_output_dir}/generation.jsonl'
         self.res_path = f'{self.task_output_dir}/eval_results.json'
         self.eval_raw_path = f'{self.task_output_dir}/raw_eval_res.jsonl'
-        self.evaluator = "meta-llama/Llama-3.1-70B-Instruct"
+        self.evaluator = evaluator or "meta-llama/Llama-3.1-70B-Instruct"
 
         if self.language == 'kor':
             import llm_eval.external.providers.hallulens.tasks.refusal_test.ko_prompt as prompt_templates
