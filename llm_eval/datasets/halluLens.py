@@ -33,48 +33,39 @@ class HalluLensDataset(BaseDataset):
         Returns:
             dict: Dictionary mapping subset names to file paths
         """
-        logger.info("Initializing wandb run...")
-        run = wandb.init(entity="horangi", project="horangi4-dataset", job_type="dataset-loading")
+        logger.info("Downloading halluLens artifact...")
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        halluLens_artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
 
-        try:
-            logger.info("Downloading halluLens artifact...")
-            halluLens_artifact_dir = run.use_artifact(
-                f'horangi/horangi4-dataset/halluLens:latest',
-                type='dataset'
-            ).download()
+        hallulens_path_set = {
+            'precise_wikiqa': os.path.join(halluLens_artifact_dir, "precise_wikiqa/precise_wikiqa.jsonl"),
+            'longwiki': os.path.join(halluLens_artifact_dir, "longwiki/longwiki.jsonl"),
+            'mixed_entities': os.path.join(halluLens_artifact_dir, "non_entity_refusal/mixed_entity_2000.csv"),
+            'generated_entities': os.path.join(halluLens_artifact_dir, "non_entity_refusal/generated_entity_1950.csv")
+        }
 
+        # Filter by subset if specified
+        if self.subset is not None:
+            logger.info(f"Filtering datasets to subset: {self.subset}")
             hallulens_path_set = {
-                'precise_wikiqa': os.path.join(halluLens_artifact_dir, "precise_wikiqa/precise_wikiqa.jsonl"),
-                'longwiki': os.path.join(halluLens_artifact_dir, "longwiki/longwiki.jsonl"),
-                'mixed_entities': os.path.join(halluLens_artifact_dir, "non_entity_refusal/mixed_entity_2000.csv"),
-                'generated_entities': os.path.join(halluLens_artifact_dir, "non_entity_refusal/generated_entity_1950.csv")
+                task: hallulens_path_set[task]
+                for task in self.subset
+                if task in hallulens_path_set
             }
 
-            # Filter by subset if specified
-            if self.subset is not None:
-                logger.info(f"Filtering datasets to subset: {self.subset}")
-                hallulens_path_set = {
-                    task: hallulens_path_set[task]
-                    for task in self.subset
-                    if task in hallulens_path_set
-                }
+            # Warn about invalid subset names
+            invalid_tasks = set(self.subset) - set(hallulens_path_set.keys())
+            if invalid_tasks:
+                logger.warning(f"Invalid subset names will be ignored: {invalid_tasks}")
 
-                # Warn about invalid subset names
-                invalid_tasks = set(self.subset) - set(hallulens_path_set.keys())
-                if invalid_tasks:
-                    logger.warning(f"Invalid subset names will be ignored: {invalid_tasks}")
+        # Assert dataset file path existence check
+        for key, path in hallulens_path_set.items():
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"Expected file not found for '{key}': {path}")
+            logger.info(f"✓ Found {key}: {path}")
 
-            # Assert dataset file path existence check
-            for key, path in hallulens_path_set.items():
-                if not os.path.exists(path):
-                    raise FileNotFoundError(f"Expected file not found for '{key}': {path}")
-                logger.info(f"✓ Found {key}: {path}")
-
-            logger.info(f"Successfully loaded {len(hallulens_path_set)} dataset(s)")
-            return hallulens_path_set
-
-        finally:
-            wandb.finish()
+        logger.info(f"Successfully loaded {len(hallulens_path_set)} dataset(s)")
+        return hallulens_path_set
 
     def info(self):
         return {

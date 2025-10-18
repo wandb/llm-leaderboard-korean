@@ -27,7 +27,6 @@ class KoreanParallelCorporaDataset(BaseDataset):
         subset: Optional[Union[str, list]] = ["e2k", "k2e"],
         split: str = "test",
         base_prompt_template: Optional[str] = None,
-        artifact_ref: str = "horangi/horangi4-dataset/korean-parallel-corpora:latest",
         **kwargs,
     ):
         if base_prompt_template is None:
@@ -35,7 +34,6 @@ class KoreanParallelCorporaDataset(BaseDataset):
                 "제시되는 문장을 한국어 문장인지 영어 문장인지 판단하여, 한국어 문장이면 영어로, 영어 문장이면 한국어로 번역하십시오. 답변에는 오직 한국어 번역문 또는 영어 번역문만을 포함하고, 그 외의 설명, 주석, 추가 텍스트를 절대 포함하지 마십시오. 반드시 한국어 번역문 또는 영어 번역문만 출력해야 합니다.\n\n{query}"
             )
         super().__init__(dataset_name, split=split, subset=subset, base_prompt_template=base_prompt_template, **kwargs)
-        self.artifact_ref = artifact_ref
         self._raw_json: Optional[Dict[str, Any]] = None
 
     def _normalize_split(self, split: str) -> str:
@@ -52,9 +50,7 @@ class KoreanParallelCorporaDataset(BaseDataset):
             return self._raw_json
 
         from llm_eval.wandb_singleton import WandbConfigSingleton
-        run = WandbConfigSingleton.get_instance().run
-        artifact = run.use_artifact(self.artifact_ref, type="dataset")
-        artifact_dir = artifact.download()
+        artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
         
         file_path = os.path.join(artifact_dir, "korean-parallel-corpora.json")
         if not os.path.exists(file_path):
@@ -119,6 +115,5 @@ class KoreanParallelCorporaDataset(BaseDataset):
         return {
             "dataset_name": self.dataset_name,
             "split": self._normalize_split(self.split),
-            "artifact_ref": self.artifact_ref,
             "description": "Korean Parallel Corpora dataset loaded from Weights & Biases artifact",
         }

@@ -80,8 +80,6 @@ def run_hallulens_from_configs(
     # }
 
     # 모델 문자열 결정
-    from llm_eval.wandb_singleton import WandbConfigSingleton
-    WandbConfigSingleton.init_weave()
     hl_model = (model_params or {}).get("model_name") or model_name
 
     # subset 순회 (리스트가 아니면 paths_dict 키 기준 실행)

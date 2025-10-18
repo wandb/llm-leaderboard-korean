@@ -1,7 +1,7 @@
 model:
   name: openai
   params:
-    model_name: gpt-4-1-2025-04-14
+    model_name: gpt-4.1-2025-04-14
     api_base: https://api.openai.com/v1
     batch_size: 32
     max_tokens: 1024

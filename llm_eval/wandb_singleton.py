@@ -1,6 +1,7 @@
 from typing import Optional, Any
 from types import SimpleNamespace
 import weave
+import wandb
 
 try:
     from omegaconf import OmegaConf  # type: ignore
@@ -29,5 +30,8 @@ class WandbConfigSingleton:
         cls._instance = SimpleNamespace(run=run, config=config, blend_config=None, llm=llm, wandb_params=wandb_params)
 
     @classmethod
-    def init_weave(cls):
-        weave.init(f"{cls._instance.wandb_params.get('entity')}/{cls._instance.wandb_params.get('project')}")
+    def download_artifact(cls, dataset_name: str):
+        api = wandb.Api()
+        artifact = api.artifact(f"{cls._instance.wandb_params.get('entity')}/{cls._instance.wandb_params.get('project_dataset')}/{dataset_name}:latest")
+        artifact_path = artifact.download()
+        return artifact_path
