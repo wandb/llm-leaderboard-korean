@@ -27,8 +27,8 @@ def run_all_from_configs(
     with open(base_config_path, "r", encoding="utf-8") as f:
         base_cfg = yaml.safe_load(f) or {}
     wandb_params: Dict[str, Any] = ((base_cfg.get("wandb") or {}).get("params") or {})
-
-    run = wandb.init(entity=wandb_params.get("entity"), project=wandb_params.get("project"), name=model_name, reinit="create_new")
+    weave.init(f"{wandb_params.get('entity')}/{wandb_params.get('project')}")
+    run = wandb.init(entity=wandb_params.get("entity"), project=wandb_params.get("project"), name=model_name)
     WandbConfigSingleton.initialize(run, model_name, wandb_params)
 
     result = run_multiple_from_configs(
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # make parser
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default="configs/gpt-4o-2024-11-20.yaml")
+    parser.add_argument("--model_config_path", type=str, default="configs/gpt-4-1-2025-04-14.yaml")
     parser.add_argument("--base_config_path", type=str, default="configs/base_config.yaml")
     args = parser.parse_args()
 
@@ -54,9 +54,9 @@ if __name__ == "__main__":
         base_config_path=args.base_config_path,
         model_config_path=args.model_config_path,
         selected_datasets=[
-            "halluLens",
-            "haerae_bench_v1", "ifeval_ko", "komoral", "squad_kor_v1", "mrcr", "kobbq",
-            "korean_hate_speech", "korean_parallel_corpora", 
+            "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr"
+            # "haerae_bench_v1", "ifeval_ko", "komoral", "squad_kor_v1", "mrcr", "kobbq",
+            # "korean_hate_speech", "korean_parallel_corpora", 
             # "aime2025", "hrm8k",
             # "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700", 
         ],
