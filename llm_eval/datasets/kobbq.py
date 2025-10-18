@@ -14,7 +14,6 @@ class KobbqDataset(BaseDataset):
     - 각 샘플은 'options'를 포함하며, 선택지 길이에 맞춰 "(A)".. 형식으로 동적 생성합니다.
     - 정답(`answer`)은 선택지 리스트(`choices`)에서 동일 문자열을 찾아 인덱스→문자 선택지로 매핑합니다.
     - 입력 프롬프트는 `context`(있으면)와 `question`, 그리고 보기(A/B/...)를 나열하여 구성합니다.
-    - `_subset_name`은 고정 문자열 "kobbq"로 설정합니다.
 
     사용 예:
         ds = KobbqDataset(split="test")
@@ -24,7 +23,6 @@ class KobbqDataset(BaseDataset):
         #     "input": "...",
         #     "reference": "(A)",
         #     "options": ["(A)", "(B)", "(C)"],
-        #     "_subset_name": "kobbq"
         #   }, ...
         # ]
     """
@@ -53,7 +51,7 @@ class KobbqDataset(BaseDataset):
     def _convert_to_list(self, hf_dataset) -> List[Dict[str, Any]]:
         """
         HF Dataset을 순회하며 HRET 표준 포맷의 리스트로 변환:
-        {"input": ..., "reference": ..., "options": ..., "_subset_name": "kobbq"}
+        {"input": ..., "reference": ..., "options": ...}
         """
         processed_list = []
         # 카테고리별 최대 샘플 수 제한
@@ -114,7 +112,6 @@ class KobbqDataset(BaseDataset):
                 "input": final_input,
                 "reference": reference,
                 "options": options,
-                "_subset_name": "kobbq",
                 "metadata": {
                     "bbq_category": category,
                     "sample_id": item.get("sample_id"),

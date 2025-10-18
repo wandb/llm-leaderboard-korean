@@ -65,41 +65,44 @@ class HLEDataset(BaseDataset):
         """
         processed_list = []
         for item in hf_dataset:
-            image_base64 = item.get("image")
+            try: 
+                image_base64 = item.get("image")
 
-            # If exclude_images is True and the sample has an image, skip it entirely.
-            if self.exclude_images and image_base64:
+                # If exclude_images is True and the sample has an image, skip it entirely.
+                if self.exclude_images and image_base64:
+                    continue
+
+                question_text = item.get("question", "").strip()
+                gold_answer = item.get("gold", "").strip()
+                
+                formatted_question = self.base_prompt_template.format(question=question_text)
+
+                if image_base64:
+                    # Format for multimodal models
+                    final_input = [
+                        {"type": "text", "text": formatted_question},
+                        {"type": "image_url", "image_url": {"url": image_base64}}
+                    ]
+                else:
+                    # Format for text-only models
+                    final_input = formatted_question
+
+                possible_answers = [ans.strip() for ans in gold_answer.split(',')]
+                reference = possible_answers[0] if possible_answers else ""
+
+                processed_list.append(
+                    {
+                        "input": final_input,
+                        "reference": reference,
+                        "metadata": {
+                            "all_references": possible_answers,
+                            "has_image": bool(image_base64),
+                        },
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Failed to process item: {e}")
                 continue
-
-            question_text = item.get("question", "").strip()
-            gold_answer = item.get("gold", "").strip()
-            
-            formatted_question = self.base_prompt_template.format(question=question_text)
-
-            if image_base64:
-                # Format for multimodal models
-                final_input = [
-                    {"type": "text", "text": formatted_question},
-                    {"type": "image_url", "image_url": {"url": image_base64}}
-                ]
-            else:
-                # Format for text-only models
-                final_input = formatted_question
-
-            possible_answers = [ans.strip() for ans in gold_answer.split(',')]
-            reference = possible_answers[0] if possible_answers else ""
-
-            processed_list.append(
-                {
-                    "input": final_input,
-                    "reference": reference,
-                    "_subset_name": "HLE",
-                    "metadata": {
-                        "all_references": possible_answers,
-                        "has_image": bool(image_base64),
-                    },
-                }
-            )
         
         logger.info(f"Loaded {len(processed_list)} samples. (Image-based samples were "
                     f"{'excluded' if self.exclude_images else 'included'}).")
@@ -109,7 +112,6 @@ class HLEDataset(BaseDataset):
         """Returns metadata about the dataset."""
         return {
             "dataset_name": self.dataset_name,
-            "subset": self.subset,
             "split": self.split,
             "description": "HLE: A multimodal QA dataset. Use 'exclude_images=True' to load only text-based problems.",
             "evaluation_only": None,

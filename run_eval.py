@@ -46,7 +46,8 @@ if __name__ == "__main__":
     # make parser
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_config_path", type=str, default="configs/gpt-4-1-2025-04-14.yaml")
+    parser.add_argument("--model_config_path", type=str, default="configs/gpt-4o-2024-11-20.yaml")
+    # parser.add_argument("--model_config_path", type=str, default="configs/gpt-5-mini-2025-08-07.yaml")
     parser.add_argument("--base_config_path", type=str, default="configs/base_config.yaml")
     args = parser.parse_args()
 
@@ -54,11 +55,15 @@ if __name__ == "__main__":
         base_config_path=args.base_config_path,
         model_config_path=args.model_config_path,
         selected_datasets=[
-            "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr"
+            "hle"
+            # Done: "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr", "haerae_bench_v1", "squad_kor_v1", "kobbq"
+            # Need to check: "aime2025", "hrm8k", "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700", "hle"
+            # Need to add: "bfcl", "swe_bench_verified", "ko_dark_bench"
+            #########################################################################################
             # "haerae_bench_v1", "ifeval_ko", "komoral", "squad_kor_v1", "mrcr", "kobbq",
             # "korean_hate_speech", "korean_parallel_corpora", 
             # "aime2025", "hrm8k",
-            # "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700", 
+            # "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700", "hle"
         ],
     )
     print(result)
