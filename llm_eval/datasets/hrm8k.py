@@ -118,6 +118,8 @@ class HRM8KDataset(BaseDataset):
                 "reference": answer.strip(),
                 "_subset_name": subset_name,
             })
+            if getattr(self, "dev_mode", False) and len(processed_list) >= 10:
+                break
         return processed_list
 
     def get_raw_samples(self) -> Any:

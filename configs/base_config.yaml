@@ -1,0 +1,108 @@
+# wandb configurations
+wandb:
+  params:
+    entity: horangi
+    project: horangi4-dev
+    project_dataset: horangi4-dataset
+
+# testmode configurations
+testmode: false
+
+# dataset configurations
+halluLens:
+  split: test
+  subset: [precise_wikiqa, mixed_entities, generated_entities]
+  limit: 10
+  evaluation:
+    abstention:
+      model: gpt-4o-mini
+    hallucination:
+      model: gpt-4o
+
+komoral:
+  split: validation
+  limit: 10
+  evaluation:
+    method: string_match
+
+kobbq:
+  split: test
+  limit: 10
+  evaluation:
+    method: string_match
+
+squad_kor_v1:
+  split: validation
+  limit: 10
+  evaluation:
+    method: char_f1
+
+ifeval_ko:
+  split: train
+  limit: 10
+  evaluation:
+    method: ifeval_strict
+
+mrcr:
+  split: train
+  params:
+    filename: 2needle.parquet        # 4needle/8needle 등으로 변경 가능
+    dev: false
+    task: 128k                # 예: 128k, 256k, 1m 등
+  evaluation:
+    method: sequence_match
+    params:
+      prefix_key: random_string_to_prepend
+      require_prefix: true
+      strip_prefix: true
+
+haerae_bench_v1:
+  subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history, reading_comprehension]
+  split: test
+  evaluation:
+    method: string_match
+
+korean_parallel_corpora:
+  subset: [e2k, k2e]
+  split: test
+  limit: 10
+  evaluation:
+    method: comet_score
+
+korean_hate_speech:
+  split: test
+  limit: 10
+  evaluation:
+    method: string_match
+
+kmmlu:
+  split: test
+  evaluation:
+    method: string_match
+    
+kmmlu_pro:
+  split: test
+  evaluation:
+    method: string_match
+
+kmmlu_hard:
+  split: test
+  evaluation:
+    method: string_match
+
+kobalt_700:
+  split: test
+  subset: KoBALT-700
+  evaluation:
+    method: string_match
+
+aime2025:
+  split: test
+  subset: ["AIME2025-I", "AIME2025-II"]
+  evaluation:
+    method: math_match
+
+hrm8k:
+  split: test
+  evaluation:
+    method: math_match

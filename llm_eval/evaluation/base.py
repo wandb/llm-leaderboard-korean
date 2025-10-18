@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Optional
 from llm_eval.models.base import BaseModel
 from llm_eval.models.multi import MultiModel # for llm as a judge
 import logging
@@ -47,6 +47,7 @@ class BaseEvaluator:
 
     def evaluate_predictions(
         self, 
+        subsets: Optional[List[str]],
         samples: List[Dict[str, Any]]
     ) -> Dict[str, float]:
         """
@@ -75,7 +76,8 @@ class BaseEvaluator:
     def evaluate(
         self,
         data: List[Dict[str, Any]],
-        model: Union[BaseModel, MultiModel, None] = None
+        model: Union[BaseModel, MultiModel, None] = None,
+        subsets: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Args:
@@ -124,7 +126,7 @@ class BaseEvaluator:
             logger.info(f"BaseEvaluator: Processed {judged_count}/{len(data)} samples")
 
         # 3) compute_metrics
-        metrics = self.evaluate_predictions(data)
+        metrics = self.evaluate_predictions(subsets, data)
         return {
             "metrics": metrics,
             "samples": data

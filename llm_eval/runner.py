@@ -13,6 +13,7 @@ This module encapsulates the entire LLM evaluation pipeline:
 This runner can be used via CLI or integrated into an API.
 """
 
+import weave
 import logging
 import time
 from dataclasses import dataclass
@@ -31,6 +32,7 @@ from llm_eval.utils.prompt_template import (
     DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
 )
 from llm_eval.utils.metrics import language_penalizer
+from llm_eval.wandb_controller import WeaveSampleLogger, WeaveEvalsController
 
 logger = get_logger(name="runner", level=logging.INFO)
 
@@ -168,7 +170,7 @@ class ComponentManager:
         """Validate that the evaluation method is allowed for this dataset."""
         ds_info = self.dataset.info()
         evaluation_only = ds_info.get("evaluation_only", None)
-        
+
         if evaluation_only is None:
             return
             
@@ -397,7 +399,7 @@ class InferenceEngine:
             
             logger.info(f"Inference completed for {len(predictions)} items.")
             return predictions
-            
+
         except Exception as e:
             logger.error(f"Error during model inference or scaling: {e}", exc_info=True)
             raise
@@ -542,6 +544,32 @@ class PipelineRunner:
             # Step 5: Apply language penalization if enabled
             self.language_penalizer.apply_penalization(eval_dict)
 
+            # # Step 5.5: Log evaluated samples so evaluation columns appear in Weave per-sample traces
+            # try:
+            #     WeaveSampleLogger.log_samples(
+            #         op_name=(self.config.model_backend_params or {}).get("model_name") or self.config.model_backend_name,
+            #         dataset_name=self.config.dataset_name,
+            #         samples=eval_dict.get("samples", []) or [],
+            #     )
+            # except Exception:
+            #     pass
+
+            # Step 5.6: Log to Weave Evals using EvaluationLogger via controller
+            WeaveEvalsController.log(
+                dataset_name=self.config.dataset_name,
+                subset=self.config.subset,
+                split=self.config.split,
+                model_backend_name=self.config.model_backend_name,
+                model_name=(self.config.model_backend_params or {}).get("model_name"),
+                scaling_method_name=self.config.scaling_method_name,
+                evaluation_method_name=self.config.evaluation_method_name,
+                language_penalize=self.config.language_penalize,
+                target_lang=self.config.target_lang,
+                samples=eval_dict.get("samples", []) or [],
+                metrics=eval_dict.get("metrics", {}) or {},
+                wandb_params=self.config.wandb_params or {},
+            )
+            
             # Step 6: Create final result
             return self._create_final_result(eval_dict, few_shot_prefix, start_time)
 
@@ -564,7 +592,7 @@ class PipelineRunner:
         """Run evaluation on the predictions."""
         logger.info(f"Starting evaluation with '{self.config.evaluation_method_name}'.")
         try:
-            return self.components.evaluator.evaluate(predictions, model=self.components.model)
+            return self.components.evaluator.evaluate(predictions, model=self.components.model, subsets=self.config.subset)
         except Exception as e:
             logger.error(f"Error during evaluation with '{self.config.evaluation_method_name}': {e}", exc_info=True)
             raise
@@ -631,6 +659,8 @@ class PipelineRunner:
     def _log_to_wandb(self, result: EvaluationResult) -> None:
         import wandb
         import pandas as pd
+        from llm_eval.wandb_singleton import WandbConfigSingleton  # optional import
+
         """Log evaluation summary to Weights & Biases if configured."""
         table_name = self.config.dataset_name + "_leaderboard_table"
         data = {k: result.metrics.get(k) for k in {"model_name", "AVG", *result.metrics.keys()}}
@@ -640,12 +670,7 @@ class PipelineRunner:
         cols = ["model_name", "AVG"] + sorted([c for c in df.columns if c not in ["model_name", "AVG"]])
         df = df[cols]
         leaderboard_table = wandb.Table(dataframe=df)
-        with wandb.init(
-            entity=self.config.wandb_params.get("entity"),
-            project=self.config.wandb_params.get("project"),
-            name=self.config.model_backend_params.get("model_name")
-            ) as run:
-            run.log({table_name: leaderboard_table})
+        WandbConfigSingleton.get_instance().run.log({table_name: leaderboard_table})
 
     def _create_error_result(self, error_msg: str) -> EvaluationResult:
         """Create an error result for pipeline failures."""
