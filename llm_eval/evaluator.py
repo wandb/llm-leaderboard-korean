@@ -360,6 +360,16 @@ def run_multiple_from_configs(
         print("dataset_params", dataset_params)
         print("--------------------")
 
+        # Branch out HalluLens to external evaluator module
+        if str(ds_key).lower() == "hallulens":
+            from llm_eval.external.providers.hallulens.evaluator import run_hallulens_from_configs
+            result_map = run_hallulens_from_configs(
+                base_config_path=base_config_path,
+                model_config_path=model_config_path,
+            )
+            results.update(result_map)
+            continue
+
         result = evaluator.run(
             model=model_name,
             dataset=ds_key,
