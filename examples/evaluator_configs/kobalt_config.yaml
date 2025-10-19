@@ -1,0 +1,51 @@
+# kobalt_700_openai_eval.yaml
+# Usage:
+#   python -m llm_eval.evaluator --config path/to/this/file.yaml
+
+# Dataset settings
+dataset:
+  name: "kobalt_700"
+  split: "test"
+  params: {} # 데이터셋의 기본 프롬프트 템플릿을 사용합니다.
+
+# Model backend
+model:
+  name: "openai"
+  params:
+    model_name: "[여기에 평가할 모델 이름을 입력하세요]"
+    api_base: "[여기에 API 엔드포인트 URL을 입력하세요]"
+    max_new_tokens: 512
+
+# No judge or reward models
+judge_model:
+  name: null
+  params: {}
+
+reward_model:
+  name: null
+  params: {}
+
+# No scaling by default
+scaling:
+  name: null
+  params: {}
+
+# Evaluation method
+evaluation:
+  method: "string_match"
+  params:
+    mcqa: true
+
+# Global options
+language_penalize: true
+target_lang: "ko"
+custom_cot_parser: null
+
+# Few-shot (optional)
+few_shot:
+  num: 0
+  split: null
+  instruction: "Use the following examples to answer the question."
+  example_template: |
+    Q: {input}
+    A: {reference}

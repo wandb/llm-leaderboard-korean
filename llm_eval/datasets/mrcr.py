@@ -175,7 +175,9 @@ class MRCRDataset(BaseDataset):
 
             samples.append(sample)
 
-            if self.dev_mode and len(samples) >= 2:
+            if getattr(self, "dev_mode", False) and len(samples) >= 2:
+                break
+            if getattr(self, "limit", None) and len(samples) >= self.limit:
                 break
 
         return samples

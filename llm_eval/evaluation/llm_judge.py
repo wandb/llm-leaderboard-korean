@@ -137,7 +137,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
             raise ValueError(f"No template found for judge_type: {judge_type}")
         return template.format(**sample)
 
-    def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
         if not samples:
             return {}
 
@@ -266,16 +266,65 @@ class LLMJudgeEvaluator(BaseEvaluator):
                 logger.error(f"Error in judge_batch: {e}")
                 return {"error": str(e)}
 
-        metrics = {}
+        # 전체 메트릭 유지 (가능한 경우)
+        metrics: Dict[str, float] = {}
         if score_count > 0:
             metrics["average_judge_score"] = total_score / score_count
         if (score_count > 0) and (total_items > 0) and (self.default_judge_type == JudgeType.KOREAN_SAT):
-            metrics["average_score_per_item"] = total_score / total_items  # Ensure this metric is calculated
+            metrics["average_score_per_item"] = total_score / total_items
             metrics['korean_sat_result'] = ksat_scores
         if total_items > 0 and any(
             sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value 
             for sample in samples
         ):
             metrics["judge_accuracy"] = total_correct / total_items
+
+        # subset 별 AVG만 추가 (subset 없는 샘플은 제외) + all 집계
+        subset_stats: Dict[str, Dict[str, float]] = {}
+        if subsets:
+            for s in subsets:
+                subset_stats[s] = {"total": 0.0, "sum_score": 0.0, "correct": 0.0}
+        for sample in samples:
+            sname = sample.get("_subset_name")
+            if not sname:
+                # subsets 지정이고 subset 미지정 샘플은 per-subset 계산에서 제외
+                continue
+            if sname not in subset_stats:
+                subset_stats[sname] = {"total": 0.0, "sum_score": 0.0, "correct": 0.0}
+
+            subset_stats[sname]["total"] += 1
+
+            # 점수형
+            if "judge_score" in sample and isinstance(sample.get("judge_score"), (int, float)):
+                subset_stats[sname]["sum_score"] += float(sample["judge_score"])
+
+            # 이진 정확도형 (pairwise 등)
+            if sample.get("judge_correct") is True:
+                subset_stats[sname]["correct"] += 1
+
+
+        if subsets:
+            for sname, st in subset_stats.items():
+                denom = st["total"] if st["total"] > 0 else 1.0
+                # 우선순위: score 기반 평균 -> 정확도 기반 -> 0.0
+                avg_score = st["sum_score"] / denom if st["sum_score"] > 0 else None
+                acc = st["correct"] / denom if st["correct"] > 0 else None
+                if avg_score is not None:
+                    metrics[f"{sname}/average_judge_score"] = avg_score
+                elif acc is not None:
+                    metrics[f"{sname}/judge_accuracy"] = acc
+                else:
+                    metrics[f"{sname}/judge_accuracy"] = 0.0
+
+        # 전체 AVG는 항상 포함: 점수 평균 우선, 없으면 정확도, 없으면 0.0
+        if score_count > 0:
+            metrics["AVG"] = total_score / score_count
+        elif total_items > 0 and any(
+            sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value 
+            for sample in samples
+        ):
+            metrics["AVG"] = total_correct / total_items
+        else:
+            metrics["AVG"] = 0.0
 
         return metrics

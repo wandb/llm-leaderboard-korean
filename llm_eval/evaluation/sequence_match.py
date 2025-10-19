@@ -67,14 +67,22 @@ class SequenceMatchEvaluator(BaseEvaluator):
             return text[len(prefix):]
         return text
 
-    def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
         if not samples:
             return {"sequence_match_score": 0.0}
 
         total_ratio = 0.0
         prefix_miss = 0
+        # 요청된 subsets 기준 초기화
+        subset_stats: Dict[str, Dict[str, float]] = {}
+        if subsets:
+            for s in subsets:
+                subset_stats[s] = {"sum_ratio": 0.0, "count": 0.0, "prefix_miss": 0.0}
 
         for sample in samples:
+            subset_name = sample.get("_subset_name")
+            if subset_name and subset_name not in subset_stats:
+                subset_stats[subset_name] = {"sum_ratio": 0.0, "count": 0.0, "prefix_miss": 0.0}
             prediction = self.parse_prediction(sample.get("prediction"))
             reference = self.parse_prediction(sample.get("reference"))
             prefix = self._get_prefix(sample)
@@ -85,8 +93,13 @@ class SequenceMatchEvaluator(BaseEvaluator):
                 if self.require_prefix and not has_prefix:
                     ratio = 0.0
                     prefix_miss += 1
+                    if subset_name:
+                        subset_stats[subset_name]["prefix_miss"] += 1
                     self._update_sample(sample, has_prefix, ratio, prefix)
                     total_ratio += ratio
+                    if subset_name:
+                        subset_stats[subset_name]["sum_ratio"] += ratio
+                        subset_stats[subset_name]["count"] += 1
                     continue
 
             if self.strip_prefix and prefix:
@@ -96,15 +109,21 @@ class SequenceMatchEvaluator(BaseEvaluator):
             ratio = SequenceMatcher(None, prediction, reference).ratio()
             self._update_sample(sample, has_prefix, ratio, prefix)
             total_ratio += ratio
+            if subset_name:
+                subset_stats[subset_name]["sum_ratio"] += ratio
+                subset_stats[subset_name]["count"] += 1
 
+        # 전체 메트릭 유지 (sequence_match_score, prefix_miss_rate, AVG)
         avg_ratio = total_ratio / len(samples)
-        metrics = {"sequence_match_score": avg_ratio}
-
+        metrics: Dict[str, float] = {"sequence_match_score": avg_ratio, "AVG": avg_ratio}
         if self.prefix_key:
             metrics["sequence_match_prefix_miss_rate"] = prefix_miss / len(samples)
-        
-        metrics["AVG"] = avg_ratio
-
+        # subsets 전달 여부에 따라 분기
+        if subsets:
+            for sname, st in subset_stats.items():
+                cnt = st["count"]
+                s_avg = (st["sum_ratio"] / cnt) if cnt > 0 else 0.0
+                metrics[f"{sname}/sequence_match_score"] = s_avg
         return metrics
 
     @staticmethod

@@ -56,6 +56,13 @@ def run_exp(
             max_workers=max_workers,
             desc="Predict on custom API",
         )
+    elif inference_method == "anthropic":
+        all_prompts["generation"] = thread_map(
+            lambda p: lm.claude_generate(p, model=model_path, temperature=0.0, top_p=1.0, max_tokens=max_tokens),
+            prompts,
+            max_workers=max_workers,
+            desc="Predict on Claude API",
+        )
     elif inference_method == "together":
         all_prompts["generation"] = thread_map(
             lambda p: lm.call_together_api(p, model=model_path, temperature=0.0, top_p=1.0, max_tokens=max_tokens),

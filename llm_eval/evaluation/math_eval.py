@@ -134,7 +134,7 @@ class MathMatchEvaluator(BaseEvaluator):
             logger.warning(f"Error: {str(e)}")
             return False
 
-    def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
         """
         Evaluates mathematical expressions for equivalence and calculates accuracy.
         Additionally, stores extracted and parsed answers for debugging or analysis.
@@ -157,8 +157,16 @@ class MathMatchEvaluator(BaseEvaluator):
         correct = 0
         parse_failures = 0
         verify_failures = 0
+        # 요청된 subsets 기준 초기화
+        subset_stats: Dict[str, Dict[str, int]] = {}
+        if subsets:
+            for s in subsets:
+                subset_stats[s] = {"total": 0, "correct": 0}
 
         for sample in tqdm(samples, desc="Math-Match Evaluation"):
+            subset_name = sample.get("_subset_name")
+            if subset_name and subset_name not in subset_stats:
+                subset_stats[subset_name] = {"total": 0, "correct": 0}
             # Extract final answers
             extracted_pred = self.extract_answer(str(sample.get("prediction", "")))
             extracted_ref = self.extract_answer(str(sample.get("reference", "")))
@@ -185,6 +193,10 @@ class MathMatchEvaluator(BaseEvaluator):
 
             if is_correct:
                 correct += 1
+                if subset_name:
+                    subset_stats[subset_name]["correct"] += 1
+            if subset_name:
+                subset_stats[subset_name]["total"] += 1
 
             sample["evaluation"] = {
                 "extracted_pred": extracted_pred,
@@ -195,10 +207,18 @@ class MathMatchEvaluator(BaseEvaluator):
                 "fallback_used": fallback_used
             }
 
-        metrics = {
-            "accuracy": correct / total if total else 0.0,
+        # 전체 메트릭 유지 (accuracy) + 실패율
+        overall_acc = correct / total if total else 0.0
+        metrics: Dict[str, float] = {
+            "AVG": overall_acc,
+            "accuracy": overall_acc,
             "parse_failure_rate": parse_failures / total if total else 0.0,
-            "verify_failure_rate": verify_failures / total if total else 0.0
+            "verify_failure_rate": verify_failures / total if total else 0.0,
         }
-
+        if subsets:
+            for sname, st in subset_stats.items():
+                s_total = st["total"]
+                s_correct = st["correct"]
+                s_acc = (s_correct / s_total) if s_total > 0 else 0.0
+                metrics[f"{sname}/accuracy"] = s_acc
         return metrics
