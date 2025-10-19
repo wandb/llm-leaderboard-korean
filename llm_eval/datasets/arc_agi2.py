@@ -7,10 +7,8 @@ from . import register_dataset
 class ARCAGI2Dataset(ARCAGIDataset):
     def __init__(self, *args, **kwargs):
         kwargs.update({
-            "mode": "github",
-            "gh_owner": "arcprize",
-            "gh_repo": "ARC-AGI-2",
-            "gh_branch": "main",
-            "gh_root_dir": "data",
+            "dataset_name": "arc_agi2",
+            "split": "evaluation",
+            "subset": "default",
         })
         super().__init__(*args, **kwargs)

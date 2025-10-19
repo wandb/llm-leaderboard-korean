@@ -136,3 +136,17 @@ hle:
   limit: 1000
   evaluation:
     method: "string_match"
+
+arc_agi:
+  split: evaluation
+  subset: default
+  limit: 1000
+  evaluation:
+    method: "grid_match"
+
+arc_agi2:
+  split: evaluation
+  subset: default
+  limit: 1000
+  evaluation:
+    method: "grid_match"

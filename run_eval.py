@@ -58,15 +58,10 @@ if __name__ == "__main__":
         model_config_path=args.model_config_path,
         selected_datasets=[
             args.dataset
-            # "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700"
-            # Done: "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr", "haerae_bench_v1", "squad_kor_v1", "kobbq"
-            # Need to check: "aime2025", "hrm8k", "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700", "hle"
-            # Need to add: "bfcl", "swe_bench_verified", "ko_dark_bench"
-            #########################################################################################
-            # "haerae_bench_v1", "ifeval_ko", "komoral", "squad_kor_v1", "mrcr", "kobbq",
-            # "korean_hate_speech", "korean_parallel_corpora", 
-            # "aime2025", "hrm8k",
-            # "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700", "hle"
+            # Done: "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi"
+            # Need to check: "aime2025", "hrm8k", 
+            # Need to add: "bfcl", "swe_bench_verified", "ko_dark_bench", "MT bench"
+            # Not use: arc_agi2, kmmlu_hard
         ],
     )
     print(result)
