@@ -34,7 +34,6 @@ class KoreanParallelCorporaDataset(BaseDataset):
                 "제시되는 문장을 한국어 문장인지 영어 문장인지 판단하여, 한국어 문장이면 영어로, 영어 문장이면 한국어로 번역하십시오. 답변에는 오직 한국어 번역문 또는 영어 번역문만을 포함하고, 그 외의 설명, 주석, 추가 텍스트를 절대 포함하지 마십시오. 반드시 한국어 번역문 또는 영어 번역문만 출력해야 합니다.\n\n{query}"
             )
         super().__init__(dataset_name, split=split, subset=subset, base_prompt_template=base_prompt_template, **kwargs)
-        self._raw_json: Optional[Dict[str, Any]] = None
 
     def _normalize_split(self, split: str) -> str:
         s = (split or "").lower()
@@ -46,9 +45,6 @@ class KoreanParallelCorporaDataset(BaseDataset):
         return "test"
 
     def _download_and_load(self) -> Dict[str, Any]:
-        if self._raw_json is not None:
-            return self._raw_json
-
         from llm_eval.wandb_singleton import WandbConfigSingleton
         artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
         
@@ -60,7 +56,6 @@ class KoreanParallelCorporaDataset(BaseDataset):
             data = json.load(f)
         if not isinstance(data, dict):
             raise ValueError("Invalid korean-parallel-corpora.json format: expected an object with 'train'/'test'/'dev' keys")
-        self._raw_json = data
         return data
 
     def load(self) -> List[Dict[str, Any]]:

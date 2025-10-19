@@ -50,7 +50,10 @@ class CharF1Evaluator(BaseEvaluator):
         n = len(samples)
         # subset 별 집계를 위한 통계 구조
         stats = {}
+        # subsets 가 문자열로 들어오는 경우 대비
         if subsets:
+            if isinstance(subsets, str):
+                subsets = [subsets]
             for subset in subsets:
                 stats[subset] = {"sum_f1": 0.0, "count": 0.0}
         stats["all"] = {"sum_f1": 0.0, "count": 0.0}
@@ -61,8 +64,10 @@ class CharF1Evaluator(BaseEvaluator):
             ref = sample.get("reference", "")
             f1 = self._char_f1(pred, ref)
 
-            # subset 통계 업데이트
+            # subset 통계 업데이트 (동적 생성 허용)
             if subset_name:
+                if subset_name not in stats:
+                    stats[subset_name] = {"sum_f1": 0.0, "count": 0.0}
                 stats[subset_name]["sum_f1"] += f1
                 stats[subset_name]["count"] += 1
             stats["all"]["sum_f1"] += f1
