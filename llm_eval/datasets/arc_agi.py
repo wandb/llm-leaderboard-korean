@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Iterable
-import requests
-from urllib.parse import quote
+from typing import Any, Dict, List, Optional, Iterable, Union
+import os
+import json
 
 from .base import BaseDataset
 from . import register_dataset
@@ -10,10 +10,9 @@ from llm_eval.utils.logging import get_logger
 
 logger = get_logger(name="arc_agi", level="INFO")
 
-try:
-    from datasets import load_dataset, Dataset, DatasetDict
-except Exception:
-    load_dataset = None  # type: ignore[assignment]
+# Lightweight aliases to keep type hints simple in artifact-only mode
+Dataset = Any
+DatasetDict = Any
 
 DEFAULT_ARC_PROMPT_TEMPLATE = (
     "You are given ARC tasks. Grids use digits 0-9 only.\n"
@@ -57,95 +56,11 @@ def _task_to_prompt(
     return template.format(examples=examples, query_block=query_block)
 
 
-def _list_github_json_urls(
-    owner: str,
-    repo: str,
-    branch: str,
-    subdir: str,
-    suffix: str = ".json",
-    token: Optional[str] = None,
-    timeout: int = 30,
-) -> List[str]:
-    api = f"https://api.github.com/repos/{quote(owner)}/{quote(repo)}/contents/{quote(subdir)}?ref={quote(branch)}"
-    headers = {"Accept": "application/vnd.github.v3+json"}
-    if token:
-        headers["Authorization"] = f"token {token}"
-
-    r = requests.get(api, headers=headers, timeout=timeout)
-    try:
-        r.raise_for_status()
-    except Exception as e:
-        raise RuntimeError(f"GitHub Contents API failed: {api} ({r.status_code}) {r.text[:200]}") from e
-
-    items = r.json()
-    if not isinstance(items, list):
-        raise RuntimeError(f"Unexpected GitHub API response at {api}: {items}")
-
-    return [
-        it["download_url"]
-        for it in items
-        if isinstance(it, dict) and it.get("type") == "file" and str(it.get("name", "")).endswith(suffix)
-    ]
-
-
-def _fetch_json_from_url(url: str, token: Optional[str] = None, timeout: int = 30) -> Dict[str, Any]:
-    headers = {}
-    if token and "raw.githubusercontent.com" not in url:
-        headers["Authorization"] = f"token {token}"
-    r = requests.get(url, headers=headers, timeout=timeout)
-    try:
-        r.raise_for_status()
-    except Exception as e:
-        raise RuntimeError(f"Fetch failed: {url} ({r.status_code}) {r.text[:200]}") from e
-    return r.json()
-
-
-def _iter_hf_samples(
-    hf_obj: Dataset | DatasetDict,  # type: ignore[name-defined]
-    arc_split: str,
-    limit: Optional[int],
-) -> Iterable[Dict[str, Any]]:
-    """
-    Assumes each HF row is a task dict like:
-      { "train": [ {input, output}, ... ], "test": [ {input, output}, ... ] }
-    If the HF builder exposes multiple splits, choose by arc_split.
-    """
-    taken = 0
-
-    def take() -> bool:
-        nonlocal taken
-        if limit is not None and taken >= limit:
-            return False
-        taken += 1
-        return True
-
-    if isinstance(hf_obj, DatasetDict):  # type: ignore[name-defined]
-        want_keys = []
-        if arc_split in ("training", "all"):
-            want_keys += ["training", "train"]
-        if arc_split in ("evaluation", "all"):
-            want_keys += ["evaluation", "test"]
-        seen = set()
-        for k in want_keys:
-            if k in hf_obj and k not in seen:
-                seen.add(k)
-                for row in hf_obj[k]:
-                    if not take():
-                        return
-                    yield row
-    else:
-        for row in hf_obj:
-            if not take():
-                return
-            yield row
-
-
 @register_dataset("arc_agi")
 class ARCAGIDataset(BaseDataset):
     """
-    ARC-AGI loader with two modes:
-      - mode="huggingface": load from Hugging Face Hub (dataset_id default: "dataartist/arc-agi")
-      - mode="github": list files via GitHub Contents API and fetch JSONs directly
+    ARC-AGI loader (artifact-only):
+      - Loads local artifact file arc_agi.json downloaded via WandB artifact utilities.
 
     Expected per-task JSON format:
     {
@@ -157,207 +72,96 @@ class ARCAGIDataset(BaseDataset):
     def __init__(
         self,
         dataset_name: str = "arc_agi",
-        split: str = "test",
+        split: str = "evaluation",
+        subset: Optional[Union[str, list]] = "default",
         base_prompt_template: Optional[str] = DEFAULT_ARC_PROMPT_TEMPLATE,
-        mode: str = "github",
-        arc_split: str = "evaluation",
-        multi_test: str = "first",
-        include_reference: bool = True,
         limit: Optional[int] = None,
-        hf_dataset_id: str = "dataartist/arc-agi",
-        hf_name: Optional[str] = None,
-        hf_revision: Optional[str] = None,
-        hf_token: Optional[str] = None,
-        gh_owner: str = "fchollet",
-        gh_repo: str = "ARC-AGI",
-        gh_branch: str = "master",
-        gh_root_dir: str = "data",
-        gh_token: Optional[str] = None,
-        gh_timeout: int = 30,
         **kwargs: Any
     ):
-        subset_from_kwargs = kwargs.pop("subset", None)
         super().__init__(
             dataset_name,
             split=split,
-            subset=subset_from_kwargs,
+            subset=subset,
             base_prompt_template=base_prompt_template,
             **kwargs
         )
 
-        self.mode = (mode or "huggingface").lower()
-        if self.mode not in {"huggingface", "github"}:
-            raise ValueError("mode must be 'huggingface' or 'github'")
-
-        self.arc_split = (arc_split or "evaluation").lower()
-        if self.arc_split not in {"training", "evaluation", "all"}:
-            raise ValueError("arc_split must be 'training', 'evaluation', or 'all'")
-
-        self.multi_test = "all" if str(multi_test).lower() == "all" else "first"
-        self.include_reference = bool(include_reference)
-        self.limit = int(limit) if (isinstance(limit, int) or (isinstance(limit, str) and str(limit).isdigit())) else None
-
-        # HF fields
-        self.hf_dataset_id = hf_dataset_id
-        self.hf_name = hf_name
-        self.hf_revision = hf_revision
-        self.hf_token = hf_token
-
-        # GitHub fields
-        self.gh_owner = gh_owner
-        self.gh_repo = gh_repo
-        self.gh_branch = gh_branch
-        self.gh_root_dir = gh_root_dir.strip("/")
-        self.gh_token = gh_token
-        self.gh_timeout = int(gh_timeout)
-
-        self._github_urls: List[str] = []
-        self._raw_tasks: Optional[List[Dict[str, Any]]] = None
-        self._hf_dataset: Optional[Any] = None  # Dataset or DatasetDict
-
-        if self.mode == "github":
-            subdirs: List[str] = []
-            if self.arc_split in ("training", "all"):
-                subdirs.append(f"{self.gh_root_dir}/training")
-            if self.arc_split in ("evaluation", "all"):
-                subdirs.append(f"{self.gh_root_dir}/evaluation")
-
-            urls: List[str] = []
-            for sd in subdirs:
-                try:
-                    urls.extend(
-                        _list_github_json_urls(
-                            owner=self.gh_owner,
-                            repo=self.gh_repo,
-                            branch=self.gh_branch,
-                            subdir=sd,
-                            suffix=".json",
-                            token=self.gh_token,
-                            timeout=self.gh_timeout,
-                        )
-                    )
-                except RuntimeError as e:
-                    logger.warning(f"GitHub listing failed for {sd}: {e}")
-
-            if not urls:
-                logger.warning(
-                    f"No ARC-AGI JSON files found via GitHub API under "
-                    f"{self.gh_owner}/{self.gh_repo}@{self.gh_branch}/{self.gh_root_dir} "
-                    f"(arc_split='{self.arc_split}')"
-                )
-
-            if self.limit:
-                urls = urls[: self.limit]
-
-            self._github_urls = urls
-
-        else:
-            if load_dataset is None:
-                raise RuntimeError("datasets library not available. Install with `pip install datasets`.")
-            load_kwargs: Dict[str, Any] = {}
-            if self.hf_name:
-                load_kwargs["name"] = self.hf_name
-            if self.hf_revision:
-                load_kwargs["revision"] = self.hf_revision
-            if self.hf_token:
-                load_kwargs["token"] = self.hf_token
-            logger.info(
-                f"Loading Hugging Face dataset: id={self.hf_dataset_id}, "
-                f"name={self.hf_name}, revision={self.hf_revision}"
-            )
-            self._hf_dataset = load_dataset(self.hf_dataset_id, **load_kwargs)
-
-        logger.info(
-            f"ARC-AGI dataset initialized. mode={self.mode}, arc_split={self.arc_split}, "
-            f"multi_test={self.multi_test}, limit={self.limit}"
-        )
-
-    def _iter_tasks(self) -> Iterable[Dict[str, Any]]:
-        if self.mode == "github":
-            for url in self._github_urls:
-                try:
-                    yield _fetch_json_from_url(url, token=self.gh_token, timeout=self.gh_timeout)
-                except Exception as e:
-                    logger.error(f"Failed to fetch/parse: {url} ({e})")
-        else:
-            assert self._hf_dataset is not None
-            for task in _iter_hf_samples(self._hf_dataset, self.arc_split, self.limit):
-                yield task
+    def _normalize_split(self, split: str) -> str:
+        s = (split or "").lower()
+        if s in ("training", "train"):
+            return "training"
+        if s in ("evaluation", "test", "eval", "evaluate"):
+            return "evaluation"
+        return "evaluation"
 
     def load(self) -> List[Dict[str, Any]]:
-        samples: List[Dict[str, Any]] = []
+        if self.subset is None:
+            subset_list = ["default"]
+        elif isinstance(self.subset, (list, tuple)):
+            subset_list = list(self.subset)
+        else:
+            subset_list = [self.subset]
+        raw = self._download_and_load()
+        split_key = self._normalize_split(self.split)
+        split_data = raw.get(split_key, {})
+        if not isinstance(split_data, dict):
+            raise ValueError(
+                f"Invalid '{split_key}' split format: expected an object keyed by subsets"
+            )
 
-        for task_idx, task in enumerate(self._iter_tasks()):
-            test_pairs = task.get("test", [])
-            if self.arc_split == "training":
-                # Still use 'test' if present; we don't synthesize tests from 'train' here.
-                pass
+        processed_list: List[Dict[str, Any]] = []
+        for sub in subset_list:
+            items = split_data.get(sub, [])
+            if not isinstance(items, list):
+                continue
+            processed_list.extend(self._convert_to_list(items, subset_name=sub))
+        return processed_list
 
-            all_references = [
-                _serialize_grid(tp["output"]) for tp in test_pairs if "output" in tp
-            ] or None
+    def _convert_to_list(self, items, subset_name: str) -> List[Dict[str, Any]]:
+        samples = []
 
-            iter_pairs = test_pairs if self.multi_test == "all" else test_pairs[:1]
-            for local_idx, test_pair in enumerate(iter_pairs):
-                prompt = _task_to_prompt(
-                    task,
-                    test_pair["input"],
-                    base_prompt_template=self.base_prompt_template or DEFAULT_ARC_PROMPT_TEMPLATE,
-                )
-                reference = (
-                    _serialize_grid(test_pair["output"])
-                    if self.include_reference and "output" in test_pair
-                    else None
-                )
-
-                samples.append(
-                    {
-                        "input": prompt,
-                        "reference": reference,
-                        "metadata": {
-                            "id": f"task{task_idx}_test_{local_idx}",
-                            "source_mode": self.mode,
-                            "arc_split": self.arc_split,
-                            "references_all": all_references,
-                        },
-                    }
-                )
+        for task in items:
+            prompt = _task_to_prompt(
+                task,
+                task["test"][0]["input"],
+                base_prompt_template=self.base_prompt_template or DEFAULT_ARC_PROMPT_TEMPLATE,
+            )
+            reference = _serialize_grid(task["test"][0]["output"])
+            samples.append(
+                {
+                    "input": prompt,
+                    "reference": reference,
+                    "_subset_name": subset_name,
+                }
+            )
+            if getattr(self, "dev_mode", False) and len(samples) >= 2:
+                break
+            if getattr(self, "limit", None) and len(samples) >= self.limit:
+                break
 
         return samples
 
     def get_raw_samples(self) -> Any:
-        if self._raw_tasks is None:
-            self._raw_tasks = list(self._iter_tasks())
-        return self._raw_tasks
+        return self._download_and_load()
+
+    def _download_and_load(self) -> Dict[str, Any]:
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
+        file_path = os.path.join(artifact_dir, f"{self.dataset_name}.json")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"{self.dataset_name}.json not found in artifact: {artifact_dir}")
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError(f"Invalid {self.dataset_name}.json format: expected an object keyed by splits")
+        return data
 
     def info(self) -> Dict[str, Any]:
-        desc = "ARC-AGI loader supporting Hugging Face Hub and GitHub sources."
         base = {
             "dataset_name": self.dataset_name,
-            "split": self.split,
-            "mode": self.mode,
-            "arc_split": self.arc_split,
-            "multi_test": self.multi_test,
-            "include_reference": self.include_reference,
-            "description": desc,
+            "subset": self.subset,
+            "split": self._normalize_split(self.split),
+            "description": f"{self.dataset_name.upper()} dataset loaded from W&B artifact.",
+            "evaluation_only": None,
         }
-        if self.mode == "github":
-            base.update(
-                {
-                    "gh_owner": self.gh_owner,
-                    "gh_repo": self.gh_repo,
-                    "gh_branch": self.gh_branch,
-                    "gh_root_dir": self.gh_root_dir,
-                    "num_urls": len(self._github_urls),
-                }
-            )
-        else:
-            base.update(
-                {
-                    "hf_dataset_id": self.hf_dataset_id,
-                    "hf_name": self.hf_name,
-                    "hf_revision": self.hf_revision,
-                }
-            )
         return base
-

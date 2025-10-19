@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional, Union
-from datasets import load_dataset
+import os
+import json
 from .base import BaseDataset
 from . import register_dataset
 
@@ -33,7 +34,7 @@ class KMMLUDataset(BaseDataset):
     """
     def __init__(
         self, 
-        dataset_name: str = "HAERAE-HUB/KMMLU",
+        dataset_name: str = "kmmlu",
         subset: Optional[Union[str, list]] = None,
         split: str = "test",
         base_prompt_template: Optional[str] = None,
@@ -52,49 +53,69 @@ class KMMLUDataset(BaseDataset):
             )
         super().__init__(dataset_name, split=split, subset=subset, base_prompt_template=base_prompt_template, **kwargs)
         
+    def _normalize_split(self, split: str) -> str:
+        s = (split or "").lower()
+        if s in ("train", "training"):
+            return "train"
+        if s in ("dev", "validation", "valid", "val"):
+            return "dev"
+        return "test"
+
+    def _download_and_load(self) -> Dict[str, Any]:
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
+        file_path = os.path.join(artifact_dir, "kmmlu.json")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"kmmlu.json not found in artifact: {artifact_dir}")
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("Invalid kmmlu.json format: expected an object keyed by splits")
+        return data
+
     def load(self) -> List[Dict[str, Any]]:
         """
-        Loads the data and returns it in the form of 
+        Loads the data from artifact and returns it in the format:
         [{"input":..., "reference":..., "options":..., "_subset_name":...}, ...].
         """
-        # 1) Split based on the type of subset
+        # Default subset list
+        default_subsets = [
+            'Accounting', 'Agricultural-Sciences', 'Aviation-Engineering-and-Maintenance', 'Biology',
+            'Chemical-Engineering', 'Chemistry', 'Civil-Engineering', 'Computer-Science', 'Construction',
+            'Criminal-Law', 'Ecology', 'Economics', 'Education', 'Electrical-Engineering', 'Electronics-Engineering',
+            'Energy-Management', 'Environmental-Science', 'Fashion', 'Food-Processing',
+            'Gas-Technology-and-Engineering', 'Geomatics', 'Health', 'Industrial-Engineer',
+            'Information-Technology', 'Interior-Architecture-and-Design', 'Law', 'Machine-Design-and-Manufacturing',
+            'Management', 'Maritime-Engineering', 'Marketing', 'Materials-Engineering', 'Mechanical-Engineering',
+            'Nondestructive-Testing', 'Patent', 'Political-Science-and-Sociology', 'Psychology', 'Public-Safety',
+            'Railway-and-Automotive-Engineering', 'Real-Estate', 'Refrigerating-Machinery', 'Social-Welfare',
+            'Taxation', 'Telecommunications-and-Wireless-Technology', 'Korean-History', 'Math'
+        ]
+
         if self.subset is None:
-            self.subset = [
-                'Accounting', 'Agricultural-Sciences', 'Aviation-Engineering-and-Maintenance', 'Biology',
-                'Chemical-Engineering', 'Chemistry', 'Civil-Engineering', 'Computer-Science', 'Construction',
-                'Criminal-Law', 'Ecology', 'Economics', 'Education', 'Electrical-Engineering', 'Electronics-Engineering',
-                'Energy-Management', 'Environmental-Science', 'Fashion', 'Food-Processing',
-                'Gas-Technology-and-Engineering', 'Geomatics', 'Health', 'Industrial-Engineer',
-                'Information-Technology', 'Interior-Architecture-and-Design', 'Law', 'Machine-Design-and-Manufacturing',
-                'Management', 'Maritime-Engineering', 'Marketing', 'Materials-Engineering', 'Mechanical-Engineering',
-                'Nondestructive-Testing', 'Patent', 'Political-Science-and-Sociology', 'Psychology', 'Public-Safety',
-                'Railway-and-Automotive-Engineering', 'Real-Estate', 'Refrigerating-Machinery', 'Social-Welfare',
-                'Taxation', 'Telecommunications-and-Wireless-Technology', 'Korean-History', 'Math'
-            ]
+            subset_list = default_subsets
+        elif isinstance(self.subset, (list, tuple)):
+            subset_list = list(self.subset)
+        else:
+            subset_list = [self.subset]
 
-        if isinstance(self.subset, list):
-            # When multiple subsets are provided
-            all_items = []
-            for sub in self.subset:
-                partial_data = load_dataset(
-                    self.dataset_name,
-                    sub,
-                    split=self.split,
-                    **self.kwargs
-                )
-                all_items.extend(self._convert_to_list(partial_data, subset_name=sub))
-            return all_items
-
-        else:  # when subset is a single string
-            raw_data = load_dataset(
-                self.dataset_name,
-                self.subset,
-                split=self.split,
-                **self.kwargs
+        raw = self._download_and_load()
+        split_key = self._normalize_split(self.split)
+        split_data = raw.get(split_key, {})
+        if not isinstance(split_data, dict):
+            raise ValueError(
+                f"Invalid '{split_key}' split format: expected an object keyed by subsets"
             )
-            return self._convert_to_list(raw_data, subset_name=self.subset)
 
-    def _convert_to_list(self, hf_dataset, subset_name: str) -> List[Dict[str, Any]]:
+        processed_list: List[Dict[str, Any]] = []
+        for sub in subset_list:
+            items = split_data.get(sub, [])
+            if not isinstance(items, list):
+                continue
+            processed_list.extend(self._convert_to_list(items, subset_name=sub))
+        return processed_list
+
+    def _convert_to_list(self, items, subset_name: str) -> List[Dict[str, Any]]:
         """
         Iterates over the HuggingFace Dataset object (hf_dataset) and converts each sample into the format:
         {"input":..., "reference":..., "options":..., "_subset_name": subset_name}.
@@ -119,7 +140,7 @@ class KMMLUDataset(BaseDataset):
             "D. {choice_D}"
         )
         
-        for item in hf_dataset:
+        for item in items:
             # Extract and clean the original question and choices
             raw_question = item.get('question', '').replace("### 정답", "").strip()
             choice_A = item.get('A', '').strip()
@@ -147,33 +168,14 @@ class KMMLUDataset(BaseDataset):
                 "options": options,
                 "_subset_name": subset_name,
             })
-            if getattr(self, "dev_mode", False) and len(processed_list) >= 10:
+            if getattr(self, "dev_mode", False) and len(processed_list) >= 2:
+                break
+            if getattr(self, "limit", None) and len(processed_list) >= self.limit:
                 break
         return processed_list
 
     def get_raw_samples(self) -> Any:
-        """
-        Returns the raw data.
-        If multiple subsets are specified, returns a list; 
-        if a single subset or None is specified, returns a single Dataset (for simplicity).
-        """
-        if self.subset is None:
-            return load_dataset(self.dataset_name, split=self.split, **self.kwargs)
-        elif isinstance(self.subset, list):
-            result = []
-            for s in self.subset:
-                partial = load_dataset(
-                    self.dataset_name, s, split=self.split, **self.kwargs
-                )
-                result.append(partial)
-            return result
-        else:
-            return load_dataset(
-                self.dataset_name, 
-                self.subset,
-                split=self.split,
-                **self.kwargs
-            )
+        return self._download_and_load()
 
     def info(self) -> Dict[str, Any]:
         """
@@ -182,11 +184,9 @@ class KMMLUDataset(BaseDataset):
         return {
             "dataset_name": self.dataset_name,
             "subset": self.subset,
-            "split": self.split,
+            "split": self._normalize_split(self.split),
             "description": (
-                "KMMLU Benchmark. https://arxiv.org/abs/2402.11548 "
-                "subset=list -> load partial subsets, "
-                "subset=str -> load single subset."
+                "KMMLU Benchmark loaded from W&B artifact. https://arxiv.org/abs/2402.11548"
             ),
             "evaluation_only": None
         }

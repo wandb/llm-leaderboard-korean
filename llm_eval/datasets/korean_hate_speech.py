@@ -24,7 +24,8 @@ class KoreanHateSpeechDataset(BaseDataset):
     def __init__(
         self,
         dataset_name: str = "korean_hate_speech",
-        split: str = "training",
+        subset: str = "default",
+        split: str = "train",
         base_prompt_template: Optional[str] = None,
         **kwargs,
     ):
@@ -32,25 +33,24 @@ class KoreanHateSpeechDataset(BaseDataset):
             base_prompt_template = (
                 "제시되는 한국어 문장이 혐오 발언인지 판단하여, '1'(혐오 발언) 또는 '0'(아님) 중 하나의 숫자로만 답변하십시오. 답변에는 오직 숫자 하나만 포함해야 하며, 마침표(.), 쉼표(,), 공백, 줄바꿈 등 어떤 추가 문자나 텍스트도 절대 포함하지 마십시오. 정확히 '1' 또는 '0' 중 하나만 출력하십시오. 예시: 0 (올바름), 0. (틀림), 0, (틀림), A0 (틀림)\n\n{query}"
             )
-        super().__init__(dataset_name, split=split, base_prompt_template=base_prompt_template, **kwargs)
-        self._raw_json: Optional[Dict[str, Any]] = None
+        super().__init__(dataset_name, split=split, subset=subset, base_prompt_template=base_prompt_template, **kwargs)
 
     def _normalize_split(self, split: str) -> str:
         s = (split or "").lower()
-        if s in ("train", "training", "test", "validation"):  # 허용 별칭
+        if s in ("train", "training"):
             return "train"
-        if s in ("dev"):
+        if s in ("dev", "validation", "valid", "val"):
             return "dev"
-        # 기본값은 train 으로 둔다
+        if s in ("test",):
+            return "test"
+        # 기본값: dev 우선, 없으면 train
         return "train"
 
     def _download_and_load(self) -> Dict[str, Any]:
-        if self._raw_json is not None:
-            return self._raw_json
 
         from llm_eval.wandb_singleton import WandbConfigSingleton
         artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
-        
+
         file_path = os.path.join(artifact_dir, "korean_hate_speech.json")
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"korean_hate_speech.json not found in artifact: {artifact_dir}")
@@ -58,18 +58,30 @@ class KoreanHateSpeechDataset(BaseDataset):
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         if not isinstance(data, dict):
-            raise ValueError("Invalid korean_hate_speech.json format: expected an object with 'train'/'dev' keys")
-        self._raw_json = data
+            raise ValueError("Invalid korean_hate_speech.json format: expected an object keyed by splits")
         return data
 
     def load(self) -> List[Dict[str, Any]]:
         raw = self._download_and_load()
         split_key = self._normalize_split(self.split)
-        samples = raw.get(split_key, [])
-        # 현재 공개되어 있는 train 데이터셋의 절반을 test 데이터셋으로 사용
-        samples = samples[:len(samples)//2]
+
+        split_obj = raw.get(split_key, {})
+        # 지원: {split: {subset: [...]}} 또는 {split: [...]}
+        if isinstance(split_obj, dict):
+            if isinstance(self.subset, (list, tuple)):
+                merged: List[Dict[str, Any]] = []
+                for subset_name in self.subset:
+                    items = split_obj.get(subset_name, [])
+                    if isinstance(items, list):
+                        merged.extend(items)
+                samples = merged
+            else:
+                samples = split_obj.get(self.subset, [])
+        else:
+            samples = split_obj if isinstance(split_obj, list) else []
+
         if not isinstance(samples, list):
-            raise ValueError(f"Invalid '{split_key}' split format: expected a list")
+            raise ValueError(f"Invalid '{split_key}' split format: expected a list or subset lists")
 
         results: List[Dict[str, Any]] = []
         for item in samples:
@@ -90,19 +102,16 @@ class KoreanHateSpeechDataset(BaseDataset):
 
             if getattr(self, "dev_mode", False) and len(results) >= 10:
                 break
-
             if getattr(self, "limit", None) and len(results) >= self.limit:
                 break
 
         return results
 
-    def get_raw_samples(self) -> Any:
-        return self._download_and_load()
-
     def info(self) -> Dict[str, Any]:
         return {
             "dataset_name": self.dataset_name,
             "split": self._normalize_split(self.split),
+            "subset": self.subset,
             "description": "Korean Hate Speech dataset loaded from Weights & Biases artifact",
         }
 
