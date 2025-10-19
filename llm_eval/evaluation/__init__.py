@@ -41,6 +41,7 @@ from .partial_match import PartialMatchEvaluator
 from .log_prob import LogProbEvaluator
 from .ifeval import IFEvalStrictEvaluator, IFEvalLooseEvaluator
 from .sequence_match import SequenceMatchEvaluator
+from .grid_match import GridMatchEvaluator
 from .char_f1 import CharF1Evaluator
 from .kobbq import KoBBQEvaluator
 from .comet_score import COMETEvaluator
