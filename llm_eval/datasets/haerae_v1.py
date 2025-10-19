@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional, Union
-from datasets import load_dataset
+import os
+import json
 from .base import BaseDataset
 from . import register_dataset
 
@@ -33,8 +34,9 @@ class HaeraeDatasetV1(BaseDataset):
     """
     def __init__(
         self, 
-        dataset_name: str = "HAERAE-HUB/HAE_RAE_BENCH_1.1",
-        subset: Optional[Union[str, list]] = None,
+        dataset_name: str = "haerae_bench_v1",
+        subset: Optional[Union[str, list]] = ["standard_nomenclature", "loan_words", "rare_words", "general_knowledge", "history", "reading_comprehension"],
+        limit: Optional[int] = 100,
         split: str = "test",
         base_prompt_template: Optional[str] = None,
         **kwargs
@@ -45,94 +47,80 @@ class HaeraeDatasetV1(BaseDataset):
             )
         super().__init__(dataset_name, split=split, subset=subset, base_prompt_template=base_prompt_template, **kwargs)
 
+    def _normalize_split(self, split: str) -> str:
+        s = (split or "").lower()
+        if s in ("train", "training"):
+            return "train"
+        if s in ("dev", "validation", "valid", "val"):
+            return "dev"
+        return "test"
+
+    def _download_and_load(self) -> Dict[str, Any]:
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
+        file_path = os.path.join(artifact_dir, "haerae_bench_v1.json")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"haerae_bench_v1.json not found in artifact: {artifact_dir}")
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("Invalid haerae_bench_v1.json format: expected an object keyed by splits")
+        return data
+
     def load(self) -> List[Dict[str, Any]]:
         """
-        Loads the data and returns it in the format:
-        [{"input": ..., "reference": ..., "options": ..., "_subset_name": ...}, ...]
+        W&B artifact의 haerae_bench_v1.json을 로드하여 표준 포맷으로 변환합니다.
+        반환 형식: [{"input": ..., "reference": ..., "options": ["(A)",...], "_subset_name": ...}, ...]
         """
-        # 1) Handle different types of subset parameter
-        if self.subset is None:
-            self.subset = [
-                'standard_nomenclature',
-                'loan_words', 
-                'rare_words',  
-                'general_knowledge', 
-                'history', 
-                'reading_comprehension'
-            ]
-
-        if isinstance(self.subset, list):
-            # In the case of multiple subsets
-            all_items = []
-            for sub in self.subset:
-                partial_data = load_dataset(
-                    self.dataset_name,
-                    sub,
-                    split=self.split,
-                    **self.kwargs
-                )
-                all_items.extend(self._convert_to_list(partial_data, subset_name=sub))
-            return all_items
-
-        else:  # If subset is a single string
-            raw_data = load_dataset(
-                self.dataset_name,
-                self.subset,
-                split=self.split,
-                **self.kwargs
+        raw = self._download_and_load()
+        split_key = self._normalize_split(self.split)
+        split_data = raw.get(split_key, {})
+        if not isinstance(split_data, dict):
+            raise ValueError(
+                f"Invalid '{split_key}' split format: expected an object keyed by subsets"
             )
-            return self._convert_to_list(raw_data, subset_name=self.subset)
 
-    def _convert_to_list(self, hf_dataset, subset_name: str) -> List[Dict[str, Any]]:
-        """
-        Iterates over the HuggingFace Dataset object (hf_dataset)
-        and converts each item to the form:
-        {"input": ..., "reference": ..., "options": ..., "_subset_name": subset_name}
-        """
-        processed_list = []
-        # Fixed options A~E
-        options = ["(A)", "(B)", "(C)", "(D)", "(E)"]
+        if self.subset is None:
+            subset_list = list(split_data.keys())
+        elif isinstance(self.subset, (list, tuple)):
+            subset_list = list(self.subset)
+        else:
+            subset_list = [self.subset]
 
-        for item in hf_dataset:
-            query = item.get("query", "")
-            query = query.replace("### 정답", "").strip() # haerae containes '### 정답', but have to be removed for parsing/cot/etc
-            if self.base_prompt_template:
-                query = self.base_prompt_template.format(query=query)
-            
-            answer = item.get("answer", "")
-            processed_list.append({
-                "input": query,
-                "reference": answer.strip(),
-                "options": options,
-                "_subset_name": subset_name,
-            })
-            if self.dev_mode and len(processed_list) >= 10:
-                break
-        return processed_list
+        results: List[Dict[str, Any]] = []
+        for subset_name in subset_list:
+            items = split_data.get(subset_name, [])
+            if not isinstance(items, list):
+                continue
+            added = 0
+            for item in items:
+                query = item.get("query", "")
+                query = query.replace("### 정답", "").strip()
+                final_input = (
+                    self.base_prompt_template.format(query=query)
+                    if self.base_prompt_template
+                    else query
+                )
+                answer = (item.get("answer", "") or "").strip()
+                results.append({
+                    "input": final_input,
+                    "reference": answer,
+                    "options": ["(A)", "(B)", "(C)", "(D)", "(E)"],
+                    "_subset_name": subset_name,
+                })
+                added += 1
+                # dev/limit 처리
+                if getattr(self, "dev_mode", False) and added >= 10:
+                    break
+                if getattr(self, "limit", None) and added >= self.limit:
+                    break
+
+        return results
+
+    # HF Hub 의존 변환 로직은 제거되었습니다.
 
     def get_raw_samples(self) -> Any:
-        """
-        Returns the raw data.
-        If multiple subsets are specified, returns a list; 
-        if a single subset or None is specified, returns a single Dataset (simple example).
-        """
-        if self.subset is None:
-            return load_dataset(self.dataset_name, split=self.split, **self.kwargs)
-        elif isinstance(self.subset, list):
-            result = []
-            for s in self.subset:
-                partial = load_dataset(
-                    self.dataset_name, s, split=self.split, **self.kwargs
-                )
-                result.append(partial)
-            return result
-        else:
-            return load_dataset(
-                self.dataset_name, 
-                self.subset,
-                split=self.split,
-                **self.kwargs
-            )
+        return self._download_and_load()
 
     def info(self) -> Dict[str, Any]:
         """

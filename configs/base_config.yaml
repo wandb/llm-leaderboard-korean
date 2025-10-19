@@ -20,35 +20,36 @@ halluLens:
       model: gpt-4o
 
 komoral:
-  split: validation
-  limit: 1000
+  split: test
+  subset: default
+  limit: 100
   evaluation:
     method: string_match
 
 kobbq:
   split: test
+  subset: default
   limit: 1000
   evaluation:
     method: string_match
 
 squad_kor_v1:
-  split: validation
+  split: test
+  subset: default
   limit: 1000
   evaluation:
     method: char_f1
 
 ifeval_ko:
-  split: train
-  limit: 1000
+  split: test
+  subset: default
+  limit: 100
   evaluation:
     method: ifeval_strict
 
-mrcr:
+mrcr_2_needles:
   split: train
-  params:
-    filename: 2needle.parquet        # 4needle/8needle 등으로 변경 가능
-    dev: false
-    task: 128k                # 예: 128k, 256k, 1m 등
+  subset: 128k
   evaluation:
     method: sequence_match
     params:
@@ -61,27 +62,30 @@ haerae_bench_v1:
   split: test
   evaluation:
     method: string_match
+    params:
+      mcqa: true
 
 korean_parallel_corpora:
   subset: [e2k, k2e]
   split: test
-  limit: 1000
+  limit: 100
   evaluation:
     method: comet_score
 
 korean_hate_speech:
-  split: test
+  split: train
+  subset: default
   limit: 1000
   evaluation:
     method: string_match
 
 kmmlu:
   split: test
-  limit: 10
+  limit: 100
   evaluation:
     method: "string_match"
     params:
-      mcqa: true # 객관식 문제(MCQA) 모드를 활성화합니다.
+      mcqa: true
     
 kmmlu_pro:
   split: test
@@ -101,8 +105,8 @@ kmmlu_hard:
 
 kobalt_700:
   split: test
-  limit: 10
-  subset: KoBALT-700
+  limit: 1000
+  subset: ["Syntax", "Semantics"] #, "Pragmatics", "Phonetics/Phonology", "Morphology"]
   evaluation:
     method: "string_match"
     params:
@@ -110,15 +114,16 @@ kobalt_700:
 
 aime2025:
   split: test
-  limit: 10
-  subset: null # set to "I" or "II" to evaluate a single set
+  limit: 100
+  subset: ["AIME2025-I", "AIME2025-II"]
   evaluation:
-    method: "string_match"  # or "math_match"
+    method: "math_match"
     params:
-      mcqa: true
+      extract_final_answer: true # 답변에서 최종 수식/결과를 추출합니다.
 
 hrm8k:
   split: test
+  subset: ["GSM8K", "KSM", "MATH", "MMMLU", "OMNI_MATH"]
   limit: 10
   evaluation:
     method: "math_match"
@@ -126,7 +131,7 @@ hrm8k:
       extract_final_answer: true # 답변에서 최종 수식/결과를 추출합니다.
 
 hle:
-  subset: HLE
+  subset: ["Other", "Humanities/Social Science", "Math", "Physics", "Computer Science/AI", "Biology/Medicine", "Chemistry", "Engineering"]
   split: test
   limit: 1000
   evaluation:

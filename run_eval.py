@@ -47,15 +47,18 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_config_path", type=str, default="configs/gpt-4o-2024-11-20.yaml")
+    # parser.add_argument("--model_config_path", type=str, default="configs/gpt-4-1-2025-04-14.yaml")
     # parser.add_argument("--model_config_path", type=str, default="configs/gpt-5-mini-2025-08-07.yaml")
     parser.add_argument("--base_config_path", type=str, default="configs/base_config.yaml")
+    parser.add_argument("--dataset", type=str, default="haerae_bench_v1")
     args = parser.parse_args()
 
     result = run_all_from_configs(
         base_config_path=args.base_config_path,
         model_config_path=args.model_config_path,
         selected_datasets=[
-            "hle"
+            args.dataset
+            # "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700"
             # Done: "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr", "haerae_bench_v1", "squad_kor_v1", "kobbq"
             # Need to check: "aime2025", "hrm8k", "kmmlu", "kmmlu_pro", "kmmlu_hard", "kobalt_700", "hle"
             # Need to add: "bfcl", "swe_bench_verified", "ko_dark_bench"

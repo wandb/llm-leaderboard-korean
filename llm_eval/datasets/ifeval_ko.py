@@ -1,8 +1,8 @@
 from typing import List, Dict, Any, Optional
-from datasets import load_dataset, load_from_disk
+import os
+import json
 from .base import BaseDataset
 from . import register_dataset
-import wandb
 
 @register_dataset("ifeval_ko")
 class IFEvalKoDataset(BaseDataset):
@@ -35,32 +35,61 @@ class IFEvalKoDataset(BaseDataset):
 
     def __init__(
         self,
-        dataset_name: str = "allganize/IFEval-Ko",
-        split: str = "train",
+        dataset_name: str = "ifeval_ko",
+        subset: str = "default",
+        split: str = "test",
         base_prompt_template: Optional[str] = None,
         **kwargs
     ):
-        super().__init__(dataset_name, split=split, base_prompt_template=base_prompt_template, **kwargs)
+        super().__init__(dataset_name, subset=subset, split=split, base_prompt_template=base_prompt_template, **kwargs)
 
-    def load_artifact(self):
+    def _normalize_split(self, split: str) -> str:
+        s = (split or "").lower()
+        if s in ("train", "training"):
+            return "train"
+        if s in ("dev", "validation", "valid", "val"):
+            return "dev"
+        return "test"
+
+    def _download_and_load(self) -> Dict[str, Any]:
         from llm_eval.wandb_singleton import WandbConfigSingleton
-        artifact_path = WandbConfigSingleton.download_artifact(self.dataset_name)
-        raw_data = load_from_disk(artifact_path)
+        ifeval_ko_artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
+        ifeval_ko_path = os.path.join(ifeval_ko_artifact_dir, "ifeval_ko.json")
+        if not os.path.exists(ifeval_ko_path):
+            raise FileNotFoundError(f"ifeval_ko.json not found in artifact: {ifeval_ko_artifact_dir}")
+
+        with open(ifeval_ko_path, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+        if not isinstance(raw_data, dict):
+            raise ValueError("Invalid ifeval_ko.json format: expected an object keyed by splits")
         return raw_data
 
     def load(self) -> List[Dict[str, Any]]:
         """
-        Load HF dataset and convert to standardized format:
-        [{"input": ..., "reference": "", "metadata": {...}}, ...]
+        W&B artifact의 ifeval_ko.json을 로드하여 표준 포맷으로 변환합니다.
+        반환 형식: [{"input": str, "reference": "", "metadata": {...}}, ...]
         """
-        raw_data = load_dataset(self.dataset_name, split=self.split, **self.kwargs)
-        # raw_data = self.load_artifact()
-        result: List[Dict[str, Any]] = []
+        raw = self._download_and_load()
+        split_key = self._normalize_split(self.split)
 
-        if self.dev_mode:
-            raw_data = raw_data.select(range(min(2, len(raw_data))))
+        split_obj = raw.get(split_key, {})
+            # subset 별로 구성된 경우 (예: {"test": {"default": [...]}})
+        if isinstance(self.subset, (list, tuple)):
+            merged: List[Dict[str, Any]] = []
+            for subset_name in self.subset:
+                items = split_obj.get(subset_name, [])
+                if isinstance(items, list):
+                    merged.extend(items)
+            samples = merged
+        else:
+            samples = split_obj.get(self.subset, [])
 
-        for item in raw_data:
+        if not isinstance(samples, list):
+            raise ValueError(f"Invalid '{split_key}' split format: expected a list or subset lists")
+
+        results: List[Dict[str, Any]] = []
+
+        for item in samples:
             prompt = str(item.get("prompt", "")).strip()
             formatted_input = (
                 self.base_prompt_template.format(prompt=prompt)
@@ -68,7 +97,7 @@ class IFEvalKoDataset(BaseDataset):
                 else prompt
             )
 
-            sample = {
+            results.append({
                 "input": formatted_input,
                 "reference": "",
                 "metadata": {
@@ -77,37 +106,32 @@ class IFEvalKoDataset(BaseDataset):
                     "instruction_id_list": item.get("instruction_id_list", []),
                     "kwargs": item.get("kwargs", []),
                 },
-            }
-            result.append(sample)
+            })
 
-            if getattr(self, "dev_mode", False) and len(result) >= 10:
+            if getattr(self, "dev_mode", False) and len(results) >= 10:
                 break
-
-        return result
-
-    def get_raw_samples(self) -> Any:
-        """
-        Return the raw HF Dataset object.
-        """
-        return load_dataset(self.dataset_name, split=self.split, **self.kwargs)
+            if getattr(self, "limit", None) and len(results) >= self.limit:
+                break
+        return results
 
     def info(self) -> Dict[str, Any]:
-        """
-        Return dataset metadata.
-        """
         return {
             "dataset_name": self.dataset_name,
-            "split": self.split,
+            "split": self._normalize_split(self.split),
+            "subset": self.subset,
             "description": (
-                "IFEval-Ko: Korean instruction-following benchmark. "
+                "IFEval-Ko: Korean instruction-following benchmark loaded from W&B artifact. "
                 "Fields: prompt, instruction_id_list, kwargs."
-            )
+            ),
         }
 
 if __name__ == "__main__":
-    # create artifact
-    ifeval = IFEvalKoDataset()
-    ifeval.create_artifact()
-    # load dataset
-    dt = ifeval.load()
-    print(dt)
+    dataset = IFEvalKoDataset()
+    dt = dataset.load()
+    dataset.info()
+    # print statistics
+    print(f"Number of samples: {len(dataset.load())}")
+    print(f"Number of subsets: {len(dataset.subset)}")
+    print(f"Number of splits: {len(dataset.split)}")
+    
+    print(dt[:3])

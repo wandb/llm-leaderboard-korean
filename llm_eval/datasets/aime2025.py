@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional, Union
-
-from datasets import load_dataset
+import os
+import json
 
 from .base import BaseDataset
 from . import register_dataset
@@ -29,7 +29,7 @@ class AIME2025Dataset(BaseDataset):
 
     def __init__(
         self,
-        dataset_name: str = "opencompass/AIME2025",
+        dataset_name: str = "aime2025",
         subset: Optional[Union[str, List[str]]] = None,
         split: str = "test",
         base_prompt_template: Optional[str] = None,
@@ -50,6 +50,13 @@ class AIME2025Dataset(BaseDataset):
         )
 
     # --- helpers ---
+    def _normalize_split(self, split: str) -> str:
+        s = (split or "").lower()
+        if s in ("train", "training"):
+            return "train"
+        if s in ("dev", "validation", "valid", "val"):
+            return "dev"
+        return "test"
     def _normalize_subset(self, s: str) -> str:
         su = str(s).strip()
         # accept simple forms
@@ -63,21 +70,17 @@ class AIME2025Dataset(BaseDataset):
         # fallback: return as-is to let HF raise a helpful error
         return su
 
-    def _load_hf_split(self, config_name: str):
-        """
-        Attempt to load the desired split with light fallbacks because some hubs
-        publish only a single split (often 'train' or 'test').
-        """
-        preferred_order = [self.split, "test", "validation", "train"]
-        last_err = None
-        for sp in preferred_order:
-            try:
-                return load_dataset(self.dataset_name, config_name, split=sp, **self.kwargs)
-            except Exception as e:  # keep trying
-                last_err = e
-                continue
-        # If everything failed, re-raise the last error
-        raise last_err if last_err else RuntimeError("Failed to load dataset split")
+    def _download_and_load(self) -> Dict[str, Any]:
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
+        file_path = os.path.join(artifact_dir, "aime2025.json")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"aime2025.json not found in artifact: {artifact_dir}")
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("Invalid aime2025.json format: expected an object keyed by splits")
+        return data
 
     # --- core API ---
     def load(self) -> List[Dict[str, Any]]:
@@ -90,13 +93,23 @@ class AIME2025Dataset(BaseDataset):
         else:
             target_subsets = [self._normalize_subset(self.subset)]
 
+        raw = self._download_and_load()
+        split_key = self._normalize_split(self.split)
+        split_data = raw.get(split_key, {})
+        if not isinstance(split_data, dict):
+            raise ValueError(
+                f"Invalid '{split_key}' split format: expected an object keyed by subsets"
+            )
+
         all_items: List[Dict[str, Any]] = []
         for sub in target_subsets:
-            hf_ds = self._load_hf_split(sub)
-            all_items.extend(self._convert_to_list(hf_ds, subset_name=sub))
+            items = split_data.get(sub, [])
+            if not isinstance(items, list):
+                continue
+            all_items.extend(self._convert_to_list(items, subset_name=sub))
         return all_items
 
-    def _convert_to_list(self, hf_dataset, subset_name: str) -> List[Dict[str, Any]]:
+    def _convert_to_list(self, items, subset_name: str) -> List[Dict[str, Any]]:
         processed: List[Dict[str, Any]] = []
         # Default template if none provided (re-derive to keep clarity)
         default_template = (
@@ -105,7 +118,7 @@ class AIME2025Dataset(BaseDataset):
         )
         template = self.base_prompt_template or default_template
 
-        for item in hf_dataset:
+        for item in items:
             question = str(item.get("question", "")).strip()
             reference = str(item.get("answer", "")).strip()
             formatted = template.format(question=question)
@@ -121,27 +134,16 @@ class AIME2025Dataset(BaseDataset):
         return processed
 
     def get_raw_samples(self) -> Any:
-        # Return HF datasets per subset
-        if self.subset is None:
-            subsets = ["AIME2025-I", "AIME2025-II"]
-        elif isinstance(self.subset, list):
-            subsets = [self._normalize_subset(s) for s in self.subset]
-        else:
-            subsets = [self._normalize_subset(self.subset)]
-
-        raw = []
-        for sub in subsets:
-            raw.append(self._load_hf_split(sub))
-        return raw if len(raw) > 1 else raw[0]
+        return self._download_and_load()
 
     def info(self) -> Dict[str, Any]:
         return {
             "dataset_name": self.dataset_name,
             "subset": self.subset,
-            "split": self.split,
+            "split": self._normalize_split(self.split),
             "description": (
-                "AIME2025 benchmark (OpenCompass). Two subsets: AIME2025-I and AIME2025-II. "
-                "Each sample is a (question, answer) pair for exact-match evaluation."
+                "AIME2025 benchmark loaded from W&B artifact. "
+                "Two subsets: AIME2025-I and AIME2025-II. Each sample is a (question, answer) pair for exact-match evaluation."
             ),
             # allow both exact string match or math equivalence
             "evaluation_only": None,
