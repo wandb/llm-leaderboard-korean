@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional, Union
-from datasets import load_dataset
+import os
+import json
 from .base import BaseDataset
 from . import register_dataset
 
@@ -28,9 +29,9 @@ class SQuADKorV1(BaseDataset):
     """
     def __init__(
         self, 
-        dataset_name: str = "KorQuAD/squad_kor_v1",
+        dataset_name: str = "squad_kor_v1",
         subset: Optional[Union[str, list]] = None,
-        split: str = "validation",
+        split: str = "test",
         base_prompt_template: Optional[str] = None,
         **kwargs
     ):
@@ -41,80 +42,85 @@ class SQuADKorV1(BaseDataset):
             )
         super().__init__(dataset_name, split=split, subset=subset, base_prompt_template=base_prompt_template, **kwargs)
 
+    def _normalize_split(self, split: str) -> str:
+        s = (split or "").lower()
+        if s in ("train", "training"):
+            return "train"
+        if s in ("dev", "validation", "valid", "val"):
+            return "dev"
+        return "test"
+
+    def _download_and_load(self) -> Dict[str, Any]:
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
+        file_path = os.path.join(artifact_dir, "squad_kor_v1.json")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"squad_kor_v1.json not found in artifact: {artifact_dir}")
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("Invalid squad_kor_v1.json format: expected an object keyed by splits")
+        return data
+
     def load(self) -> List[Dict[str, Any]]:
         """
-        Loads the data and returns it in the format:
-        [{"input": ..., "reference": ..., "options": ..., "_subset_name": ...}, ...]
+        W&B artifact의 squad_kor_v1.json을 로드하여 표준 포맷으로 변환합니다.
+        반환 형식: [{"input": ..., "reference": ..., "_subset_name": ...}, ...]
         """
-        raw_data = load_dataset(
-            self.dataset_name,
-            self.subset,
-            split=self.split,
-            **self.kwargs
-        )
-        return self._convert_to_list(raw_data, subset_name=self.subset)
+        raw = self._download_and_load()
+        split_key = self._normalize_split(self.split)
+        split_data = raw.get(split_key, {})
+        if not isinstance(split_data, dict):
+            raise ValueError(
+                f"Invalid '{split_key}' split format: expected an object keyed by subsets"
+            )
 
-    def _convert_to_list(self, hf_dataset, subset_name: str) -> List[Dict[str, Any]]:
-        """
-        Iterates over the HuggingFace Dataset object (hf_dataset)
-        and converts each item to the form:
-        {"input": ..., "reference": ..., "options": ..., "_subset_name": subset_name}
-        """
-        processed_list = []
+        if self.subset is None:
+            subset_list = list(split_data.keys())
+        elif isinstance(self.subset, (list, tuple)):
+            subset_list = list(self.subset)
+        else:
+            subset_list = [self.subset]
 
-        for item in hf_dataset:
-            context = item.get("context", "")
-            question = item.get("question", "")
+        results: List[Dict[str, Any]] = []
+        for subset_name in subset_list:
+            items = split_data.get(subset_name, [])
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                context = item.get("context", "")
+                question = item.get("question", "")
 
-            if self.base_prompt_template:
-                prompt = self.base_prompt_template.format(context=context, question=question)
-            else:
-                prompt = f"{context}\n\n{question}"
+                if self.base_prompt_template:
+                    prompt = self.base_prompt_template.format(context=context, question=question)
+                else:
+                    prompt = f"{context}\n\n{question}"
 
-            answers = item.get("answers", {}) or {}
-            answer_texts = answers.get("text", []) or []
-            # Choose the first non-empty gold answer; fall back to empty string
-            reference = ""
-            for a in answer_texts:
-                if isinstance(a, str) and a.strip():
-                    reference = a.strip()
+                answers = item.get("answers", {}) or {}
+                answer_texts = answers.get("text", []) or []
+                reference = ""
+                for a in answer_texts:
+                    if isinstance(a, str) and a.strip():
+                        reference = a.strip()
+                        break
+
+                results.append({
+                    "input": prompt,
+                    "reference": reference,
+                    "_subset_name": subset_name,
+                })
+
+                if getattr(self, "dev_mode", False) and len(results) >= 10:
+                    break
+                if getattr(self, "limit", None) and len(results) >= self.limit:
                     break
 
-            processed_list.append({
-                "input": prompt,
-                "reference": reference,
-                "_subset_name": subset_name,
-            })
+        return results
 
-            if getattr(self, "dev_mode", False) and len(processed_list) >= 10:
-                break
-            if getattr(self, "limit", None) and len(processed_list) >= self.limit:
-                break
-        return processed_list
+    # HF Hub 변환 유틸은 제거되었습니다.
 
     def get_raw_samples(self) -> Any:
-        """
-        Returns the raw data.
-        If multiple subsets are specified, returns a list; 
-        if a single subset or None is specified, returns a single Dataset (simple example).
-        """
-        if self.subset is None:
-            return load_dataset(self.dataset_name, split=self.split, **self.kwargs)
-        elif isinstance(self.subset, list):
-            result = []
-            for s in self.subset:
-                partial = load_dataset(
-                    self.dataset_name, s, split=self.split, **self.kwargs
-                )
-                result.append(partial)
-            return result
-        else:
-            return load_dataset(
-                self.dataset_name, 
-                self.subset,
-                split=self.split,
-                **self.kwargs
-            )
+        return self._download_and_load()
 
     def info(self) -> Dict[str, Any]:
         """
@@ -123,10 +129,9 @@ class SQuADKorV1(BaseDataset):
         return {
             "dataset_name": self.dataset_name,
             "subset": self.subset,
-            "split": self.split,
+            "split": self._normalize_split(self.split),
             "description": (
-                "KorQuAD SQuAD Kor v1.0 extractive QA (KorQuAD/squad_kor_v1). "
-                "subset=list -> load multiple configs, subset=str -> single config."
+                "SQuAD Kor v1.0 extractive QA loaded from W&B artifact."
             ),
             "evaluation_only": None
         }

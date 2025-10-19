@@ -1,5 +1,6 @@
-from typing import Any, Dict, List, Optional
-from datasets import load_dataset
+from typing import Any, Dict, List, Optional, Union
+import os
+import json
 from .base import BaseDataset
 from . import register_dataset
 from llm_eval.utils.logging import get_logger
@@ -19,8 +20,17 @@ class HLEDataset(BaseDataset):
 
     def __init__(
         self,
-        dataset_name: str = "HAERAE-HUB/KoSimpleEval",
-        subset: str = "HLE",
+        dataset_name: str = "hle_text",
+        subset: Optional[Union[str, List[str]]] = [
+            "Other",
+            "Humanities/Social Science",
+            "Math",
+            "Physics",
+            "Computer Science/AI",
+            "Biology/Medicine",
+            "Chemistry",
+            "Engineering",
+        ],
         split: str = "test",
         base_prompt_template: Optional[str] = None,
         exclude_images: bool = True,
@@ -40,77 +50,98 @@ class HLEDataset(BaseDataset):
             base_prompt_template=base_prompt_template,
             **kwargs,
         )
-        self.exclude_images = exclude_images
-        if self.exclude_images:
-            logger.info("'exclude_images' is set to True. All samples originally containing images will be skipped.")
+        # Text-only dataset; image fields are not expected or used.
+        self.exclude_images = True
+
+    def _normalize_split(self, split: str) -> str:
+        s = (split or "").lower()
+        if s in ("train", "training"):
+            return "train"
+        if s in ("dev", "validation", "valid", "val"):
+            return "dev"
+        return "test"
+
+    def _download_and_load(self) -> Dict[str, Any]:
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
+        # 텍스트 전용 파일만 사용
+        file_path = os.path.join(artifact_dir, "hle_text.json")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"hle_text.json not found in artifact: {artifact_dir}")
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("Invalid HLE json format: expected an object keyed by splits")
+        return data
 
     def load(self) -> List[Dict[str, Any]]:
         """
-        Loads the HLE subset, optionally filtering out image-based samples,
-        and returns it in the HRET standard list format.
+        HLE 아티팩트를 로드하여 표준 포맷 리스트로 변환합니다.
+        텍스트 전용 데이터만 사용합니다(이미지 없음).
         """
         logger.info(f"Loading dataset '{self.dataset_name}' with subset '{self.subset}' for split '{self.split}'.")
-        
-        try:
-            dataset = load_dataset(self.dataset_name, name=self.subset, split=self.split, **self.kwargs)
-        except Exception as e:
-            logger.error(f"Failed to load dataset '{self.dataset_name}' with name '{self.subset}'. Error: {e}")
-            return []
+        raw = self._download_and_load()
+        split_key = self._normalize_split(self.split)
+        split_data = raw.get(split_key, {})
+        if not isinstance(split_data, dict):
+            raise ValueError(f"Invalid '{split_key}' split format: expected an object keyed by subsets")
 
-        return self._convert_to_list(dataset)
+        if self.subset is None:
+            subset_list = list(split_data.keys())
+        elif isinstance(self.subset, (list, tuple)):
+            subset_list = list(self.subset)
+        else:
+            subset_list = [self.subset]
 
-    def _convert_to_list(self, hf_dataset) -> List[Dict[str, Any]]:
-        """
-        Converts the HuggingFace Dataset, filtering out samples with images if requested.
-        """
-        processed_list = []
-        for item in hf_dataset:
-            image_base64 = item.get("image")
-
-            # If exclude_images is True and the sample has an image, skip it entirely.
-            if self.exclude_images and image_base64:
+        processed_list: List[Dict[str, Any]] = []
+        for subset_name in subset_list:
+            items = split_data.get(subset_name, [])
+            if not isinstance(items, list):
                 continue
+            for item in items:
+                try:
+                    question_text = (item.get("question") or "").strip()
+                    gold_answer = (item.get("gold") or "").strip()
 
-            question_text = item.get("question", "").strip()
-            gold_answer = item.get("gold", "").strip()
-            
-            formatted_question = self.base_prompt_template.format(question=question_text)
+                    formatted_question = self.base_prompt_template.format(question=question_text)
 
-            if image_base64:
-                # Format for multimodal models
-                final_input = [
-                    {"type": "text", "text": formatted_question},
-                    {"type": "image_url", "image_url": {"url": image_base64}}
-                ]
-            else:
-                # Format for text-only models
-                final_input = formatted_question
+                    # Text-only input
+                    final_input = formatted_question
 
-            possible_answers = [ans.strip() for ans in gold_answer.split(',')]
-            reference = possible_answers[0] if possible_answers else ""
+                    possible_answers = [ans.strip() for ans in gold_answer.split(',') if str(ans).strip()]
+                    reference = possible_answers[0] if possible_answers else ""
 
-            processed_list.append(
-                {
-                    "input": final_input,
-                    "reference": reference,
-                    "_subset_name": "HLE",
-                    "metadata": {
-                        "all_references": possible_answers,
-                        "has_image": bool(image_base64),
-                    },
-                }
-            )
-        
-        logger.info(f"Loaded {len(processed_list)} samples. (Image-based samples were "
-                    f"{'excluded' if self.exclude_images else 'included'}).")
+                    processed_list.append(
+                        {
+                            "input": final_input,
+                            "reference": reference,
+                            "_subset_name": subset_name,
+                            "metadata": {
+                                "all_references": possible_answers,
+                            },
+                        }
+                    )
+
+                    if getattr(self, "dev_mode", False) and len(processed_list) >= 10:
+                        break
+                    if getattr(self, "limit", None) and len(processed_list) >= self.limit:
+                        break
+                except Exception as e:
+                    logger.error(f"Failed to process item: {e}")
+                    continue
+
+        logger.info(f"Loaded {len(processed_list)} text-only samples.")
         return processed_list
+
+    # HF Hub 변환 유틸은 제거되었습니다.
 
     def info(self) -> Dict[str, Any]:
         """Returns metadata about the dataset."""
         return {
             "dataset_name": self.dataset_name,
             "subset": self.subset,
-            "split": self.split,
-            "description": "HLE: A multimodal QA dataset. Use 'exclude_images=True' to load only text-based problems.",
+            "split": self._normalize_split(self.split),
+            "description": "HLE Text: A text-only QA dataset loaded from W&B artifact.",
             "evaluation_only": None,
         }

@@ -134,7 +134,10 @@ class StringMatchEvaluator(BaseEvaluator):
         correct = 0
         # subset 별 집계를 위한 통계 구조 (요청된 subsets 기준으로 초기화)
         stats: Dict[str, Dict[str, int]] = {}
+        # subsets 문자열 입력 대응 및 사전 초기화
         if subsets:
+            if isinstance(subsets, str):
+                subsets = [subsets]
             for subset in subsets:
                 stats[subset] = {"total": 0, "correct": 0}
 
@@ -162,8 +165,12 @@ class StringMatchEvaluator(BaseEvaluator):
             if is_correct:
                 correct += 1
                 if subset_name:
+                    if subset_name not in stats:
+                        stats[subset_name] = {"total": 0, "correct": 0}
                     stats[subset_name]["correct"] += 1
             if subset_name:
+                if subset_name not in stats:
+                    stats[subset_name] = {"total": 0, "correct": 0}
                 stats[subset_name]["total"] += 1
 
             # Record detailed evaluation info within the sample for debugging and analysis.
@@ -176,7 +183,9 @@ class StringMatchEvaluator(BaseEvaluator):
 
         # 전체 AVG는 항상 포함
         metrics: Dict[str, float] = {"AVG": (correct / total if total > 0 else 0.0)}
-        if subsets:
+        if isinstance(subsets, (list, tuple, str)):
+            if isinstance(subsets, str):
+                subsets = [subsets]
             for sname, st in stats.items():
                 s_total = st["total"]
                 s_correct = st["correct"]

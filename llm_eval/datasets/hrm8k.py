@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional, Union
-from datasets import load_dataset
+import os
+import json
 from .base import BaseDataset
 from . import register_dataset
 
@@ -32,8 +33,8 @@ class HRM8KDataset(BaseDataset):
     """
     def __init__(
         self, 
-        dataset_name: str = "HAERAE-HUB/HRM8K",
-        subset: Optional[Union[str, list]] = None,
+        dataset_name: str = "hrm8k",
+        subset: Optional[Union[str, list]] = ["GSM8K", "KSM", "MATH", "MMMLU", "OMNI_MATH"],
         split: str = "test",
         base_prompt_template: Optional[str] = None,
         **kwargs
@@ -51,43 +52,54 @@ class HRM8KDataset(BaseDataset):
         """
         super().__init__(dataset_name, split=split, subset=subset, base_prompt_template=base_prompt_template, **kwargs)
         
+    def _normalize_split(self, split: str) -> str:
+        s = (split or "").lower()
+        if s in ("train", "training"):
+            return "train"
+        if s in ("dev", "validation", "valid", "val"):
+            return "dev"
+        return "test"
+
+    def _download_and_load(self) -> Dict[str, Any]:
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
+        file_path = os.path.join(artifact_dir, "hrm8k.json")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"hrm8k.json not found in artifact: {artifact_dir}")
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("Invalid hrm8k.json format: expected an object keyed by splits")
+        return data
+
     def load(self) -> List[Dict[str, Any]]:
         """
-        Loads the dataset and converts it into a standardized format.
+        Loads the dataset from artifact and converts it into a standardized format.
 
         Returns:
-            List[Dict[str, Any]]: A list of processed samples, where each sample is a dictionary with:
-                - "input": The formatted prompt.
-                - "reference": The expected answer.
-                - "_subset_name": The name of the subset from which the sample was loaded.
+            List[Dict[str, Any]]: A list of processed samples.
         """
-        # If no subset is specified, use the default list of subsets.
+        # Default subsets when not specified
         if self.subset is None:
             self.subset = ['GSM8K', 'KSM', 'MATH', 'MMMLU', 'OMNI_MATH']
 
-        if isinstance(self.subset, list):
-            # Load and combine multiple subsets.
-            all_items = []
-            for sub in self.subset:
-                partial_data = load_dataset(
-                    self.dataset_name,
-                    sub,
-                    split=self.split,
-                    **self.kwargs
-                )
-                all_items.extend(self._convert_to_list(partial_data, subset_name=sub))
-            return all_items
-        else:
-            # Load a single subset.
-            raw_data = load_dataset(
-                self.dataset_name,
-                self.subset,
-                split=self.split,
-                **self.kwargs
+        raw = self._download_and_load()
+        split_key = self._normalize_split(self.split)
+        split_data = raw.get(split_key, {})
+        if not isinstance(split_data, dict):
+            raise ValueError(
+                f"Invalid '{split_key}' split format: expected an object keyed by subsets"
             )
-            return self._convert_to_list(raw_data, subset_name=self.subset)
 
-    def _convert_to_list(self, hf_dataset, subset_name: str) -> List[Dict[str, Any]]:
+        processed_list: List[Dict[str, Any]] = []
+        for sub in self.subset:
+            items = split_data.get(sub, [])
+            if not isinstance(items, list):
+                continue
+            processed_list.extend(self._convert_to_list(items, subset_name=sub))
+        return processed_list
+
+    def _convert_to_list(self, items, subset_name: str) -> List[Dict[str, Any]]:
         """
         Converts the HuggingFace Dataset object into a standardized format.
 
@@ -102,9 +114,10 @@ class HRM8KDataset(BaseDataset):
         """
         processed_list = []
         # Define a default prompt template if none is provided.
-        default_template = "put your final answer within \\boxed{{}}.\nQuestion: {question}"
+        # default_template = "put your final answer within \\boxed{{}}.\nQuestion: {question}"
+        default_template = "Solve the following problem. Briefly show your reasoning, then end with a single line in the form 'Answer: X'.\n\n{question}"
         
-        for item in hf_dataset:
+        for item in items:
             # Extract and clean the question text.
             raw_question = item.get("question", "").strip()
             # Use the provided base_prompt_template or fall back to the default template.
@@ -120,33 +133,12 @@ class HRM8KDataset(BaseDataset):
             })
             if getattr(self, "dev_mode", False) and len(processed_list) >= 10:
                 break
+            if getattr(self, "limit", None) and len(processed_list) >= self.limit:
+                break
         return processed_list
 
     def get_raw_samples(self) -> Any:
-        """
-        Returns the raw dataset.
-
-        Returns:
-            Any: If multiple subsets are specified, returns a list of Dataset objects;
-                 if a single subset or None is specified, returns a single Dataset object.
-        """
-        if self.subset is None:
-            return load_dataset(self.dataset_name, split=self.split, **self.kwargs)
-        elif isinstance(self.subset, list):
-            result = []
-            for s in self.subset:
-                partial = load_dataset(
-                    self.dataset_name, s, split=self.split, **self.kwargs
-                )
-                result.append(partial)
-            return result
-        else:
-            return load_dataset(
-                self.dataset_name, 
-                self.subset,
-                split=self.split,
-                **self.kwargs
-            )
+        return self._download_and_load()
 
     def info(self) -> Dict[str, Any]:
         """
@@ -158,7 +150,7 @@ class HRM8KDataset(BaseDataset):
         return {
             "dataset_name": self.dataset_name,
             "subset": self.subset,
-            "split": self.split,
+            "split": self._normalize_split(self.split),
             "description": (
                 "HRM8K dataset. "
                 "If subset is a list -> loads multiple subsets, "

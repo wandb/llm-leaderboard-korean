@@ -40,34 +40,11 @@ system/user/assistant 역할 정보를 활용한 프롬프트 구성에 참고�
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional, Tuple
-
-from datasets import load_dataset
+import os
+from typing import Any, Dict, List, Optional
 
 from .base import BaseDataset
 from . import register_dataset
-
-
-DEFAULT_REPO_ID = "openai/mrcr"
-DEFAULT_FILENAME = "default.parquet"
-
-
-TOKEN_BUCKETS: Dict[str, Tuple[int, int]] = {
-    "4k": (4096, 8192),
-    "8k": (8192, 16384),
-    "16k": (16384, 32768),
-    "32k": (32768, 65536),
-    "128k": (65536, 131072),  # OpenAI MRCR naming convention
-    "256k": (131072, 262144),
-    "512k": (262144, 524288),
-    "1m": (524288, 1048576),
-}
-
-
-try:  # Optional dependency for precise token counting
-    import tiktoken  # type: ignore
-except ImportError:  # pragma: no cover - optional dependency
-    tiktoken = None  # type: ignore
 
 
 @register_dataset("mrcr")
@@ -76,62 +53,56 @@ class MRCRDataset(BaseDataset):
 
     def __init__(
         self,
-        dataset_name: str = DEFAULT_REPO_ID,
+        dataset_name: str = "mrcr_2_needles",
+        subset: str = "128k",
         split: str = "train",
-        filename: str = DEFAULT_FILENAME,
-        task: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        # MRCR은 subset 개념이 없으므로 BaseDataset.subset은 사용하지 않는다.
         self.dev_mode = kwargs.pop("dev", False)
-        super().__init__(dataset_name, split=split, **kwargs)
-        self.filename = filename
-        self.task = task.lower() if task else None
-        if self.task and self.task not in TOKEN_BUCKETS:
-            valid = ", ".join(sorted(TOKEN_BUCKETS))
-            raise ValueError(
-                f"Unsupported task '{task}'. Choose one of: {valid}"
-            )
-        self._encoder = None
+        super().__init__(dataset_name, split=split, subset=subset, **kwargs)
+        # subset은 4k/8k/16k... 같은 레이블 용도이며, 필터링에는 사용하지 않음
 
-    def _get_token_bounds(self) -> Optional[Tuple[int, int]]:
-        if not self.task:
-            return None
-        return TOKEN_BUCKETS[self.task]
+    def _normalize_split(self, split: str) -> str:
+        # MRCR는 train 키를 사용합니다(아티팩트 구조 기준)
+        return "train"
 
-    def _ensure_encoder(self) -> None:
-        if self._encoder is not None:
-            return
-        if tiktoken is None:
-            raise ImportError(
-                "task filtering requires the 'tiktoken' package."
-                " Install via 'pip install tiktoken'."
-            )
-        self._encoder = tiktoken.get_encoding("o200k_base")
+    def _download_and_load(self) -> Dict[str, Any]:
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        artifact_dir = WandbConfigSingleton.download_artifact(self.dataset_name)
+        file_path = os.path.join(artifact_dir, f"{self.dataset_name}.json")
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError(f"Invalid {self.dataset_name}.json format: expected an object keyed by splits")
+        return data
 
-    def _count_tokens(self, messages: List[Dict[str, Any]]) -> int:
-        self._ensure_encoder()
-        assert self._encoder is not None
-        count = 0
-        for message in messages:
-            content = message.get("content", "")
-            if not isinstance(content, str):
-                content = str(content)
-            count += len(self._encoder.encode(content))
-        return count
+    # 토큰 카운팅/필터링 관련 코드는 더 이상 사용하지 않습니다.
 
     def load(self) -> List[Dict[str, Any]]:
-        """HF Hub에서 MRCR Parquet 파일을 불러와 파이프라인 표준 포맷으로 변환."""
+        """W&B artifact의 mrcr.json을 불러와 파이프라인 표준 포맷으로 변환."""
 
-        dataset = load_dataset(
-            path=self.dataset_name,
-            data_files={self.split: self.filename},
-            split=self.split,
-            **self.kwargs,
-        )
+        raw = self._download_and_load()
+        split_key = self._normalize_split(self.split)
+        split_obj = raw.get(split_key, [])
+        # 지원: {split: {subset: [...]}} 또는 {split: [...]}
+        if isinstance(split_obj, dict):
+            if isinstance(self.subset, (list, tuple)):
+                merged: List[Dict[str, Any]] = []
+                for subset_name in self.subset:
+                    items = split_obj.get(subset_name, [])
+                    if isinstance(items, list):
+                        merged.extend(items)
+                dataset = merged
+            else:
+                dataset = split_obj.get(self.subset, [])
+        else:
+            dataset = split_obj if isinstance(split_obj, list) else []
 
         samples: List[Dict[str, Any]] = []
-        token_bounds = self._get_token_bounds()
+        print("_____________________")
+        print(dataset[0].keys())
+        print(len(dataset))
+        print("_____________________")
 
         for row in dataset:
             prompt_raw = row.get("prompt")
@@ -144,25 +115,13 @@ class MRCRDataset(BaseDataset):
                 messages = json.loads(prompt_raw)
             except json.JSONDecodeError as exc:
                 raise ValueError("Failed to parse MRCR prompt JSON") from exc
-
-            token_count = None
-            if token_bounds:
-                token_count = self._count_tokens(messages)
-                lower, upper = token_bounds
-                if not (lower <= token_count <= upper):
-                    continue
-
             metadata = {
                 "random_string_to_prepend": row.get("random_string_to_prepend", ""),
                 "n_needles": row.get("n_needles"),
                 "desired_msg_index": row.get("desired_msg_index"),
                 "total_messages": row.get("total_messages"),
                 "n_chars": row.get("n_chars"),
-                "filename": self.filename,
             }
-            if token_count is not None:
-                metadata["token_count"] = token_count
-                metadata["token_bounds"] = token_bounds
 
             # 예제 스크립트와 동일하게 messages 자체를 모델에 사용하고,
             # input에는 JSON 문자열 형태로 보관하여 로깅 및 few-shot 로직과 호환되도록 한다.
@@ -183,27 +142,50 @@ class MRCRDataset(BaseDataset):
         return samples
 
     def get_raw_samples(self) -> Any:
-        """Raw HuggingFace Dataset 객체 반환."""
-
-        return load_dataset(
-            path=self.dataset_name,
-            data_files={self.split: self.filename},
-            split=self.split,
-            **self.kwargs,
-        )
+        return self._download_and_load()
 
     def info(self) -> Dict[str, Any]:
         """MRCR 데이터셋 메타데이터 반환."""
 
         return {
             "dataset_name": self.dataset_name,
-            "split": self.split,
-            "filename": self.filename,
-            "description": (
-                "MRCR (Multi-round Co-reference Resolution) long-context benchmark"
-            ),
-            "license": "MIT",
-            "evaluation_only": ["sequence_match"],
+            "split": self._normalize_split(self.split),
+            "subset": self.subset,
+            "description": "MRCR, long-context benchmark loaded from W&B artifact (artifact name selects needles)",
         }
 
 
+@register_dataset("mrcr_2_needles")
+class MRCR2NeedlesDataset(MRCRDataset):
+    def __init__(
+        self,
+        dataset_name: str = "mrcr_2_needles",
+        subset: str = "128k",
+        split: str = "train",
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(dataset_name=dataset_name, subset=subset, split=split, **kwargs)
+
+
+@register_dataset("mrcr_4_needles")
+class MRCR4NeedlesDataset(MRCRDataset):
+    def __init__(
+        self,
+        dataset_name: str = "mrcr_4_needles",
+        subset: str = "128k",
+        split: str = "train",
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(dataset_name=dataset_name, subset=subset, split=split, **kwargs)
+
+
+@register_dataset("mrcr_8_needles")
+class MRCR8NeedlesDataset(MRCRDataset):
+    def __init__(
+        self,
+        dataset_name: str = "mrcr_8_needles",
+        subset: str = "128k",
+        split: str = "train",
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(dataset_name=dataset_name, subset=subset, split=split, **kwargs)

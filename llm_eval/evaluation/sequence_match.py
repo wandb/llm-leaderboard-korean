@@ -119,7 +119,7 @@ class SequenceMatchEvaluator(BaseEvaluator):
         if self.prefix_key:
             metrics["sequence_match_prefix_miss_rate"] = prefix_miss / len(samples)
         # subsets 전달 여부에 따라 분기
-        if subsets:
+        if isinstance(subsets, (list, tuple)):
             for sname, st in subset_stats.items():
                 cnt = st["count"]
                 s_avg = (st["sum_ratio"] / cnt) if cnt > 0 else 0.0

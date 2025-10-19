@@ -55,6 +55,7 @@ from .ifeval_ko import IFEvalKoDataset
 from .mrcr import MRCRDataset
 from .halluLens import HalluLensDataset
 from .arc_agi import ARCAGIDataset
+from .arc_agi2 import ARCAGI2Dataset
 from .squad_kor_v1 import SQuADKorV1
 from .haerae_v1 import HaeraeDatasetV1
 from .kobbq import KobbqDataset
