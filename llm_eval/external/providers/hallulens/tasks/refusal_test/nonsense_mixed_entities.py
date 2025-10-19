@@ -16,8 +16,8 @@ from llm_eval.external.providers.hallulens.tasks.refusal_test.entities_generatio
 
 
 class NonsenseMixedInference(NonsenseNameInference):
-    def __init__(self, taskname, output_base_dir, generate_model, prompt_path, seed, method='vllm'):
-        super().__init__(output_base_dir, generate_model, prompt_path, seed, method)
+    def __init__(self, taskname, output_base_dir, generate_model, prompt_path, seed, method='vllm', limit=None):
+        super().__init__(output_base_dir, generate_model, prompt_path, seed, method, limit=limit)
 
         self.output_base_dir = output_base_dir
         self.generate_model = generate_model
@@ -28,7 +28,7 @@ class NonsenseMixedInference(NonsenseNameInference):
         print('INFER TASKNAME', self.TASKNAME)
 
 class NonsenseMixedEval(NonsenseNameEval):
-    def __init__(self, taskname, output_base_dir, model_path, prompt_path, med_safety_filtered_model=False, language='kor'):
+    def __init__(self, taskname, output_base_dir, model_path, prompt_path, med_safety_filtered_model=False, language='kor', evaluator: str | None = None):
         super().__init__(output_base_dir, model_path, prompt_path)
 
         self.prompt_path = prompt_path
@@ -41,7 +41,7 @@ class NonsenseMixedEval(NonsenseNameEval):
         self.eval_raw_path = f'{self.task_output_dir}/raw_eval_res.jsonl'
 
         self.med_safety_filtered_model = med_safety_filtered_model
-        self.evaluator = "meta-llama/Llama-3.1-8B-Instruct"
+        self.evaluator = evaluator or "meta-llama/Llama-3.1-8B-Instruct"
 
         print('EVAL TASKNAME', self.TASKNAME)
 
@@ -72,11 +72,17 @@ class NonsenseMixedEval(NonsenseNameEval):
                 for gen_obj in generations
             ]
         
+        # Route by evaluator name: llama* -> together, gpt-5* -> openai
+        eval_name = str(self.evaluator).lower()
+        if "gpt" in eval_name:
+            gen_fn = lambda p: lm.openai_generate(p, self.evaluator)
+        else:
+            gen_fn = lambda p: lm.generate(p, self.evaluator)
         abstains_eval_raw = thread_map(
-            lambda p: lm.generate(p, self.evaluator),
-                    abstain_prompts,
-                    max_workers=50,
-                    desc=f"using {self.evaluator}")
+            gen_fn,
+            abstain_prompts,
+            max_workers=50,
+            desc=f"using {self.evaluator}")
         
         if self.med_safety_filtered_model:
             for i, gen_obj in enumerate(generations):

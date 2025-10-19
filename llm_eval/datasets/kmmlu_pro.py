@@ -97,6 +97,8 @@ class KMMLUProDataset(BaseDataset):
                     "metadata": {"original_gold_index": gold_answer_index},
                 }
             )
+            if getattr(self, "dev_mode", False) and len(processed_list) >= 10:
+                break
         return processed_list
 
     def get_raw_samples(self) -> Any:

@@ -1,6 +1,7 @@
 dataset:
-  name: ifeval_ko
-  split: train
+  name: komoral
+  split: validation
+  limit: 100
   params:
     dev: false
 model:
@@ -13,8 +14,8 @@ model:
     temperature: 0.0                 # 일관된 Needle 복원에 권장
     sequential_mode: false
 evaluation:
-  method: ifeval_strict
-wandb:
+  method: string_match
+wandb:  
   params:
     entity: horangi
     project: horangi4-dev

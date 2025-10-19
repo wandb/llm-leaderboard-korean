@@ -50,7 +50,12 @@ def jsonify_ans(
                 
                 while error:
                     try:
-                        re_eval = lm.generate(p, evaluator_model)
+                        # Route by evaluator name: llama* -> together, gpt-5* -> openai
+                        eval_name = str(evaluator_model).lower()
+                        if "gpt" in eval_name:
+                            re_eval = lm.openai_generate(p, evaluator_model)
+                        else:
+                            re_eval = lm.generate(p, evaluator_model)
                     except:
                         raise ValueError(f"Invalid evaluator: {evaluator_model}")
                         
