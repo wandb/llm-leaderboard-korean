@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from collections import Counter
 
 from .base import BaseEvaluator
@@ -78,7 +78,7 @@ class GridMatchEvaluator(BaseEvaluator):
     def parse_prediction(self, raw_output: str) -> str:
         return _clean_text(raw_output)
 
-    def evaluate_predictions(self, samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
         n_scored = 0
         n_correct = 0
         reason_counter = Counter()
