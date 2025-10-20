@@ -9,15 +9,6 @@ wandb:
 testmode: false
 
 # dataset configurations
-halluLens:
-  split: test
-  subset: [precise_wikiqa, mixed_entities, generated_entities]
-  limit: 1000
-  evaluation:
-    abstention:
-      model: gpt-4o-mini
-    hallucination:
-      model: gpt-4o
 
 komoral:
   split: test
@@ -25,6 +16,20 @@ komoral:
   limit: 100
   evaluation:
     method: string_match
+
+mt_bench:
+  split: test
+  subset: default
+  limit: 100
+  evaluation:
+    method: "mt_bench_judge"
+    params:
+      judge_backend_name: openai_judge
+      model_name: gpt-4.1-2025-04-14
+      api_base: https://api.openai.com/v1
+      batch_size: 10
+      max_tokens: 512
+      temperature: 0.0
 
 kobbq:
   split: test
@@ -89,7 +94,7 @@ kmmlu:
     
 kmmlu_pro:
   split: test
-  limit: 10
+  limit: 100
   evaluation:
     method: "string_match"
     params:
@@ -144,9 +149,21 @@ arc_agi:
   evaluation:
     method: "grid_match"
 
-arc_agi2:
-  split: evaluation
-  subset: default
+
+
+halluLens:
+  split: test
+  subset: [precise_wikiqa, mixed_entities, generated_entities]
   limit: 1000
   evaluation:
-    method: "grid_match"
+    abstention:
+      model: gpt-4o-mini
+    hallucination:
+      model: gpt-4o
+
+# arc_agi2:
+#   split: evaluation
+#   subset: default
+#   limit: 1000
+#   evaluation:
+#     method: "grid_match"

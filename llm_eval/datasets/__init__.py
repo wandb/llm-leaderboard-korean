@@ -63,3 +63,4 @@ from .komoral import KomoralDataset
 from .korean_hate_speech import KoreanHateSpeechDataset
 from .korean_parallel_corpora import KoreanParallelCorporaDataset
 from .hle import HLEDataset
+from .mt_bench import MTBenchDataset

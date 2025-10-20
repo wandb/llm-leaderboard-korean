@@ -303,7 +303,9 @@ class LLMJudgeEvaluator(BaseEvaluator):
                 subset_stats[sname]["correct"] += 1
 
 
-        if subsets:
+        if isinstance(subsets, (list, tuple, str)):
+            if isinstance(subsets, str):
+                subsets = [subsets]
             for sname, st in subset_stats.items():
                 denom = st["total"] if st["total"] > 0 else 1.0
                 # 우선순위: score 기반 평균 -> 정확도 기반 -> 0.0
