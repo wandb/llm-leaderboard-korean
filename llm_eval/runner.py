@@ -32,7 +32,7 @@ from llm_eval.utils.prompt_template import (
     DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
 )
 from llm_eval.utils.metrics import language_penalizer
-from llm_eval.wandb_controller import WeaveSampleLogger, WeaveEvalsController
+from weave import EvaluationLogger
 
 logger = get_logger(name="runner", level=logging.INFO)
 
@@ -521,6 +521,22 @@ class PipelineRunner:
                    f"split: {self.config.split}, model: {self.config.model_backend_name}")
 
         try:
+            # Step 0: Initialize per-dataset Weave Evals logger
+            metadata: Dict[str, Any] = {
+                "dataset_name": self.config.dataset_name,
+                "subset": self.config.subset,
+                "split": self.config.split or "test",
+                "model_name": (self.config.model_backend_params or {}).get("model_name"),
+                "language_penalize": self.config.language_penalize,
+                "target_lang": self.config.target_lang,
+            }
+            # weave.init(f"{wandb_params.get('entity')}/{wandb_params.get('project')}")
+            eval_logger = EvaluationLogger(
+                dataset=str(self.config.dataset_name or "unknown_dataset"),
+                model=(self.config.model_backend_params or {}).get("model_name"),
+                eval_attributes=metadata,
+            )
+
             # Step 1: Load and prepare data
             raw_samples = self._load_evaluation_data()
             few_shot_prefix = self.few_shot_handler.prepare_few_shot_prefix()
@@ -535,7 +551,7 @@ class PipelineRunner:
             )
             logger.info(f"Prepared {len(inference_samples)} samples for model inference.")
 
-            # Step 3: Run inference
+            # Step 3: Run inference (Evals already initialized; call backend directly so child traces attach to Eval)
             predictions = self.inference_engine.run_inference(inference_samples)
 
             # Step 4: Evaluate predictions
@@ -555,19 +571,12 @@ class PipelineRunner:
             #     pass
 
             # Step 5.6: Log to Weave Evals using EvaluationLogger via controller
-            WeaveEvalsController.log(
+            self.weave_eval_logger_log(
+                eval_logger=eval_logger,
+                samples=eval_dict.get("samples", []),
+                evaluated_samples=eval_dict.get("samples", []),
+                metrics=eval_dict.get("metrics", {}),
                 dataset_name=self.config.dataset_name,
-                subset=self.config.subset,
-                split=self.config.split,
-                model_backend_name=self.config.model_backend_name,
-                model_name=(self.config.model_backend_params or {}).get("model_name"),
-                scaling_method_name=self.config.scaling_method_name,
-                evaluation_method_name=self.config.evaluation_method_name,
-                language_penalize=self.config.language_penalize,
-                target_lang=self.config.target_lang,
-                samples=eval_dict.get("samples", []) or [],
-                metrics=eval_dict.get("metrics", {}) or {},
-                wandb_params=self.config.wandb_params or {},
             )
             
             # Step 6: Create final result
@@ -685,3 +694,38 @@ class PipelineRunner:
                 "error": f"Pipeline failed: {error_msg}"
             }
         )
+    
+    def weave_eval_logger_log(
+        self, 
+        eval_logger: EvaluationLogger,
+        samples: List[Dict[str, Any]],
+        evaluated_samples: List[Dict[str, Any]],
+        metrics: Dict[str, Any],
+        dataset_name: Optional[str] = None,
+    ) -> None:
+        """Log predictions and per-sample scores; finalize the evaluation."""
+
+        preds = [
+            eval_logger.log_prediction(
+                inputs={
+                    column_name: item.get(column_name)
+                    for column_name in ['input', 'options', 'reference', 'dataset', 'subset']
+                    if item.get(column_name) is not None
+                },
+                output=item.get("prediction", item.get("original_prediction", ""))
+            )
+            for item in (samples or [])
+        ]
+
+        # 2) attach scores, then finish each prediction (order aligned via zip)
+        for pred, item in zip(preds, evaluated_samples or []):
+            evaluation_fields = item.get("evaluation", {}) or {}
+            for key, value in evaluation_fields.items():
+                if isinstance(value, (int, float, bool)):
+                    pred.log_score(scorer=str(key), score=value)
+            if "language_penalizer" in item:
+                pred.log_score(scorer="language_penalizer", score=float(item["language_penalizer"]))
+            pred.finish()
+
+        # 3) summary after all preds are finished
+        eval_logger.log_summary(summary=metrics or {})

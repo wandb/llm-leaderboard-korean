@@ -27,7 +27,7 @@ def run_all_from_configs(
     with open(base_config_path, "r", encoding="utf-8") as f:
         base_cfg = yaml.safe_load(f) or {}
     wandb_params: Dict[str, Any] = ((base_cfg.get("wandb") or {}).get("params") or {})
-    weave.init(f"{wandb_params.get('entity')}/{wandb_params.get('project')}")
+    # weave.init(f"{wandb_params.get('entity')}/{wandb_params.get('project')}")
     run = wandb.init(entity=wandb_params.get("entity"), project=wandb_params.get("project"), name=model_name)
     WandbConfigSingleton.initialize(run, model_name, wandb_params)
 
@@ -57,7 +57,8 @@ if __name__ == "__main__":
         base_config_path=args.base_config_path,
         model_config_path=args.model_config_path,
         selected_datasets=[
-            "halluLens"#, "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi"
+            "komoral",
+            #"halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi"
             # Done: "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi"
             # Need to check: "aime2025", "hrm8k", 
             # Need to add: "bfcl", "swe_bench_verified", "ko_dark_bench", "MT bench"
