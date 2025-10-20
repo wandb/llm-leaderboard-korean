@@ -370,14 +370,23 @@ def run_multiple_from_configs(
             results.update(result_map)
             continue
 
+        # If mt_bench_judge (or llm_judge) embeds judge config in evaluation.params, honor it
+        judge_name = None
+        judge_params = None
+        if 'judge' in str(eval_method).lower():
+            judge_name = eval_params.get("judge_backend_name")
+            judge_params = {k: v for k, v in eval_params.items() if k != "judge_backend_name"}
+
         result = evaluator.run(
             model=model_name,
+            judge_model=judge_name,
             dataset=ds_key,
             subset=subset,
             split=split,
             evaluation_method=eval_method,
             dataset_params=dataset_params,
             model_params=model_params,
+            judge_params=judge_params,
             evaluator_params=eval_params,
             wandb_params=wandb_params,
             language_penalize=lang_penalize_final,
