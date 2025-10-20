@@ -95,14 +95,6 @@ kmmlu_pro:
     params:
       mcqa: true
 
-kmmlu_hard:
-  split: test
-  limit: 10
-  evaluation:
-    method: "string_match"
-    params:
-      mcqa: true
-
 kobalt_700:
   split: test
   limit: 1000

@@ -126,7 +126,7 @@ class COMETEvaluator(BaseEvaluator):
             sample["evaluation"]["comet"] = sc
 
         avg = total / len(samples)
-        metrics: Dict[str, float] = {"AVG": avg, "comet": avg}
+        metrics: Dict[str, float] = {"final_score": avg, "comet": avg}
 
         if subsets:
             for sname, st in subset_stats.items():

@@ -176,7 +176,7 @@ class IFEvalLooseEvaluator(BaseEvaluator):
         else:
             metrics["instruction_level_loose_accuracy"] = 0.0
 
-        metrics["AVG"] = (metrics["prompt_level_loose_accuracy"] + metrics["instruction_level_loose_accuracy"]) / 2
+        metrics["final_score"] = (metrics["prompt_level_loose_accuracy"] + metrics["instruction_level_loose_accuracy"]) / 2
 
         # subsets 전달 여부에 따라 분기
         if subsets:

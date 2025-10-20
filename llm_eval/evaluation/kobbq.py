@@ -195,7 +195,7 @@ class KoBBQEvaluator(BaseEvaluator):
         format_error_rate = float((df["format_error"] == 1).sum() / len(df))
 
         return {
-            "AVG": avg,
+            "final_score": avg,
             "kobbq_acc_a": acc_a,
             "kobbq_acc_d": acc_d,
             "kobbq_diff_bias_a": diff_bias_a,

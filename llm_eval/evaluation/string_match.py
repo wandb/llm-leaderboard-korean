@@ -182,7 +182,7 @@ class StringMatchEvaluator(BaseEvaluator):
             }
 
         # 전체 AVG는 항상 포함
-        metrics: Dict[str, float] = {"AVG": (correct / total if total > 0 else 0.0)}
+        metrics: Dict[str, float] = {"final_score": (correct / total if total > 0 else 0.0)}
         if isinstance(subsets, (list, tuple, str)):
             if isinstance(subsets, str):
                 subsets = [subsets]

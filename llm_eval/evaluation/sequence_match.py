@@ -113,9 +113,9 @@ class SequenceMatchEvaluator(BaseEvaluator):
                 subset_stats[subset_name]["sum_ratio"] += ratio
                 subset_stats[subset_name]["count"] += 1
 
-        # 전체 메트릭 유지 (sequence_match_score, prefix_miss_rate, AVG)
+        # 전체 메트릭 유지 (sequence_match_score, prefix_miss_rate, final_score)
         avg_ratio = total_ratio / len(samples)
-        metrics: Dict[str, float] = {"sequence_match_score": avg_ratio, "AVG": avg_ratio}
+        metrics: Dict[str, float] = {"sequence_match_score": avg_ratio, "final_score": avg_ratio}
         if self.prefix_key:
             metrics["sequence_match_prefix_miss_rate"] = prefix_miss / len(samples)
         # subsets 전달 여부에 따라 분기
