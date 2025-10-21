@@ -168,7 +168,7 @@ class KMMLUDataset(BaseDataset):
                 "options": options,
                 "_subset_name": subset_name,
             })
-            if getattr(self, "dev_mode", False) and len(processed_list) >= 2:
+            if getattr(self, "dev_mode", False) and len(processed_list) >= 10:
                 break
             if getattr(self, "limit", None) and len(processed_list) >= self.limit:
                 break
