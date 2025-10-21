@@ -46,14 +46,9 @@ def run_swebench_verified_from_configs(*, base_config_path: str, model_config_pa
     subset: str = sb_cfg.get("subset", "official_80")
     limit: Optional[int] = sb_cfg.get("limit")
 
-    # dataset_dict 경로 기반으로 HF on-disk dataset 로드
-    eval_params: Dict[str, Any] = ((sb_cfg.get("evaluation") or {}).get("params") or {})
-    dataset_dict_path = eval_params.get("dataset_dict")
-    if not dataset_dict_path:
-        raise ValueError("base_config.swe_bench_verified.evaluation.params.dataset_dict 가 필요합니다.")
+    artifact_dir = WandbConfigSingleton.download_artifact("swebench_verified_official_80")
 
-    dataset_root = Path(dataset_dict_path).parent
-    hf_ds = load_from_disk(str(dataset_root))
+    hf_ds = load_from_disk(artifact_dir)
     if hasattr(hf_ds, "keys") and split in hf_ds:
         hf_ds = hf_ds[split]
 
@@ -104,6 +99,19 @@ def run_swebench_verified_from_configs(*, base_config_path: str, model_config_pa
     except Exception:
         try:
             instance.config["swebench"] = swebench_cfg
+        except Exception:
+            pass
+
+    # model.pretrained_model_name_or_path 주입 (calculate_metrics에서 사용)
+    try:
+        instance.config.model = {
+            "pretrained_model_name_or_path": model_params.get("model_name") or model_name
+        }
+    except Exception:
+        try:
+            instance.config["model"] = {
+                "pretrained_model_name_or_path": model_params.get("model_name") or model_name
+            }
         except Exception:
             pass
 
