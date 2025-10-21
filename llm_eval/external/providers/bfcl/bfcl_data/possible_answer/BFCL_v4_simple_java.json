@@ -1,0 +1,30 @@
+{"id": "simple_java_1", "ground_truth": [{"SQLCompletionAnalyzer.makeProposalsFromObject": {"object": ["Customers"], "useShortName": [true], "params": [{"limit": [50], "schemaFilter": ["public"]}]}}]}
+{"id": "simple_java_9", "ground_truth": [{"writeMultiPoint": {"multiPoint": ["new MultiPoint(new Point[]{new Point(1, 2), new Point(3, 4), new Point(5, 6), new Point(7, 8), new Point(9, 10)})"], "xyzmMode": ["XyzmMode.XYZ"], "buffer": ["ByteBuffer.allocate(1024)"]}}]}
+{"id": "simple_java_10", "ground_truth": [{"JNIBridge.setLauncherInfo": {"launcher": ["/usr/local/bin/dbeaver"], "name": ["DBeaverLauncher"]}}]}
+{"id": "simple_java_15", "ground_truth": [{"Res9patchStreamDecoder.decode": {"input": ["imageInputStream"], "out": ["imageOutputStream"]}}]}
+{"id": "simple_java_21", "ground_truth": [{"SessionHandler.exceptionCaught": {"ctx": ["nettyChannelContext"], "e": ["ioExceptionEvent"]}}]}
+{"id": "simple_java_26", "ground_truth": [{"ProxyConnection.prepareCall": {"sql": ["CALL totalSales(?)"], "resultSetType": ["ResultSet.TYPE_SCROLL_INSENSITIVE"], "concurrency": ["ResultSet.CONCUR_READ_ONLY"], "holdability": ["ResultSet.CLOSE_CURSORS_AT_COMMIT"]}}]}
+{"id": "simple_java_30", "ground_truth": [{"RedissonAsyncCache.putIfAbsent": {"key": ["answer"], "value": ["42"]}}]}
+{"id": "simple_java_32", "ground_truth": [{"RedissonPermitExpirableSemaphore.tryAcquireAsync": {"waitTime": [5], "leaseTime": [120], "unit": ["SECONDS"]}}]}
+{"id": "simple_java_33", "ground_truth": [{"RedissonMapCache.putOperationAsync": {"key": ["employee:1234"], "value": ["John Doe"]}}]}
+{"id": "simple_java_37", "ground_truth": [{"ConsoleAnnotator.annotate": {"context": ["jenkinsBuild"], "text": ["buildOutput"]}}]}
+{"id": "simple_java_41", "ground_truth": [{"SearchHit.declareInnerHitsParseFields": {"parser": ["searchHitParser"]}}]}
+{"id": "simple_java_42", "ground_truth": [{"TermQueryBuilderTests.termQuery": {"mapper": ["usernameField"], "value": ["JohnDoe"], "caseInsensitive": [true]}}]}
+{"id": "simple_java_45", "ground_truth": [{"Basic.checkSizes": {"environ": ["envVariables"], "size": [5]}}]}
+{"id": "simple_java_48", "ground_truth": [{"CookieHeaderTest.create": {"sa": ["new InetSocketAddress(\"192.168.1.10\", 8080)"], "sslContext": ["testSSLContext"]}}]}
+{"id": "simple_java_49", "ground_truth": [{"Http2TestExchangeImpl.sendResponseHeaders": {"rCode": [404], "responseLength": [1500]}}]}
+{"id": "simple_java_50", "ground_truth": [{"TransformIndexerStateTests.doDeleteByQuery": {"deleteByQueryRequest": ["deleteQueryRequest"], "responseListener": ["testListener"]}}]}
+{"id": "simple_java_55", "ground_truth": [{"SearchableSnapshotDirectory.create": {"repositories": ["repositoriesService"], "cache": ["cacheService"], "indexSettings": ["indexSettingsForLogs"], "shardPath": ["/data/nodes/0/indices/logs/5"], "currentTimeNanosSupplier": ["currentTimeNanos"], "threadPool": ["threadPool"], "blobStoreCacheService": ["blobStoreCacheService"], "sharedBlobCacheService": ["sharedBlobCacheService"]}}]}
+{"id": "simple_java_56", "ground_truth": [{"CCSDuelIT.parseEntity": {"entity": ["httpResponseEntity"], "entityParser": ["responseParser"], "parserConfig": ["defaultParserConfig"]}}]}
+{"id": "simple_java_65", "ground_truth": [{"RootObjectMapper.doXContent": {"builder": ["xContentBuilderInstance"], "params": [["include_defaults", true, "TOXCONTENT_SKIP_RUNTIME", true]]}}]}
+{"id": "simple_java_70", "ground_truth": [{"XMLNamespaceBinder.endElement": {"element": ["new QName('http://www.example.com', 'item', 'ex')"], "augs": ["augmentations"]}}]}
+{"id": "simple_java_72", "ground_truth": [{"ToTextStream.characters": {"ch": ["textBuffer"], "start": [5], "length": [10]}}]}
+{"id": "simple_java_73", "ground_truth": [{"Encodings.getEncodingInfo": {"encoding": ["UTF-8"], "allowJavaNames": [true]}}]}
+{"id": "simple_java_76", "ground_truth": [{"Intro.step": {"w": [800], "h": [600]}}]}
+{"id": "simple_java_78", "ground_truth": [{"OptionSpecBuilder.requiredUnless": {"dependent": ["quiet"], "otherDependents": [["verbose"]]}}]}
+{"id": "simple_java_80", "ground_truth": [{"RegexConstraint.initIRPattern": {"category": ["failOn"], "ruleIdx": [42]}}]}
+{"id": "simple_java_83", "ground_truth": [{"thrcputime002.runIt": {"argv": [["-waitTime", "2", "-iterations", "500"]], "out": ["System.out"]}}]}
+{"id": "simple_java_87", "ground_truth": [{"suspendpolicy017.settingVMDeathRequest": {"suspendPolicy": ["EVENT_THREAD"], "property": ["deathEvent001"]}}]}
+{"id": "simple_java_91", "ground_truth": [{"invokemethod007.runIt": {"args": [["suspend", "log"]], "out": ["debugLog"]}}]}
+{"id": "simple_java_92", "ground_truth": [{"ClassFileFinder.findClassFile": {"name": ["com.example.MyClass"], "classPath": ["/usr/local/classes:/home/user/java/libs"]}}]}
+{"id": "simple_java_96", "ground_truth": [{"InstrumentableProcessor.createCallConverter": {"converterMethod": ["convertValue"], "frameParameterName": ["frameVar"], "returnName": ["returnValueCode"]}}]}

@@ -1,4 +1,4 @@
-import argparse
+# import argparse  # CLI interface moved to evaluator.py
 import statistics
 from collections import defaultdict
 import os
@@ -26,14 +26,24 @@ from bfcl_eval.eval_checker.multi_turn_eval.multi_turn_utils import (
 from bfcl_eval.model_handler.base_handler import BaseHandler
 from bfcl_eval.model_handler.utils import parse_prompt_variation_params
 from bfcl_eval.utils import *
-from dotenv import load_dotenv
+# from dotenv import load_dotenv  # CLI interface moved to evaluator.py
 from tqdm import tqdm
 
 
+
 def get_handler(model_name: str) -> BaseHandler:
+    if model_name not in MODEL_CONFIG_MAPPING:
+        all_models = list(MODEL_CONFIG_MAPPING.keys())
+        raise ValueError(
+            f"Model '{model_name}' is not found in MODEL_CONFIG_MAPPING.\n"
+            f"Available models:\n{all_models}"
+        )
     config = MODEL_CONFIG_MAPPING[model_name]
-    handler: BaseHandler = config.model_handler(model_name, temperature=0)  # Temperature doesn't matter for evaluation
-    handler.is_fc_model = config.is_fc_model
+    registry_name = config.model_name.replace("/", "_")
+    is_fc_model = config.is_fc_model
+    handler: BaseHandler = config.model_handler(
+        model_name, temperature=0, registry_name=registry_name, is_fc_model=is_fc_model
+    )  # Temperature doesn't matter for evaluation
     return handler
 
 
@@ -598,23 +608,41 @@ def ast_file_runner(
     return save_eval_results(result, correct_count, model_result, test_category, model_name, score_dir)
 
 
-# # NOTE: Filter the model result to only include the ones that are in the prompt entries
-# def filter_entries_by_id(reference_entries, candidate_entries):
-#     """
-#     Filter candidate entries to only include those whose IDs are present in reference entries.
+def _subset_entries_by_model_ids(
+    model_result_entries: list[dict],
+    prompt_entries: list[dict],
+    ground_truth_entries: list[dict] = None,  # Irrelevance entries don't have ground truth
+    allow_missing: bool = False,
+):
+    """
+    Filter the prompt and ground truth entries so that its order/length matches the IDs present in `model_result`. When `allow_missing` is False, all IDs must be present; otherwise, any missing IDs are silently ignored.
+    """
+    if not model_result_entries:
+        return [], []
 
-#     Args:
-#         reference_entries: List of entries with 'id' field to use as reference
-#         candidate_entries: List of entries to filter based on reference IDs
+    if not allow_missing and (len(model_result_entries) != len(prompt_entries)):
+        raise ValueError(
+            f"Length of model result ({len(model_result_entries)}) does not match length of test entries ({len(prompt_entries)}). If you intended to run only on a subset (eg. entries present in the model result), please pass the `--partial-eval` flag."
+        )
 
-#     Returns:
-#         List of filtered candidate entries that have matching IDs in reference entries
-#     """
-#     reference_ids = {entry["id"] for entry in reference_entries}
-#     filtered_entries = [entry for entry in candidate_entries if entry["id"] in reference_ids]
+    all_present_ids = {entry["id"]: entry for entry in model_result_entries}
 
-#     assert len(filtered_entries) == len(reference_entries), f"The length of the filtered entries ({len(filtered_entries)}) does not match the length of the reference entries ({len(reference_entries)}). Please check the input files for completeness."
-#     return filtered_entries
+    # Align prompt and ground-truth using the *index* of the prompt entry. Some
+    # ground-truth items use a different ID format, but the order between the
+    # prompt list and the ground-truth list is guaranteed to be identical. We
+    # therefore keep the element at index *i* in both lists whenever the
+    # prompt entry at that index has an ID present in the model results.
+    filtered_prompt_entries: list[dict] = []
+    filtered_ground_truth_entries: list[dict] = []
+    for idx, prompt_entry in enumerate(prompt_entries):
+        if prompt_entry["id"] in all_present_ids:
+            filtered_prompt_entries.append(prompt_entry)
+            # ground_truth_entries and prompt_entries are aligned by index.
+            if ground_truth_entries is not None:
+                filtered_ground_truth_entries.append(ground_truth_entries[idx])
+
+    return filtered_prompt_entries, filtered_ground_truth_entries
+
 
 
 #### Main runner function ####
@@ -626,6 +654,7 @@ def evaluate_task(
     model_name,
     handler,
     leaderboard_table,
+    allow_missing: bool = True,  # If True, missing IDs are silently ignored
 ):
     print(f"🔍 Running test: {test_category}")
 
@@ -634,24 +663,19 @@ def evaluate_task(
     # Find the corresponding prompt entries
     prompt = load_dataset_entry(test_category, include_prereq=False, include_language_specific_hint=False)
 
-    # # NOTE: Filter the prompt entries to only include the ones that are in the model result
-    # prompt = filter_entries_by_id(
-    #     reference_entries=model_result,
-    #     candidate_entries=prompt,
-    # )
-
     if is_relevance_or_irrelevance(test_category):
+        prompt, _ = _subset_entries_by_model_ids(model_result, prompt, None, allow_missing=allow_missing)
+        assert len(prompt) == len(model_result), f"Length of prompt ({len(prompt)}) does not match length of model result ({len(model_result)}). Please check the input files for completeness."
+        
         accuracy, total_count = relevance_file_runner(handler, model_result, prompt, model_name, test_category, score_dir)
 
     else:
         # Find the corresponding possible answer entries
         possible_answer = load_ground_truth_entry(test_category)
+        # Sanity: prompt and ground truth should be 1:1
 
-        # # NOTE: Filter the possible answer entries to only include the ones that are in the model result
-        # possible_answer = filter_entries_by_id(
-        #     reference_entries=model_result,
-        #     candidate_entries=possible_answer,
-        # )
+        prompt, possible_answer = _subset_entries_by_model_ids(model_result, prompt, possible_answer, allow_missing=allow_missing)
+        assert len(prompt) == len(possible_answer), f"Length of ground truth ({len(possible_answer)}) should match prompt entries ({len(prompt)})."
 
         if is_format_sensitivity(test_category):
             accuracy, total_count = format_sensitivity_runner(
@@ -703,14 +727,12 @@ def evaluate_task(
 
     return leaderboard_table
 
-
 def runner(model_names, test_categories, result_dir, score_dir):
 
     # A dictionary to store the evaluation scores.
     # Key is model name, value is a dictionary with keys as test category
     # and values as a dictionary with accuracy and total count.
-    # TODO: use defaultdict to initialize the leaderboard table
-    leaderboard_table = {}
+    leaderboard_table = defaultdict(dict)
 
     # Get a list of all entries in the folder
     entries = result_dir.iterdir()
@@ -760,74 +782,4 @@ def runner(model_names, test_categories, result_dir, score_dir):
     # Write the leaderboard table to a file
     generate_leaderboard_csv(leaderboard_table, score_dir)
 
-
-def main(model, test_categories, result_dir, score_dir):
-    if result_dir is None:
-        result_dir = RESULT_PATH
-    else:
-        result_dir = (PROJECT_ROOT / result_dir).resolve()
-
-    if score_dir is None:
-        score_dir = SCORE_PATH
-    else:
-        score_dir = (PROJECT_ROOT / score_dir).resolve()
-
-    if type(test_categories) is not list:
-        test_categories = [test_categories]
-
-    all_test_categories = parse_test_category_argument(test_categories)
-
-    model_names = None
-    if model:
-        model_names = []
-        for model_name in model:
-            if model_name not in MODEL_CONFIG_MAPPING:
-                raise ValueError(f"Invalid model name '{model_name}'.")
-            # Runner takes in the model name that contains "_", instead of "/", for the sake of file path issues.
-            # This is differnet than the model name format that the generation script "openfunctions_evaluation.py" takes in (where the name contains "/").
-            # We patch it here to avoid confusing the user.
-            model_names.append(model_name.replace("/", "_"))
-
-    # Driver function to run the evaluation for all categories involved.
-    runner(model_names, all_test_categories, result_dir, score_dir)
-
-    print(f"🏁 Evaluation completed. See {score_dir / 'data_overall.csv'} for overall evaluation results on BFCL V4.")
-    print(
-        f"See {score_dir / 'data_live.csv'}, {score_dir / 'data_non_live.csv'}, {score_dir / 'data_multi_turn.csv'}, {score_dir / 'data_agentic.csv'} and {score_dir / 'data_format_sensitivity.csv'} for detailed evaluation results on each sub-section categories respectively."
-    )
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process two lists of strings.")
-
-    # Add arguments for two lists of strings
-    parser.add_argument("--model", nargs="+", type=str, help="A list of model names to evaluate")
-    parser.add_argument(
-        "--test-category",
-        nargs="+",
-        type=str,
-        default="all",
-        help="A list of test categories to run the evaluation on",
-    )
-    parser.add_argument(
-        "--result-dir",
-        default=None,
-        type=str,
-        help="Path to the folder where the model response files are stored; relative to the `berkeley-function-call-leaderboard` root folder",
-    )
-    parser.add_argument(
-        "--score-dir",
-        default=None,
-        type=str,
-        help="Path to the folder where the evaluation score files will be stored; relative to the `berkeley-function-call-leaderboard` root folder",
-    )
-
-    args = parser.parse_args()
-
-    load_dotenv(dotenv_path=DOTENV_PATH, verbose=True, override=True)  # Load the .env file
-    main(
-        args.model,
-        args.test_category,
-        args.result_dir,
-        args.score_dir,
-    )
+    return leaderboard_table
