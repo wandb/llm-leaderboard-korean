@@ -87,10 +87,15 @@ def run_bfcl_from_configs(
 
     # Prepare result and score directories (relative to this file)
     current_dir = Path(__file__).parent
-    result_dir = current_dir / "result"
-    score_dir = current_dir / "score"
+    if testmode:
+        result_dir = current_dir / "result_temp"
+        score_dir = current_dir / "score_temp"
+    else:
+        result_dir = current_dir / "result"
+        score_dir = current_dir / "score"
     result_dir.mkdir(parents=True, exist_ok=True)
     score_dir.mkdir(parents=True, exist_ok=True)
+
 
     # ---------- Model Inference ----------
     try:
