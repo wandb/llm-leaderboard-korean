@@ -672,7 +672,7 @@ def run_swebench_evaluation(predictions_file: Path, max_workers: int = 4, instan
 
     # Fallback to local official harness
     # run_id生成
-    run_id = f"nejumi_{int(time.time())}"
+    run_id = f"horangi_{int(time.time())}"
     
     print(f"Running SWE-bench evaluation (run_id: {run_id})...")
     

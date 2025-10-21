@@ -168,12 +168,6 @@ swe_bench_verified:
   limit: 80
   evaluation:
     method: "swebench_verified"
-    params:
-      # 아래 파일들은 기본적으로 artifacts 경로에서 자동 탐색됩니다.
-      # 필요 시 명시적으로 오버라이드하세요.
-      dataset_dict: artifacts/artifacts/swebench_verified_official_80:v0/swebench_verified_official/dataset_dict.json
-      state: artifacts/artifacts/swebench_verified_official_80:v0/swebench_verified_official/test/state.json
-      dataset_info: artifacts/artifacts/swebench_verified_official_80:v0/swebench_verified_official/test/dataset_info.json
   # 원격 SWE-bench API 서버 설정 (있을 경우 실제 실행)
   server:
     url: ""  # 예: https://swebench-api.my-domain.com
