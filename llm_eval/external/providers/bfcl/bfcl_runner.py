@@ -26,6 +26,7 @@ from bfcl_eval.eval_checker.multi_turn_eval.multi_turn_utils import (
 from bfcl_eval.model_handler.base_handler import BaseHandler
 from bfcl_eval.model_handler.utils import parse_prompt_variation_params
 from bfcl_eval.utils import *
+
 # from dotenv import load_dotenv  # CLI interface moved to evaluator.py
 from tqdm import tqdm
 from llm_eval.wandb_controller import WeaveEvalsController
@@ -33,20 +34,14 @@ import wandb
 import pandas as pd
 
 
-
 def get_handler(model_name: str) -> BaseHandler:
     if model_name not in MODEL_CONFIG_MAPPING:
         all_models = list(MODEL_CONFIG_MAPPING.keys())
-        raise ValueError(
-            f"Model '{model_name}' is not found in MODEL_CONFIG_MAPPING.\n"
-            f"Available models:\n{all_models}"
-        )
+        raise ValueError(f"Model '{model_name}' is not found in MODEL_CONFIG_MAPPING.\n" f"Available models:\n{all_models}")
     config = MODEL_CONFIG_MAPPING[model_name]
     registry_name = config.model_name.replace("/", "_")
     is_fc_model = config.is_fc_model
-    handler: BaseHandler = config.model_handler(
-        model_name, temperature=0, registry_name=registry_name, is_fc_model=is_fc_model
-    )  # Temperature doesn't matter for evaluation
+    handler: BaseHandler = config.model_handler(model_name, temperature=0, registry_name=registry_name, is_fc_model=is_fc_model)  # Temperature doesn't matter for evaluation
     return handler
 
 
@@ -647,7 +642,6 @@ def _subset_entries_by_model_ids(
     return filtered_prompt_entries, filtered_ground_truth_entries
 
 
-
 #### Main runner function ####
 def evaluate_task(
     test_category,
@@ -669,7 +663,7 @@ def evaluate_task(
     if is_relevance_or_irrelevance(test_category):
         prompt, _ = _subset_entries_by_model_ids(model_result, prompt, None, allow_missing=allow_missing)
         assert len(prompt) == len(model_result), f"Length of prompt ({len(prompt)}) does not match length of model result ({len(model_result)}). Please check the input files for completeness."
-        
+
         accuracy, total_count = relevance_file_runner(handler, model_result, prompt, model_name, test_category, score_dir)
 
     else:
@@ -792,13 +786,13 @@ def evaluate_task(
 def _log_to_wandb(result_df: pd.DataFrame, model_task_name: str) -> None:
     """Log evaluation summary to Weights & Biases if configured."""
     from llm_eval.wandb_singleton import WandbConfigSingleton
+
     leaderboard_table = wandb.Table(dataframe=result_df)
     run = WandbConfigSingleton.get_instance().run
-    run.log({model_task_name+'_leaderboard_table': leaderboard_table})
+    run.log({model_task_name + "_leaderboard_table": leaderboard_table})
 
 
 def runner(model_names, test_categories, result_dir, score_dir):
-
     # A dictionary to store the evaluation scores.
     # Key is model name, value is a dictionary with keys as test category
     # and values as a dictionary with accuracy and total count.
@@ -852,24 +846,55 @@ def runner(model_names, test_categories, result_dir, score_dir):
     # Write the leaderboard table to a file
     generate_leaderboard_csv(leaderboard_table, score_dir)
 
-    # Log overall results to wandb (similar to HalluLens)
+    # Log overall results to wandb (per-category and overall model-wise)
     try:
-        # Convert leaderboard_table to DataFrame for wandb logging
+        # Convert leaderboard_table to DataFrame for wandb logging (per category)
         wandb_data = []
         for model_name, model_results in leaderboard_table.items():
             for test_category, result in model_results.items():
                 if isinstance(result, dict) and "accuracy" in result:
-                    wandb_data.append({
-                        "model": model_name,
-                        "test_category": test_category,
-                        "accuracy": result["accuracy"],
-                        "total_count": result.get("total_count", 0),
-                        "correct_count": result.get("correct_count", 0),
-                    })
-        
+                    wandb_data.append(
+                        {
+                            "model": model_name,
+                            "test_category": test_category,
+                            "accuracy": result["accuracy"],
+                            "total_count": result.get("total_count", 0),
+                            "correct_count": result.get("correct_count", 0),
+                        }
+                    )
         if wandb_data:
             overall_df = pd.DataFrame(wandb_data)
             _log_to_wandb(overall_df, "bfcl_overall")
+
+        # Additionally, make model-wise overall bfcl_leaderboard_table (aggregate over all categories)
+        summary_rows = []
+        for model_name, model_results in leaderboard_table.items():
+            total_correct = 0
+            total_count = 0
+            for result in model_results.values():
+                if isinstance(result, dict) and "accuracy" in result:
+                    correct_count = result.get("correct_count")
+                    if correct_count is not None:
+                        total_correct += correct_count
+                    else:
+                        # fallback, compute from accuracy * total_count
+                        try:
+                            total_correct += int(result.get("accuracy", 0) * result.get("total_count", 0))
+                        except Exception:
+                            pass
+                    total_count += result.get("total_count", 0)
+            overall_accuracy = (total_correct / total_count) if total_count > 0 else 0.0
+            summary_rows.append(
+                {
+                    "model": model_name,
+                    "accuracy": overall_accuracy,
+                    "total_count": total_count,
+                    "correct_count": total_correct,
+                }
+            )
+        if summary_rows:
+            leaderboard_df = pd.DataFrame(summary_rows)
+            _log_to_wandb(leaderboard_df, "bfcl")
     except Exception as e:
         print(f"[Wandb] BFCL overall logging skipped: {e}")
 
