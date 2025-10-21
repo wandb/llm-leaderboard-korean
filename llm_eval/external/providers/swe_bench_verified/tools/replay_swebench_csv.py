@@ -94,7 +94,7 @@ def main() -> None:
                 "patch_diff": patch,
                 "namespace": args.namespace,
                 "tag": args.tag,
-                "model_name_or_path": "nejumi-replay-csv",
+                "model_name_or_path": "horangi-replay-csv",
             }
             try:
                 job = http_json("POST", f"{endpoint}/v1/jobs", body_obj=payload, headers=headers, timeout=60)

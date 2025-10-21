@@ -48,7 +48,7 @@ class JobCreate(BaseModel):
     tag: str = Field("latest", description="Instance image tag")
     timeout_sec: int = Field(1800, description="Evaluation timeout in seconds")
     model_name_or_path: str = Field(
-        default="nejumi-api",
+        default="horangi-api",
         description="Identifier recorded in predictions (used by official harness)",
     )
 
