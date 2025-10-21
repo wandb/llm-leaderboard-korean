@@ -305,6 +305,26 @@ def main(args):
         all_test_entries_involved,
     ) = get_involved_test_entries(args.test_category, args.run_ids)
 
+    # Refine filtering of test cases when limit_per_test_category is set
+    limit_per_test_category = getattr(args, "limit_per_test_category", None)
+    if limit_per_test_category is not None:
+        print(f"Limiting the number of test cases to {limit_per_test_category} per test category")
+        filtered_entries = []
+        for test_category in all_test_categories:
+            # Select entries with exact match on test_category (by field, not substring of id)
+            for entry in all_test_entries_involved:
+                entry_id = entry.get("id", "")
+                entry_id_prefix = "_".join(entry_id.split("_")[:-1])
+                if entry_id_prefix == test_category:
+                    filtered_entries.append(entry)
+                    if len(filtered_entries) >= limit_per_test_category:
+                        break
+        all_test_entries_involved = filtered_entries
+        assert len(all_test_entries_involved) == limit_per_test_category * len(all_test_categories)
+
+    print(f"Number of test categories: {len(all_test_categories)}")
+    print(f"Number of test cases to generate: {len(all_test_entries_involved)}")
+
     for model_name in args.model:
         if model_name not in MODEL_CONFIG_MAPPING:
             raise ValueError(
