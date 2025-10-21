@@ -791,13 +791,10 @@ def evaluate_task(
 
 def _log_to_wandb(result_df: pd.DataFrame, model_task_name: str) -> None:
     """Log evaluation summary to Weights & Biases if configured."""
-    try:
-        from llm_eval.wandb_singleton import WandbConfigSingleton
-        leaderboard_table = wandb.Table(dataframe=result_df)
-        run = WandbConfigSingleton.get_instance().run
-        run.log({model_task_name+'_leaderboard_table': leaderboard_table})
-    except Exception as e:
-        print(f"[Wandb] BFCL {model_task_name} logging skipped: {e}")
+    from llm_eval.wandb_singleton import WandbConfigSingleton
+    leaderboard_table = wandb.Table(dataframe=result_df)
+    run = WandbConfigSingleton.get_instance().run
+    run.log({model_task_name+'_leaderboard_table': leaderboard_table})
 
 
 def runner(model_names, test_categories, result_dir, score_dir):

@@ -1,5 +1,9 @@
 # Import providers to trigger registration
-from .bfcl import BFCLProvider  # noqa: F401
+try:
+    from .bfcl import *
+except Exception:
+    pass
+
 try:
     from .hallulens import *
 except Exception:

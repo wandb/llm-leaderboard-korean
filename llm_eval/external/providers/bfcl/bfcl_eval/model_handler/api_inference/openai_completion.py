@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import weave
 from typing import Any
 
 from bfcl_eval.constants.type_mappings import GORILLA_TO_OPENAPI
@@ -66,6 +67,7 @@ class OpenAICompletionsHandler(BaseHandler):
         else:
             return default_decode_execute_prompting(result)
 
+    @weave.op
     @retry_with_backoff(error_type=RateLimitError)
     def generate_with_backoff(self, **kwargs):
         start_time = time.time()
