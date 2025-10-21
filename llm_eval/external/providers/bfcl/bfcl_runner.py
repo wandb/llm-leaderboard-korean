@@ -754,20 +754,20 @@ def evaluate_task(
         # Get model name for logging (convert _ back to / for display)
         model_name_display = model_name.replace("_", "/")
 
-        # WeaveEvalsController.log(
-        #     dataset_name="bfcl",
-        #     subset=test_category,
-        #     split="test",
-        #     model_backend_name="bfcl",
-        #     model_name=model_name_display,
-        #     scaling_method_name=None,
-        #     evaluation_method_name="BFCL-Evaluation",
-        #     language_penalize=False,
-        #     target_lang="en",  # BFCL is primarily English
-        #     samples=samples,
-        #     metrics=metrics,
-        #     wandb_params={},
-        # )
+        WeaveEvalsController.log(
+            dataset_name="bfcl",
+            subset=test_category,
+            split="test",
+            model_backend_name="bfcl",
+            model_name=model_name_display,
+            scaling_method_name=None,
+            evaluation_method_name="BFCL-Evaluation",
+            language_penalize=False,
+            target_lang="en",  # BFCL is primarily English
+            samples=samples,
+            metrics=metrics,
+            wandb_params={},
+        )
     except Exception as e:
         print(f"[Weave] BFCL {test_category} logging skipped: {e}")
 
