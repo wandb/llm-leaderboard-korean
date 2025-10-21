@@ -161,6 +161,20 @@ halluLens:
     hallucination:
       model: gpt-4o
 
+# SWE-bench Verified 설정
+swe_bench_verified:
+  split: test
+  subset: official_80
+  limit: 80
+  evaluation:
+    method: "swebench_verified"
+  # 원격 SWE-bench API 서버 설정 (있을 경우 실제 실행)
+  server:
+    url: ""  # 예: https://swebench-api.my-domain.com
+    token: ""  # 필요 시 토큰
+    poll_interval_sec: 10
+    max_wait_sec: 36000
+
 # arc_agi2:
 #   split: evaluation
 #   subset: default
