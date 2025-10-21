@@ -91,6 +91,11 @@ def run_bfcl_from_configs(
         logger.info(f"[BFCL] Running model inference for {len(test_categories)} categories")
         from .bfcl_eval._llm_response_generation import main as generation_main
 
+        # Read concurrency from config (default: 32 if not provided)
+        bfcl_params: Dict[str, Any] = (ds_cfg.get("params") or {})
+        num_threads_cfg: Optional[int] = bfcl_params.get("num_threads") or ds_cfg.get("num_threads")
+        num_threads = int(num_threads_cfg) if num_threads_cfg is not None else 32
+
         args = SimpleNamespace(
             model=[bfcl_model],
             test_category=test_categories,
@@ -98,7 +103,7 @@ def run_bfcl_from_configs(
             include_input_log=False,
             exclude_state_log=False,
             num_gpus=1,
-            num_threads=1,
+            num_threads=num_threads,
             gpu_memory_utilization=0.9,
             backend="sglang",
             skip_server_setup=False,
