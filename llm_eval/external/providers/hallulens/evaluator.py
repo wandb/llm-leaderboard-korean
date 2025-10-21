@@ -45,6 +45,12 @@ def run_hallulens_from_configs(
     subset = ds_cfg.get("subset")
     split = ds_cfg.get("split", "test")
     limit = ds_cfg.get("limit", None)
+    
+    # testmode 체크 - testmode가 true면 각 서브셋당 10개로 제한 (기존 limit 무시)
+    testmode = base_cfg.get("testmode", False)
+    if testmode:
+        limit = 10
+        logger.info(f"testmode enabled: overriding halluLens limit to {limit} per subset")
 
     # dataset-specific params
     dataset_params = dict(ds_cfg.get("params") or {})
