@@ -18,3 +18,6 @@ llm_eval/datasets/bfcl/
 # WandB
 wandb/
 artifacts/
+
+# SWE-bench Verified
+logs/
