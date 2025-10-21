@@ -28,6 +28,9 @@ from bfcl_eval.model_handler.utils import parse_prompt_variation_params
 from bfcl_eval.utils import *
 # from dotenv import load_dotenv  # CLI interface moved to evaluator.py
 from tqdm import tqdm
+from llm_eval.wandb_controller import WeaveEvalsController
+import wandb
+import pandas as pd
 
 
 
@@ -725,7 +728,77 @@ def evaluate_task(
 
     print(f"✅ Test completed: {test_category}. 🎯 Accuracy: {accuracy:.2%}")
 
+    # Weave Evals logging
+    try:
+        # Build samples from model_result for logging
+        samples = []
+        for i, result_item in enumerate(model_result):
+            sample = {
+                "input": result_item.get("prompt", ""),
+                "prediction": result_item.get("result", ""),
+                "reference": None,  # BFCL doesn't have explicit references in this format
+                "evaluation": {
+                    "test_category": test_category,
+                    "id": result_item.get("id", i),
+                },
+            }
+            samples.append(sample)
+
+        # Extract metrics
+        metrics = {
+            "accuracy": accuracy,
+            "total_count": total_count,
+            "correct_count": int(accuracy * total_count),
+        }
+
+        # Get model name for logging (convert _ back to / for display)
+        model_name_display = model_name.replace("_", "/")
+
+        # WeaveEvalsController.log(
+        #     dataset_name="bfcl",
+        #     subset=test_category,
+        #     split="test",
+        #     model_backend_name="bfcl",
+        #     model_name=model_name_display,
+        #     scaling_method_name=None,
+        #     evaluation_method_name="BFCL-Evaluation",
+        #     language_penalize=False,
+        #     target_lang="en",  # BFCL is primarily English
+        #     samples=samples,
+        #     metrics=metrics,
+        #     wandb_params={},
+        # )
+    except Exception as e:
+        print(f"[Weave] BFCL {test_category} logging skipped: {e}")
+
+    # Wandb logging (similar to HalluLens)
+    try:
+        # Create summary metrics for wandb
+        summary_metrics = {
+            "model": model_name,
+            "test_category": test_category,
+            "accuracy": accuracy,
+            "total_count": total_count,
+            "correct_count": int(accuracy * total_count),
+        }
+        summary_df = pd.DataFrame([summary_metrics])
+        _log_to_wandb(summary_df, f"bfcl_{test_category}")
+    except Exception as e:
+        print(f"[Wandb] BFCL {test_category} summary logging skipped: {e}")
+
     return leaderboard_table
+
+
+def _log_to_wandb(result_df: pd.DataFrame, model_task_name: str) -> None:
+    """Log evaluation summary to Weights & Biases if configured."""
+    try:
+        from llm_eval.wandb_singleton import WandbConfigSingleton
+        leaderboard_table = wandb.Table(dataframe=result_df)
+        run = WandbConfigSingleton.get_instance().run
+        run.log({model_task_name+'_leaderboard_table': leaderboard_table})
+    except Exception as e:
+        print(f"[Wandb] BFCL {model_task_name} logging skipped: {e}")
+
 
 def runner(model_names, test_categories, result_dir, score_dir):
 
@@ -781,5 +854,26 @@ def runner(model_names, test_categories, result_dir, score_dir):
     update_leaderboard_table_with_local_score_file(leaderboard_table, score_dir)
     # Write the leaderboard table to a file
     generate_leaderboard_csv(leaderboard_table, score_dir)
+
+    # Log overall results to wandb (similar to HalluLens)
+    try:
+        # Convert leaderboard_table to DataFrame for wandb logging
+        wandb_data = []
+        for model_name, model_results in leaderboard_table.items():
+            for test_category, result in model_results.items():
+                if isinstance(result, dict) and "accuracy" in result:
+                    wandb_data.append({
+                        "model": model_name,
+                        "test_category": test_category,
+                        "accuracy": result["accuracy"],
+                        "total_count": result.get("total_count", 0),
+                        "correct_count": result.get("correct_count", 0),
+                    })
+        
+        if wandb_data:
+            overall_df = pd.DataFrame(wandb_data)
+            _log_to_wandb(overall_df, "bfcl_overall")
+    except Exception as e:
+        print(f"[Wandb] BFCL overall logging skipped: {e}")
 
     return leaderboard_table

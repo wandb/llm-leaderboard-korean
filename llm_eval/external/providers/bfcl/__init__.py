@@ -1,9 +1,11 @@
 """
-BFCL (Berkeley Function Call Leaderboard) Provider Module
+BFCL (Berkeley Function Call Leaderboard) Evaluation Module
 
-This module contains the BFCL provider and related evaluation components.
+This module contains BFCL evaluation components.
+Note: BFCLProvider has been deprecated. Use evaluator.py for BFCL evaluations.
 """
 
-from .provider import BFCLProvider
+# BFCLProvider is deprecated - use evaluator.py instead
+# from .provider import BFCLProvider
 
-__all__ = ["BFCLProvider"]
+__all__ = []

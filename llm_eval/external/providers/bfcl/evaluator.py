@@ -130,7 +130,7 @@ def run_bfcl_from_configs(
     # ---------- Evaluation ----------
     try:
         logger.info(f"[BFCL] Running evaluation for {len(test_categories)} categories")
-        from .eval_runner import runner as evaluation_main
+        from .bfcl_runner import runner as evaluation_main
 
         leaderboard_table = evaluation_main(
             model_names=[bfcl_model],
@@ -138,9 +138,8 @@ def run_bfcl_from_configs(
             result_dir=result_dir,
             score_dir=score_dir,
         )
-        completed_tasks = test_categories
-        failed_tasks = []
         logger.info(f"[BFCL] Successfully completed evaluation for all categories")
+
     except Exception as e:
         logger.error(f"[BFCL] Failed to run evaluation: {e}")
         return {
@@ -173,6 +172,7 @@ def run_bfcl_from_configs(
             },
         )
     }
+
 
 def get_bfcl_test_categories() -> List[str]:
     """
