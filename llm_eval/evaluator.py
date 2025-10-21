@@ -370,6 +370,18 @@ def run_multiple_from_configs(
             results.update(result_map)
             continue
 
+        # Branch out SWE-bench Verified to external evaluator module
+        if str(ds_key).lower() == "swe_bench_verified":
+            from llm_eval.external.providers.swe_bench_verified.evaluator import (
+                run_swebench_verified_from_configs,
+            )
+            result_map = run_swebench_verified_from_configs(
+                base_config_path=base_config_path,
+                model_config_path=model_config_path,
+            )
+            results.update(result_map)
+            continue
+
         # If mt_bench_judge (or llm_judge) embeds judge config in evaluation.params, honor it
         judge_name = None
         judge_params = None
