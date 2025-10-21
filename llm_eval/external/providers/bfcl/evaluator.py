@@ -107,7 +107,7 @@ def run_bfcl_from_configs(
             allow_overwrite=True,
             run_ids=True,
         )
-        # generation_main(args)
+        generation_main(args)
         logger.info(f"[BFCL] Successfully completed model inference")
 
     except Exception as e:
