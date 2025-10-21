@@ -722,48 +722,48 @@ def evaluate_task(
 
     print(f"✅ Test completed: {test_category}. 🎯 Accuracy: {accuracy:.2%}")
 
-    # Weave Evals logging
-    try:
-        # Build samples from model_result for logging
-        samples = []
-        for i, result_item in enumerate(model_result):
-            sample = {
-                "input": result_item.get("prompt", ""),
-                "prediction": result_item.get("result", ""),
-                "reference": None,  # BFCL doesn't have explicit references in this format
-                "evaluation": {
-                    "test_category": test_category,
-                    "id": result_item.get("id", i),
-                },
-            }
-            samples.append(sample)
+    # # Weave Evals logging
+    # try:
+    #     # Build samples from model_result for logging
+    #     samples = []
+    #     for i, result_item in enumerate(model_result):
+    #         sample = {
+    #             "input": result_item.get("prompt", ""),
+    #             "prediction": result_item.get("result", ""),
+    #             "reference": None,  # BFCL doesn't have explicit references in this format
+    #             "evaluation": {
+    #                 "test_category": test_category,
+    #                 "id": result_item.get("id", i),
+    #             },
+    #         }
+    #         samples.append(sample)
 
-        # Extract metrics
-        metrics = {
-            "accuracy": accuracy,
-            "total_count": total_count,
-            "correct_count": int(accuracy * total_count),
-        }
+    #     # Extract metrics
+    #     metrics = {
+    #         "accuracy": accuracy,
+    #         "total_count": total_count,
+    #         "correct_count": int(accuracy * total_count),
+    #     }
 
-        # Get model name for logging (convert _ back to / for display)
-        model_name_display = model_name.replace("_", "/")
+    #     # Get model name for logging (convert _ back to / for display)
+    #     model_name_display = model_name.replace("_", "/")
 
-        WeaveEvalsController.log(
-            dataset_name="bfcl",
-            subset=test_category,
-            split="test",
-            model_backend_name="bfcl",
-            model_name=model_name_display,
-            scaling_method_name=None,
-            evaluation_method_name="BFCL-Evaluation",
-            language_penalize=False,
-            target_lang="en",  # BFCL is primarily English
-            samples=samples,
-            metrics=metrics,
-            wandb_params={},
-        )
-    except Exception as e:
-        print(f"[Weave] BFCL {test_category} logging skipped: {e}")
+    #     WeaveEvalsController.log(
+    #         dataset_name="bfcl",
+    #         subset=test_category,
+    #         split="test",
+    #         model_backend_name="bfcl",
+    #         model_name=model_name_display,
+    #         scaling_method_name=None,
+    #         evaluation_method_name="BFCL-Evaluation",
+    #         language_penalize=False,
+    #         target_lang="en",  # BFCL is primarily English
+    #         samples=samples,
+    #         metrics=metrics,
+    #         wandb_params={},
+    #     )
+    # except Exception as e:
+    #     print(f"[Weave] BFCL {test_category} logging skipped: {e}")
 
     # Wandb logging (similar to HalluLens)
     try:
@@ -800,19 +800,16 @@ def runner(model_names, test_categories, result_dir, score_dir):
 
     # Get a list of all entries in the folder
     entries = result_dir.iterdir()
-
     # Filter out the subdirectories
     subdirs = [entry for entry in entries if entry.is_dir()]
 
     # Traverse each subdirectory
     for subdir in tqdm(subdirs, desc="Number of models evaluated"):
-
         model_name = subdir.relative_to(result_dir).name
         if model_names is not None and model_name not in model_names:
             continue
 
         model_name_escaped = model_name.replace("_", "/")
-
         print(f"🦍 Model: {model_name}")
 
         # Find and process all result JSON files recursively in the subdirectory
@@ -822,9 +819,8 @@ def runner(model_names, test_categories, result_dir, score_dir):
                 continue
 
             handler = get_handler(model_name_escaped)
-
             # We don't evaluate the following categories in the current iteration of the benchmark
-            if is_chatable(test_category) or is_sql(test_category) or is_executable(test_category) or is_memory_prereq(test_category):
+            if (is_chatable(test_category) or is_sql(test_category) or is_executable(test_category) or is_memory_prereq(test_category)):
                 continue
 
             model_result = load_file(model_result_json, sort_by_id=True)
@@ -839,12 +835,14 @@ def runner(model_names, test_categories, result_dir, score_dir):
                 leaderboard_table,
             )
 
-    # This function reads all the score files from local folder and updates the
-    # leaderboard table. This is helpful when you only want to run the
-    # evaluation for a subset of models and test categories.
+    # This function reads all the score files from local folder and updates the leaderboard table.
+    # This is helpful when you only want to run the evaluation for a subset of models and test categories.
     update_leaderboard_table_with_local_score_file(leaderboard_table, score_dir)
     # Write the leaderboard table to a file
     generate_leaderboard_csv(leaderboard_table, score_dir)
+    
+    if model_names is not None:
+        leaderboard_table = {k: v for k, v in leaderboard_table.items() if k in model_names}
 
     # Log overall results to wandb (per-category and overall model-wise)
     try:
@@ -897,5 +895,50 @@ def runner(model_names, test_categories, result_dir, score_dir):
             _log_to_wandb(leaderboard_df, "bfcl")
     except Exception as e:
         print(f"[Wandb] BFCL overall logging skipped: {e}")
+
+    # --- Weave Evals logging across all models/categories (aggregate and per-sample) ---
+    try:
+        from llm_eval.wandb_controller import WeaveEvalsController
+
+        # First, log aggregate/summary metrics per model across all categories
+        for model_name, model_results in leaderboard_table.items():
+            total_correct = 0
+            total_count = 0
+            for result in model_results.values():
+                if isinstance(result, dict) and "accuracy" in result:
+                    correct_count = result.get("correct_count")
+                    if correct_count is not None:
+                        total_correct += correct_count
+                    else:
+                        # fallback: compute from accuracy * total_count
+                        try:
+                            total_correct += int(result.get("accuracy", 0) * result.get("total_count", 0))
+                        except Exception:
+                            pass
+                    total_count += result.get("total_count", 0)
+            overall_accuracy = (total_correct / total_count) if total_count > 0 else 0.0
+            summary_metrics = {
+                "accuracy": overall_accuracy,
+                "total_count": total_count,
+                "correct_count": total_correct,
+            }
+            model_name_display = model_name.replace("_", "/")
+            # Log overall metrics for this model (no samples, just summary)
+            WeaveEvalsController.log(
+                dataset_name="bfcl",
+                subset="overall",  # Special value to indicate overall summary
+                split="test",
+                model_backend_name="bfcl",
+                model_name=model_name_display,
+                scaling_method_name=None,
+                evaluation_method_name="BFCL-Evaluation",
+                language_penalize=False,
+                target_lang="en",
+                samples=[],
+                metrics=summary_metrics,
+                wandb_params={},
+            )
+    except Exception as e:
+        print(f"[Weave] BFCL all logging skipped: {e}")
 
     return leaderboard_table

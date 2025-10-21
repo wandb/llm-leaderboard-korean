@@ -613,64 +613,64 @@ def generate_leaderboard_csv(leaderboard_table, output_path):
         no_conversion_numeric_column_index=[4, 5, 6, 7, 32, 33],
     )
 
-    wandb_project = os.getenv("WANDB_BFCL_PROJECT")
-    if wandb_project and wandb_project != "ENTITY:PROJECT":
-        import wandb
-
-        # Initialize WandB run
-        wandb.init(
-            # wandb_project is 'entity:project'
-            entity=wandb_project.split(":")[0],
-            project=wandb_project.split(":")[1],
-            name=f"BFCL-v4-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
-        )
-
-        # Log CSV files to WandB
-        # Read the CSV files
-        non_live_df = pd.read_csv(output_path / "data_non_live.csv")
-        live_df = pd.read_csv(output_path / "data_live.csv")
-        multi_turn_df = pd.read_csv(output_path / "data_multi_turn.csv")
-        agentic_df = pd.read_csv(output_path / "data_agentic.csv")
-        overall_df = pd.read_csv(output_path / "data_overall.csv")
-
-        # Convert DataFrames to WandB Tables
-        non_live_table = wandb.Table(dataframe=non_live_df)
-        live_table = wandb.Table(dataframe=live_df)
-        multi_turn_table = wandb.Table(dataframe=multi_turn_df)
-        agentic_table = wandb.Table(dataframe=agentic_df)
-        overall_table = wandb.Table(dataframe=overall_df)
-
-        # Create artifacts
-        bfcl_artifact = wandb.Artifact("bfcl_results", type="dataset")
-
-        # Add tables to artifact
-        bfcl_artifact.add(non_live_table, "non_live_results")
-        bfcl_artifact.add(live_table, "live_results")
-        bfcl_artifact.add(multi_turn_table, "multi_turn_results")
-        bfcl_artifact.add(agentic_table, "agentic_results")
-        bfcl_artifact.add(overall_table, "overall_results")
-
-        # Add raw CSV files to artifact
-        bfcl_artifact.add_file(str(output_path / "data_non_live.csv"))
-        bfcl_artifact.add_file(str(output_path / "data_live.csv"))
-        bfcl_artifact.add_file(str(output_path / "data_multi_turn.csv"))
-        bfcl_artifact.add_file(str(output_path / "data_agentic.csv"))
-        bfcl_artifact.add_file(str(output_path / "data_overall.csv"))
-
-        # Log tables directly
-        wandb.log(
-            {
-                "Non-Live Results": non_live_table,
-                "Live Results": live_table,
-                "Multi-Turn Results": multi_turn_table,
-                "Agentic Results": agentic_table,
-                "Overall Results": overall_table,
-            }
-        )
-
-        # Log artifact
-        wandb.log_artifact(bfcl_artifact)
-        wandb.finish()
+    # wandb_project = os.getenv("WANDB_BFCL_PROJECT")
+    # if wandb_project and wandb_project != "ENTITY:PROJECT":
+    #     import wandb
+    #
+    #     # Initialize WandB run
+    #     wandb.init(
+    #         # wandb_project is 'entity:project'
+    #         entity=wandb_project.split(":")[0],
+    #         project=wandb_project.split(":")[1],
+    #         name=f"BFCL-v4-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+    #     )
+    #
+    #     # Log CSV files to WandB
+    #     # Read the CSV files
+    #     non_live_df = pd.read_csv(output_path / "data_non_live.csv")
+    #     live_df = pd.read_csv(output_path / "data_live.csv")
+    #     multi_turn_df = pd.read_csv(output_path / "data_multi_turn.csv")
+    #     agentic_df = pd.read_csv(output_path / "data_agentic.csv")
+    #     overall_df = pd.read_csv(output_path / "data_overall.csv")
+    #
+    #     # Convert DataFrames to WandB Tables
+    #     non_live_table = wandb.Table(dataframe=non_live_df)
+    #     live_table = wandb.Table(dataframe=live_df)
+    #     multi_turn_table = wandb.Table(dataframe=multi_turn_df)
+    #     agentic_table = wandb.Table(dataframe=agentic_df)
+    #     overall_table = wandb.Table(dataframe=overall_df)
+    #
+    #     # Create artifacts
+    #     bfcl_artifact = wandb.Artifact("bfcl_results", type="dataset")
+    #
+    #     # Add tables to artifact
+    #     bfcl_artifact.add(non_live_table, "non_live_results")
+    #     bfcl_artifact.add(live_table, "live_results")
+    #     bfcl_artifact.add(multi_turn_table, "multi_turn_results")
+    #     bfcl_artifact.add(agentic_table, "agentic_results")
+    #     bfcl_artifact.add(overall_table, "overall_results")
+    #
+    #     # Add raw CSV files to artifact
+    #     bfcl_artifact.add_file(str(output_path / "data_non_live.csv"))
+    #     bfcl_artifact.add_file(str(output_path / "data_live.csv"))
+    #     bfcl_artifact.add_file(str(output_path / "data_multi_turn.csv"))
+    #     bfcl_artifact.add_file(str(output_path / "data_agentic.csv"))
+    #     bfcl_artifact.add_file(str(output_path / "data_overall.csv"))
+    #
+    #     # Log tables directly
+    #     wandb.log(
+    #         {
+    #             "Non-Live Results": non_live_table,
+    #             "Live Results": live_table,
+    #             "Multi-Turn Results": multi_turn_table,
+    #             "Agentic Results": agentic_table,
+    #             "Overall Results": overall_table,
+    #         }
+    #     )
+    #
+    #     # Log artifact
+    #     wandb.log_artifact(bfcl_artifact)
+    #     wandb.finish()
 
 
 def update_leaderboard_table_with_local_score_file(
