@@ -1,0 +1,30 @@
+{"id": "multiple_29", "result": "[functions.intersect(function1=\"3*x+2\", function2=\"2*x+3\")]", "input_token_count": 517, "output_token_count": 21, "latency": 0.7629051208496094}
+{"id": "multiple_33", "result": "[calculate_integral(func=\"3*x**2\", a=1, b=2)]", "input_token_count": 582, "output_token_count": 20, "latency": 0.7047359943389893}
+{"id": "multiple_48", "result": "[library.find_nearby(location=\"New York City, NY\", preferences=[\"Pet-friendly\", \"Disabled Access\"])]", "input_token_count": 612, "output_token_count": 25, "latency": 1.4724974632263184}
+{"id": "multiple_52", "result": "[currency_conversion(amount=100, from_currency=\"EUR\", to_currency=\"USD\")]", "input_token_count": 557, "output_token_count": 18, "latency": 0.7527227401733398}
+{"id": "multiple_82", "result": "[music.generate(key=\"C Major\", tempo=120)]", "input_token_count": 597, "output_token_count": 13, "latency": 0.8937511444091797}
+{"id": "multiple_83", "result": "[player_stats.get_all_time_goals(player_name=\"Lionel Messi\", team_name=\"Barcelona\")]", "input_token_count": 688, "output_token_count": 20, "latency": 2.5574026107788086}
+{"id": "multiple_87", "result": "[games.update.find(game=\"Cyberpunk 2077\", platform=\"Xbox\")]", "input_token_count": 690, "output_token_count": 17, "latency": 0.6928603649139404}
+{"id": "multiple_91", "result": "[recipe.find(mainIngredient=\"apple\", ingredientLimit=5)]", "input_token_count": 544, "output_token_count": 14, "latency": 0.8802101612091064}
+{"id": "multiple_92", "result": "[walmart.vegan_products(location=\"Denver, CO\", categories=[\"gluten-free\"])]", "input_token_count": 759, "output_token_count": 20, "latency": 0.9765288829803467}
+{"id": "multiple_96", "result": "[solve_quadratic_equation(a=2, b=6, c=5)]", "input_token_count": 808, "output_token_count": 20, "latency": 1.2566053867340088}
+{"id": "multiple_104", "result": "[get_shortest_driving_distance(origin=\"New York City\", destination=\"Washington D.C.\")]", "input_token_count": 859, "output_token_count": 20, "latency": 2.1865038871765137}
+{"id": "multiple_110", "result": "[mutation_type.find(snp_id=\"rs6034464\")]", "input_token_count": 607, "output_token_count": 14, "latency": 0.8384788036346436}
+{"id": "multiple_122", "result": "[run_linear_regression(predictors=[\"Age\", \"Income\", \"Education\"], target=\"Purchase_Amount\", standardize=True)]", "input_token_count": 991, "output_token_count": 28, "latency": 0.765984296798706}
+{"id": "multiple_124", "result": "[probabilities.calculate_single(total_outcomes=52, event_outcomes=4)]", "input_token_count": 762, "output_token_count": 18, "latency": 0.7443621158599854}
+{"id": "multiple_127", "result": "[finance.calculate_quarterly_dividend_per_share(total_payout=50000000, outstanding_shares=100000000)]", "input_token_count": 922, "output_token_count": 27, "latency": 1.0974454879760742}
+{"id": "multiple_129", "result": "[compound_interest(principal=10000, annual_rate=5.0, compounding_freq=\"monthly\", time_in_years=5)]", "input_token_count": 714, "output_token_count": 30, "latency": 0.7854294776916504}
+{"id": "multiple_133", "result": "[calculate_mutual_fund_balance(investment_amount=50000, annual_yield=0.05, years=3)]", "input_token_count": 577, "output_token_count": 28, "latency": 1.948920488357544}
+{"id": "multiple_138", "result": "The question lacks the required parameter \"case_id\" to fetch the detailed legal case information. Please provide the case ID for the R vs Adams legal case.", "input_token_count": 775, "output_token_count": 32, "latency": 1.1214218139648438}
+{"id": "multiple_151", "result": "[social_media_analytics.most_followed(topic=\"psychology\", sub_topics=[\"behaviour\", \"group dynamics\"])]", "input_token_count": 802, "output_token_count": 26, "latency": 0.9213113784790039}
+{"id": "multiple_155", "result": "[get_discoverer(discovery=\"neutron\", detail=True)]", "input_token_count": 756, "output_token_count": 14, "latency": 1.1140353679656982}
+{"id": "multiple_157", "result": "[get_earliest_reference(name=\"Jesus Christ\", source=\"historical records\")]", "input_token_count": 565, "output_token_count": 17, "latency": 1.736692190170288}
+{"id": "multiple_161", "result": "[find_exhibition(location=\"New York\", art_form=\"modern sculpture\", user_ratings=\"high\")]", "input_token_count": 837, "output_token_count": 22, "latency": 0.8873939514160156}
+{"id": "multiple_170", "result": "[soccer_stat.get_player_stats(player_name=\"Cristiano Ronaldo\", season=\"2019-2020\")]", "input_token_count": 909, "output_token_count": 23, "latency": 0.8842239379882812}
+{"id": "multiple_180", "result": "[game_stats.fetch_player_statistics(game='Zelda', username='Sam', platform='Switch')]", "input_token_count": 950, "output_token_count": 20, "latency": 1.1927158832550049}
+{"id": "multiple_181", "result": "[soccer.get_last_match(team_name=\"Liverpool F.C.\", include_stats=True)]", "input_token_count": 940, "output_token_count": 18, "latency": 0.9343738555908203}
+{"id": "multiple_185", "result": "[restaurant_search.find_closest(location=\"Boston, MA\", cuisine=\"Sushi\", amenities=[\"Patio\"])]", "input_token_count": 635, "output_token_count": 24, "latency": 0.9644091129302979}
+{"id": "multiple_187", "result": "[whole_foods.check_price(location=\"Los Angeles\", items=[\"tomatoes\", \"lettuce\"])]", "input_token_count": 920, "output_token_count": 22, "latency": 1.0732216835021973}
+{"id": "multiple_188", "result": "[grocery_store.find_best(my_location=\"Berkeley\", rating=4.5, products=[\"tomatoes\", \"pet food\"])]", "input_token_count": 958, "output_token_count": 28, "latency": 1.0233125686645508}
+{"id": "multiple_190", "result": "[book_hotel(hotel_name=\"Hilton Hotel\", location=\"Chicago\", room_type=\"single\", start_date=\"2022-12-10\", nights=2)]", "input_token_count": 784, "output_token_count": 36, "latency": 1.5710444450378418}
+{"id": "multiple_198", "result": "[calculate_genotype_frequency(allele_frequency=0.3, genotype=\"AA\")]", "input_token_count": 1003, "output_token_count": 19, "latency": 1.3188979625701904}

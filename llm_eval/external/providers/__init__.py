@@ -1,6 +1,13 @@
 # Import providers to trigger registration
-from .bfcl import BFCLProvider  # noqa: F401
-from .hallulens import *
+try:
+    from .bfcl import *
+except Exception:
+    pass
+
+try:
+    from .hallulens import *
+except Exception:
+    pass
 
 # SWE-bench Verified does not use a provider class in this project.
 # Guard the import so importing this package won't fail.
