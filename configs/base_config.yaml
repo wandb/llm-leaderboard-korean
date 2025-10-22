@@ -6,7 +6,7 @@ wandb:
     project_dataset: horangi4-dataset
 
 # testmode configurations
-testmode: false
+testmode: true
 
 # dataset configurations
 

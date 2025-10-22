@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 import yaml
-
+import pandas as pd
 from llm_eval.utils.logging import get_logger
 from llm_eval.utils.util import EvaluationResult
 from llm_eval.datasets import load_datasets
@@ -10,6 +10,8 @@ from llm_eval.external.providers.hallulens.hallulens_runner import (
     non_mixed_entity_runner,
     non_generated_entity_runner,
 )
+from llm_eval.wandb_singleton import WandbConfigSingleton
+import wandb
 
 logger = get_logger(name="hallulens_evaluator", level=20)
 
@@ -94,7 +96,7 @@ def run_hallulens_from_configs(
     else:
         task_list = list(paths_dict.keys())
         
-
+    dfs = []
     for subset_name in task_list:
         task_path = paths_dict.get(subset_name)
         if not task_path:
@@ -102,7 +104,7 @@ def run_hallulens_from_configs(
             continue
         logger.info(f"[HalluLens] Running task '{subset_name}' with model='{hl_model}', limit='{dataset_params.get('limit')}'")
         if subset_name == "precise_wikiqa":
-            precise_wikiqa_runner(
+            result_df = precise_wikiqa_runner(
                 qa_dataset_path=task_path,
                 model=hl_model,
                 limit=dataset_params.get("limit"),
@@ -111,7 +113,7 @@ def run_hallulens_from_configs(
                 evaluator_halu_model=hallucination_eval_model,
             )
         elif subset_name == "longwiki":
-            longwiki_runner(
+            result_df = longwiki_runner(
                 benchmark_dataset_path=task_path,
                 model=hl_model,
                 limit=dataset_params.get("limit"),
@@ -121,7 +123,7 @@ def run_hallulens_from_configs(
                 verifier=longwiki_verifier or hl_model,
             )
         elif subset_name == "mixed_entities":
-            non_mixed_entity_runner(
+            result_df = non_mixed_entity_runner(
                 prompt_path=task_path,
                 tested_model=hl_model,
                 limit=dataset_params.get("limit"),
@@ -129,7 +131,7 @@ def run_hallulens_from_configs(
                 evaluator_model=abstention_eval_model or "gpt-4o",
             )
         elif subset_name == "generated_entities":
-            non_generated_entity_runner(
+            result_df = non_generated_entity_runner(
                 prompt_path=task_path,
                 generate_model=hl_model,
                 limit=dataset_params.get("limit"),
@@ -138,6 +140,18 @@ def run_hallulens_from_configs(
             )
         else:
             logger.warning(f"[HalluLens] Unknown subtask '{subset_name}', skipping.")
+            continue
+        dfs.append(result_df)
+
+    df1 = dfs[0][['model', 'refusal_rate', 'halu_Rate', 'correct_rate']]
+    df2 = dfs[1][['model', 'refusal_rate']]
+    df3 = dfs[2][['model', 'refusal_rate']]
+    df = df1.merge(df2, on='model').merge(df3, on='model')
+    df['AVG'] = df[df.columns[1:]].mean(axis=1)
+    df['model_name'] = df['model']
+    run = WandbConfigSingleton.get_instance().run
+    run.log({"halluLens_leaderboard_table": wandb.Table(dataframe=df[['model_name', 'AVG']])})
+    WandbConfigSingleton.collect_leaderboard_table("halluLens", df[['model_name', 'AVG']])
 
     # 집계용 결과 반환 (실제 점수 로깅은 각 러너에서 수행)
     return {

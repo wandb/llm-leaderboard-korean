@@ -776,7 +776,7 @@ def evaluate_task(
             "correct_count": int(accuracy * total_count),
         }
         summary_df = pd.DataFrame([summary_metrics])
-        _log_to_wandb(summary_df, f"bfcl_{test_category}")
+        # _log_to_wandb(summary_df, f"bfcl_{test_category}")
     except Exception as e:
         print(f"[Wandb] BFCL {test_category} summary logging skipped: {e}")
 
@@ -788,6 +788,8 @@ def _log_to_wandb(result_df: pd.DataFrame, model_task_name: str) -> None:
     from llm_eval.wandb_singleton import WandbConfigSingleton
 
     leaderboard_table = wandb.Table(dataframe=result_df)
+
+    WandbConfigSingleton.collect_leaderboard_table(model_task_name, result_df)
     run = WandbConfigSingleton.get_instance().run
     run.log({model_task_name + "_leaderboard_table": leaderboard_table})
 
