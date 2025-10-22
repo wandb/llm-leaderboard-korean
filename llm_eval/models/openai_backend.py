@@ -6,6 +6,7 @@ import time
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import os
 import openai
 from tqdm import tqdm
 
@@ -90,8 +91,12 @@ class OpenAIModel(BaseModel):
         self.api_base = api_base
         if api_key:
             self.api_key = api_key
+        elif "upstage" in api_base:
+            self.api_key = os.getenv("UPSTAGE_API_KEY")
+        elif "x.ai" in api_base:
+            self.api_key = os.getenv("XAI_API_KEY")
         self.client = openai.AsyncOpenAI(
-            api_key=api_key,
+            api_key=self.api_key,
             base_url=api_base,
             timeout=self.timeout,
             max_retries=0,

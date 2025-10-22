@@ -1,0 +1,10 @@
+model:
+  name: openai
+  params:
+    model_name: solar-pro2-250710
+    api_base: https://api.upstage.ai/v1
+    batch_size: 32
+    max_tokens: 1024
+    temperature: 0.0
+    reasoning_effort: "high"
+  release_date: "2025-07-10"
