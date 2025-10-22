@@ -886,8 +886,8 @@ def runner(model_names, test_categories, result_dir, score_dir):
             overall_accuracy = (total_correct / total_count) if total_count > 0 else 0.0
             summary_rows.append(
                 {
-                    "model": model_name,
-                    "accuracy": overall_accuracy,
+                    "model_name": model_name,
+                    "AVG": overall_accuracy,
                     "total_count": total_count,
                     "correct_count": total_correct,
                 }
@@ -920,7 +920,7 @@ def runner(model_names, test_categories, result_dir, score_dir):
                     total_count += result.get("total_count", 0)
             overall_accuracy = (total_correct / total_count) if total_count > 0 else 0.0
             summary_metrics = {
-                "accuracy": overall_accuracy,
+                "AVG": overall_accuracy,
                 "total_count": total_count,
                 "correct_count": total_correct,
             }

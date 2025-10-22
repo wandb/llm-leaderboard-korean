@@ -140,9 +140,9 @@ class WandbConfigSingleton:
                 }
             },
             "bfcl": {
-                "columns": ["model_name", "accuracy"],
+                "columns": ["model_name", "AVG"],
                 "mapper": {
-                    "accuracy": "함수호출"
+                    "AVG": "함수호출"
                 }
             },
             "mrcr_2_needles": {
