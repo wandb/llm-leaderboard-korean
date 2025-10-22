@@ -48,12 +48,12 @@ class WandbConfigSingleton:
     def log_overall_leaderboard_table(cls, model_name: str, dataset_names: List[str]) -> wandb.Table:
         final_score_key_dict = {
             "mt_bench": {
-                "columns": ["model_name", "roleplay", "humanities", "writing", "AVG_reasoning"],
+                "columns": ["model_name", "roleplay/average_judge_score", "humanities/average_judge_score", "writing/average_judge_score", "reasoning/average_judge_score"],
                 "mapper": {
-                    "AVG_roleplay": "GLP_표현",
-                    "AVG_humanities": "GLP_표현",
-                    "AVG_writing": "GLP_표현",
-                    "AVG_reasoning": "GLP_논리적추론"
+                    "roleplay/average_judge_score": "GLP_표현",
+                    "humanities/average_judge_score": "GLP_표현",
+                    "writing/average_judge_score": "GLP_표현",
+                    "reasoning/average_judge_score": "GLP_논리적추론"
                 }
             },
             "hle": 
@@ -107,9 +107,14 @@ class WandbConfigSingleton:
                 }
             },
             "haerae_bench_v1": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "reading_comprehension/accuracy", "general_knowledge/accuracy", "history/accuracy", "loan_words/accuracy", "rare_words/accuracy", "standard_nomenclature/accuracy"],
                 "mapper": {
-                    "AVG": "GLP_일반적지식"
+                    "reading_comprehension/accuracy": "GLP_의미해석",
+                    "general_knowledge/accuracy": "GLP_일반적지식",
+                    "history/accuracy": "GLP_일반적지식",
+                    "loan_words/accuracy": "GLP_일반적지식",
+                    "rare_words/accuracy": "GLP_일반적지식",
+                    "standard_nomenclature/accuracy": "GLP_일반적지식"
                 }
             },
             "ifeval_ko": {
@@ -180,8 +185,8 @@ class WandbConfigSingleton:
             new_table.set_index('model_name', inplace=True)
             new_table = new_table.rename(columns=final_score_key_dict[dataset_name]["mapper"])
             table = pd.merge(table, new_table, left_index=True, right_index=True)
-
-        
-        leaderboard_table = wandb.Table(dataframe=table.reset_index())
+        table.columns = table.columns.str.replace(r'(_[xy]$)|(\.\d+$)', '', regex=True)
+        table_mean = table.T.groupby(table.columns).mean().T
+        leaderboard_table = wandb.Table(dataframe=table_mean.reset_index())
         cls._instance.run.log({"leaderboard_table": leaderboard_table})
         # return leaderboard_table
