@@ -98,7 +98,7 @@ class WeaveEvalsController:
         evaluation_name = str(model_name or model_backend_name)
         # Weave의 Model 표시는 클래스명을 사용하므로 파이썬 식별자 형태로 정규화 필요
         model_label = (model_name or model_backend_name) or "Model"
-        model_label = str(model_label).replace("-", "_").replace(" ", "_")
+        model_label = str(model_label).replace("-", "_").replace(" ", "_").replace(".", "_")
 
         metadata: Dict[str, Any] = {
             "dataset_name": dataset_name,

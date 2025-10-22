@@ -81,7 +81,7 @@ class KoreanParallelCorporaDataset(BaseDataset):
             # Determine per-subset limit
             subset_limit = getattr(self, "limit", None)
             if getattr(self, "dev_mode", False):
-                subset_limit = 10 if subset_limit is None else min(subset_limit, 10)
+                subset_limit = 2 if subset_limit is None else min(subset_limit, 2)
 
             added_count = 0
             for item in items:

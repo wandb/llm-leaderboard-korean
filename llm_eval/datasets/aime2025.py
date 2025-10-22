@@ -129,7 +129,7 @@ class AIME2025Dataset(BaseDataset):
                     "_subset_name": subset_name,
                 }
             )
-            if getattr(self, "dev_mode", False) and len(processed) >= 10:
+            if getattr(self, "dev_mode", False) and len(processed) >= 2:
                 break
         return processed
 

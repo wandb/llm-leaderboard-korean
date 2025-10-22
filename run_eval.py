@@ -58,7 +58,7 @@ if __name__ == "__main__":
     if args.dataset:
         selected_datasets = [args.dataset]
     else:
-        selected_datasets = ["halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr_2_needles", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi", "aime2025", "hrm8k", "bfcl"]#, "swe_bench_verified"]
+        selected_datasets = ["mt_bench", "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr_2_needles", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi", "aime2025", "hrm8k", "bfcl"]#, "swe_bench_verified"]
         # selected_datasets = ["ifeval_ko", "kobalt_700"]#, "bfcl"]
 
     result = run_all_from_configs(
