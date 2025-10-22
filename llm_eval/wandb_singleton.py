@@ -172,7 +172,37 @@ class WandbConfigSingleton:
                 }
             }
         }
+        GLP_COLUMN_WEIGHT = {
+            "GLP_구문해석": 1,
+            "GLP_의미해석": 1,
+            "GLP_표현": 1,
+            "GLP_번역": 1,
+            "GLP_정보검색": 1,
+            "GLP_장문맥이해": 1,
+            "GLP_일반적지식": 2,
+            "GLP_전문적지식": 2,
+            "GLP_수학적추론": 2,
+            "GLP_논리적추론": 2,
+            "GLP_추상적추론": 2,
+            "GLP_함수호출": 2,
+            "GLP_코딩능력": 2,
+        }
+        ALT_COLUMN_WEIGHT = {
+            "ALT_제어성": 1,
+            "ALT_유해성방지": 1,
+            "ALT_편향성방지": 1,
+            "ALT_윤리/도덕": 1,
+            "ALT_환각방지": 1,
+        }
+        def weighted_average(df, weights_dict):
+            cols = [c for c in weights_dict.keys() if c in df.columns]
+            weights = [weights_dict[c] for c in cols]
+            return (df[cols].mul(weights, axis=1).sum(axis=1)) / sum(weights)
+        print('--------------------------------')
+        print(cls._instance.leaderboard_tables.keys())
         dataset_name = dataset_names[0]
+        print(dataset_name)
+        print('--------------------------------')
         columns = final_score_key_dict[dataset_name]["columns"]
         table = cls._instance.leaderboard_tables[dataset_name]
         table = table[columns]
@@ -187,6 +217,10 @@ class WandbConfigSingleton:
             table = pd.merge(table, new_table, left_index=True, right_index=True)
         table.columns = table.columns.str.replace(r'(_[xy]$)|(\.\d+$)', '', regex=True)
         table_mean = table.T.groupby(table.columns).mean().T
+        glp_columns = table_mean.columns[table_mean.columns.str.contains('GLP_')]
+        alt_columns = table_mean.columns[table_mean.columns.str.contains('ALT_')]
+        table_mean['범용언어성능(GLP)_AVG'] = weighted_average(table_mean, GLP_COLUMN_WEIGHT)
+        table_mean['가치정렬성능(ALT)_AVG'] = weighted_average(table_mean, ALT_COLUMN_WEIGHT)
         leaderboard_table = wandb.Table(dataframe=table_mean.reset_index())
         cls._instance.run.log({"leaderboard_table": leaderboard_table})
         # return leaderboard_table
