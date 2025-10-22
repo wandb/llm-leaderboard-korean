@@ -105,8 +105,7 @@ class MTBenchJudgeEvaluator(BaseEvaluator):
 
         metrics: Dict[str, float] = {}
         if score_count > 0:
-            metrics["average_judge_score"] = total_score / score_count
-            metrics["AVG"] = total_score / score_count
+            metrics["AVG"] = total_score / score_count / 10
         else:
             metrics["AVG"] = 0.0
 
@@ -125,7 +124,7 @@ class MTBenchJudgeEvaluator(BaseEvaluator):
         for sname, st in subset_stats.items():
             denom = st["total"] if st["total"] > 0 else 1.0
             avg_score = st["sum_score"] / denom if st["sum_score"] > 0 else 0.0
-            metrics[f"{sname}/average_judge_score"] = avg_score
+            metrics[f"{sname}/average_judge_score"] = avg_score / 10
 
         return metrics
 
