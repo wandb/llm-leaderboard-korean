@@ -198,11 +198,7 @@ class WandbConfigSingleton:
             cols = [c for c in weights_dict.keys() if c in df.columns]
             weights = [weights_dict[c] for c in cols]
             return (df[cols].mul(weights, axis=1).sum(axis=1)) / sum(weights)
-        print('--------------------------------')
-        print(cls._instance.leaderboard_tables.keys())
         dataset_name = dataset_names[0]
-        print(dataset_name)
-        print('--------------------------------')
         columns = final_score_key_dict[dataset_name]["columns"]
         table = cls._instance.leaderboard_tables[dataset_name]
         table = table[columns]
