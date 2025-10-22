@@ -101,7 +101,7 @@ class KomoralDataset(BaseDataset):
                 },
             })
 
-            if getattr(self, "dev_mode", False) and len(results) >= 10:
+            if getattr(self, "dev_mode", False) and len(results) >= 2:
                 break
 
             if getattr(self, "limit", None) and len(results) >= self.limit:

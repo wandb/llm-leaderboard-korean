@@ -111,7 +111,7 @@ class GridMatchEvaluator(BaseEvaluator):
         )
 
         return {
-            "accuracy": accuracy,
+            "AVG": accuracy,
             "n_scored": float(n_scored),
             "n_correct": float(n_correct),
             "reasons": dict(reason_counter),

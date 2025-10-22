@@ -163,12 +163,20 @@ class MTBenchDataset(BaseDataset):
         # Build samples (single-turn focus: use turns[0])
         results: List[Dict[str, Any]] = []
         added = 0
+        # When dev_mode is enabled, collect up to 2 samples per category (subset)
+        category_counts: Dict[str, int] = {}
         for q in questions:
             try:
                 qid = q.get("question_id")
                 category = q.get("category")
                 turns = q.get("turns") or []
                 if not isinstance(turns, list) or not turns:
+                    continue
+
+                # Determine category key for counting (normalize None)
+                cat_key = str(category) if category is not None else "uncategorized"
+                # If in dev_mode, limit to 2 samples per category
+                if getattr(self, "dev_mode", False) and category_counts.get(cat_key, 0) >= 2:
                     continue
 
                 question_1 = str(turns[0])
@@ -207,8 +215,9 @@ class MTBenchDataset(BaseDataset):
 
                 results.append(sample)
                 added += 1
-                if getattr(self, "dev_mode", False) and added >= 10:
-                    break
+                # Track per-category sample count in dev_mode
+                if getattr(self, "dev_mode", False):
+                    category_counts[cat_key] = category_counts.get(cat_key, 0) + 1
                 if getattr(self, "limit", None) and added >= self.limit:
                     break
             except Exception:

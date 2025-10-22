@@ -860,7 +860,7 @@ def evaluate():
     # サンプル数制限
     max_samples = cfg.swebench.get("max_samples", 500)
     if cfg.testmode:
-        max_samples = 10 # テストモード時はサンプル数を減らす
+        max_samples = 2 # テストモード時はサンプル数を減らす
     
     samples = task_data[:max_samples]
     print(f"Processing {len(samples)} samples")
@@ -998,6 +998,7 @@ def calculate_metrics(samples, results_or_queue, temp_dir):
 
             leaderboard_data = {
                 "model_name": model_name,
+                "AVG": resolution_rate,
                 "total_samples": total,
                 "issues_resolved": resolved,
                 "resolution_rate": resolution_rate,
@@ -1005,8 +1006,9 @@ def calculate_metrics(samples, results_or_queue, temp_dir):
             }
             
             leaderboard_table = pd.DataFrame([leaderboard_data])
-            run.log({"swebench_leaderboard_table": wandb.Table(dataframe=leaderboard_table)})
-            run.log({"swebench_results": results})
+            run.log({"swe_bench_verified_leaderboard_table": wandb.Table(dataframe=leaderboard_table)})
+            run.log({"swe_bench_verified_results": results})
+            WandbConfigSingleton.collect_leaderboard_table("swe_bench_verified", leaderboard_table)
         
         # -------- per-instance table (inputs / outputs / status) --------
         print("Logging per-instance output table to WandB...")
@@ -1101,7 +1103,7 @@ def calculate_metrics(samples, results_or_queue, temp_dir):
                 logger.info("✅ All Docker images are available")
 
             instance_df = pd.DataFrame(table_rows)
-            run.log({"swebench_output_table": wandb.Table(dataframe=instance_df)})
+            run.log({"swe_bench_verified_output_table": wandb.Table(dataframe=instance_df)})
             print("Per-instance table logged to WandB.")
         except Exception as e:
             logger.warning(f"Failed to log per-instance table: {e}")
