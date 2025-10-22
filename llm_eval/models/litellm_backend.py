@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from typing import List, Dict, Any, Optional, Union, Callable, Tuple
 
 import litellm
@@ -112,6 +113,10 @@ class LiteLLMBackend(BaseModel):
         
         # Adjust model name formatting based on provider (latest LiteLLM uses prefixes like 'azure/<deployment>')
         if self.provider in {"azure", "bedrock"}:
+            completion_kwargs["model"] = f"{self.provider}/{self.model_name}"
+        elif self.provider == "gemini":
+            completion_kwargs["model"] = f"{self.provider}/{self.model_name}"
+        elif self.provider == "xai":
             completion_kwargs["model"] = f"{self.provider}/{self.model_name}"
         else:
             completion_kwargs["model"] = self.model_name
