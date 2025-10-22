@@ -205,6 +205,7 @@ class Evaluator:
         if use_multi:
             logger.info("Configuring MultiModel due to specified judge_model or reward_model.")
             multi_config = {
+                "model_name": current_model_params['model_name'],
                 "generate_model": {"name": model_backend_name, "params": current_model_params.copy()} if model_backend_name else None,
                 "judge_model": {"name": judge_backend_name, "params": judge_params or {}} if judge_backend_name else None,
                 "reward_model": {"name": reward_backend_name, "params": reward_params or {}} if reward_backend_name else None,

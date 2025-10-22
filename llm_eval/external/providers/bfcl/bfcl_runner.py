@@ -4,6 +4,7 @@ from collections import defaultdict
 import os
 import sys
 from pathlib import Path
+import json
 
 # Add bfcl directory to Python path so it can find bfcl_eval
 _bfcl_path = Path(__file__).parent
@@ -652,6 +653,7 @@ def evaluate_task(
     handler,
     leaderboard_table,
     allow_missing: bool = True,  # If True, missing IDs are silently ignored
+    aggregated_samples: list | None = None,
 ):
     print(f"🔍 Running test: {test_category}")
 
@@ -722,48 +724,68 @@ def evaluate_task(
 
     print(f"✅ Test completed: {test_category}. 🎯 Accuracy: {accuracy:.2%}")
 
-    # # Weave Evals logging
-    # try:
-    #     # Build samples from model_result for logging
-    #     samples = []
-    #     for i, result_item in enumerate(model_result):
-    #         sample = {
-    #             "input": result_item.get("prompt", ""),
-    #             "prediction": result_item.get("result", ""),
-    #             "reference": None,  # BFCL doesn't have explicit references in this format
-    #             "evaluation": {
-    #                 "test_category": test_category,
-    #                 "id": result_item.get("id", i),
-    #             },
-    #         }
-    #         samples.append(sample)
+    # Collect per-category samples into aggregator instead of logging per-subset
+    try:
+        if aggregated_samples is not None:
+            has_reference = not is_relevance_or_irrelevance(test_category)
+            for i, result_item in enumerate(model_result):
+                # Input text from prompt entry if available
+                pe = {}
+                try:
+                    pe = prompt[i]
+                except Exception:
+                    pe = {}
+                if isinstance(pe, dict):
+                    input_text = (
+                        pe.get("question")
+                        or pe.get("prompt")
+                        or pe.get("instruction")
+                        or pe.get("desc")
+                        or pe.get("id")
+                    )
+                    if input_text is None:
+                        try:
+                            input_text = json.dumps(pe, ensure_ascii=False)[:2000]
+                        except Exception:
+                            input_text = str(pe)
+                else:
+                    input_text = str(pe)
 
-    #     # Extract metrics
-    #     metrics = {
-    #         "accuracy": accuracy,
-    #         "total_count": total_count,
-    #         "correct_count": int(accuracy * total_count),
-    #     }
+                # Prediction text normalization
+                pred_obj = result_item.get("result", "")
+                if isinstance(pred_obj, (str, int, float)):
+                    prediction_text = str(pred_obj)
+                else:
+                    try:
+                        prediction_text = json.dumps(pred_obj, ensure_ascii=False)
+                    except Exception:
+                        prediction_text = str(pred_obj)
 
-    #     # Get model name for logging (convert _ back to / for display)
-    #     model_name_display = model_name.replace("_", "/")
+                # Reference when available
+                reference_text = None
+                if has_reference:
+                    try:
+                        pa_item = possible_answer[i].get("ground_truth")
+                        if isinstance(pa_item, (str, int, float)):
+                            reference_text = str(pa_item)
+                        else:
+                            try:
+                                reference_text = json.dumps(pa_item, ensure_ascii=False)
+                            except Exception:
+                                reference_text = str(pa_item)
+                    except Exception:
+                        reference_text = None
 
-    #     WeaveEvalsController.log(
-    #         dataset_name="bfcl",
-    #         subset=test_category,
-    #         split="test",
-    #         model_backend_name="bfcl",
-    #         model_name=model_name_display,
-    #         scaling_method_name=None,
-    #         evaluation_method_name="BFCL-Evaluation",
-    #         language_penalize=False,
-    #         target_lang="en",  # BFCL is primarily English
-    #         samples=samples,
-    #         metrics=metrics,
-    #         wandb_params={},
-    #     )
-    # except Exception as e:
-    #     print(f"[Weave] BFCL {test_category} logging skipped: {e}")
+                aggregated_samples.append({
+                    "input": input_text or "",
+                    "prediction": prediction_text or "",
+                    "reference": reference_text,
+                    "evaluation": {},
+                    "id": result_item.get("id", i),
+                    "_subset_name": test_category,
+                })
+    except Exception as e:
+        print(f"[Weave] BFCL {test_category} sample aggregation skipped: {e}")
 
     # Wandb logging (similar to HalluLens)
     try:
@@ -800,6 +822,9 @@ def runner(model_names, test_categories, result_dir, score_dir):
     # and values as a dictionary with accuracy and total count.
     leaderboard_table = defaultdict(dict)
 
+    # Keep aggregated samples per model for a single Weave eval
+    model_to_samples: dict[str, list] = {}
+
     # Get a list of all entries in the folder
     entries = result_dir.iterdir()
     # Filter out the subdirectories
@@ -813,6 +838,9 @@ def runner(model_names, test_categories, result_dir, score_dir):
 
         model_name_escaped = model_name.replace("_", "/")
         print(f"🦍 Model: {model_name}")
+
+        # Per-model aggregator
+        aggregated_samples_for_model: list = []
 
         # Find and process all result JSON files recursively in the subdirectory
         for model_result_json in subdir.rglob(RESULT_FILE_PATTERN):
@@ -835,7 +863,11 @@ def runner(model_names, test_categories, result_dir, score_dir):
                 model_name,
                 handler,
                 leaderboard_table,
+                aggregated_samples=aggregated_samples_for_model,
             )
+
+        # store aggregated samples for this model
+        model_to_samples[model_name] = aggregated_samples_for_model
 
     # This function reads all the score files from local folder and updates the leaderboard table.
     # This is helpful when you only want to run the evaluation for a subset of models and test categories.
@@ -925,10 +957,10 @@ def runner(model_names, test_categories, result_dir, score_dir):
                 "correct_count": total_correct,
             }
             model_name_display = model_name.replace("_", "/")
-            # Log overall metrics for this model (no samples, just summary)
+            # Log overall metrics for this model with all subset samples aggregated
             WeaveEvalsController.log(
                 dataset_name="bfcl",
-                subset="overall",  # Special value to indicate overall summary
+                subset="overall",  # single eval containing all subsets
                 split="test",
                 model_backend_name="bfcl",
                 model_name=model_name_display,
@@ -936,7 +968,7 @@ def runner(model_names, test_categories, result_dir, score_dir):
                 evaluation_method_name="BFCL-Evaluation",
                 language_penalize=False,
                 target_lang="en",
-                samples=[],
+                samples=model_to_samples.get(model_name, []),
                 metrics=summary_metrics,
                 wandb_params={},
             )
