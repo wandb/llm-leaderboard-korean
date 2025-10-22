@@ -207,7 +207,7 @@ class MTBenchDataset(BaseDataset):
 
                 results.append(sample)
                 added += 1
-                if getattr(self, "dev_mode", False) and added >= 10:
+                if getattr(self, "dev_mode", False) and added >= 2:
                     break
                 if getattr(self, "limit", None) and added >= self.limit:
                     break

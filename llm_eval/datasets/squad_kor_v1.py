@@ -110,7 +110,7 @@ class SQuADKorV1(BaseDataset):
                     "_subset_name": subset_name,
                 })
 
-                if getattr(self, "dev_mode", False) and len(results) >= 10:
+                if getattr(self, "dev_mode", False) and len(results) >= 2:
                     break
                 if getattr(self, "limit", None) and len(results) >= self.limit:
                     break
