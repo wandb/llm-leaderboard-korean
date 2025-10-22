@@ -38,6 +38,9 @@ def run_all_from_configs(
         language_penalize=language_penalize,
         target_lang=target_lang,
     )
+
+    WandbConfigSingleton.log_overall_leaderboard_table(model_name, selected_datasets)
+
     run.finish()
     return result
 
@@ -46,6 +49,7 @@ if __name__ == "__main__":
     # make parser
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument("--run_name", type=str, default=None)
     parser.add_argument("--config", type=str, default="gpt-4o-2024-11-20")
     parser.add_argument("--base_config_path", type=str, default="base_config.yaml")
     parser.add_argument("--dataset", type=str)
@@ -54,7 +58,8 @@ if __name__ == "__main__":
     if args.dataset:
         selected_datasets = [args.dataset]
     else:
-        selected_datasets = ["halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi", "aime2025", "hrm8k", "bfcl", "swe_bench_verified"]
+        selected_datasets = ["halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr_2_needles", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi", "aime2025", "hrm8k", "bfcl"]#, "swe_bench_verified"]
+        # selected_datasets = ["ifeval_ko", "kobalt_700"]#, "bfcl"]
 
     result = run_all_from_configs(
         base_config_path=f"configs/{args.base_config_path}",

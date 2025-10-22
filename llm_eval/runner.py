@@ -670,6 +670,7 @@ class PipelineRunner:
         cols = ["model_name", "AVG"] + sorted([c for c in df.columns if c not in ["model_name", "AVG"]])
         df = df[cols]
         leaderboard_table = wandb.Table(dataframe=df)
+        WandbConfigSingleton.collect_leaderboard_table(self.config.dataset_name, df)
         WandbConfigSingleton.get_instance().run.log({table_name: leaderboard_table})
 
     def _create_error_result(self, error_msg: str) -> EvaluationResult:

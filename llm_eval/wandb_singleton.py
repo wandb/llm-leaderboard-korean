@@ -1,6 +1,6 @@
-from typing import Optional, Any
+from typing import Optional, Any, List
 from types import SimpleNamespace
-import weave
+import pandas as pd
 import wandb
 
 try:
@@ -27,7 +27,7 @@ class WandbConfigSingleton:
             config = OmegaConf.create(config_dict)
         else:
             config = config_dict
-        cls._instance = SimpleNamespace(run=run, config=config, blend_config=None, llm=llm, wandb_params=wandb_params)
+        cls._instance = SimpleNamespace(run=run, config=config, blend_config=None, llm=llm, wandb_params=wandb_params, leaderboard_tables={})
 
     @classmethod
     def download_artifact(cls, dataset_name: str):
@@ -39,3 +39,138 @@ class WandbConfigSingleton:
         artifact = api.artifact(f"{cls._instance.wandb_params.get('entity')}/{cls._instance.wandb_params.get('project_dataset')}/{dataset_name}:latest")
         artifact_path = artifact.download()
         return artifact_path
+
+    @classmethod
+    def collect_leaderboard_table(cls, table_name: str, leaderboard_table: wandb.Table):
+        cls._instance.leaderboard_tables[table_name] = leaderboard_table
+
+    @classmethod
+    def log_overall_leaderboard_table(cls, model_name: str, dataset_names: List[str]) -> wandb.Table:
+        final_score_key_dict = {
+            "hle": 
+            {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "전문적지식"
+                }
+            },
+            "hrm8k": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "수학적추론"
+                }
+            },
+            "aime2025": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "수학적추론"
+                }
+            },
+            "kobalt_700": {
+                "columns": ["model_name", "Semantics/accuracy", "Syntax/accuracy"],
+                "mapper": {
+                    "Semantics/accuracy": "의미해석",
+                    "Syntax/accuracy": "구문해석"
+                }
+            },
+            "kmmlu": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "일반적지식"
+                }
+            },
+            "kmmlu_pro": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "전문적지식"
+                }
+            },
+            "korean_hate_speech": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "유해성방지"
+                }
+            },
+            "korean_parallel_corpora": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "번역"
+                }
+            },
+            "haerae_bench_v1": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "일반적지식"
+                }
+            },
+            "ifeval_ko": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "제어성"
+                }
+            },
+            "squad_kor_v1": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "정보검색"
+                }
+            },
+            "kobbq": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "편향성방지"
+                }
+            },
+            "komoral": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "윤리/도덕"
+                }
+            },
+            "arc_agi": {
+                "columns": ["model_name", "accuracy"],
+                "mapper": {
+                    "accuracy": "추상적추론"
+                }
+            },
+            "swe_bench_verified": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "코딩능력"
+                }
+            },
+            "bfcl": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "함수호출"
+                }
+            },
+            "mrcr_2_needles": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "장문맥이해"
+                }
+            },
+            "halluLens": {
+                "columns": ["model_name", "AVG"],
+                "mapper": {
+                    "AVG": "허위정보방지"
+                }
+            }
+        }
+        dataset_name = dataset_names[0]
+        columns = final_score_key_dict[dataset_name]["columns"]
+        table = cls._instance.leaderboard_tables[dataset_name]
+        table = table[columns]
+        table.set_index('model_name', inplace=True)
+        table = table.rename(columns=final_score_key_dict[dataset_name]["mapper"])
+        for dataset_name in dataset_names[1:]:
+            columns = final_score_key_dict[dataset_name]["columns"]
+            new_table = cls._instance.leaderboard_tables[dataset_name]
+            new_table = new_table[columns]
+            new_table.set_index('model_name', inplace=True)
+            new_table = new_table.rename(columns=final_score_key_dict[dataset_name]["mapper"])
+            table = pd.merge(table, new_table, left_index=True, right_index=True)
+        leaderboard_table = wandb.Table(dataframe=table.reset_index())
+        cls._instance.run.log({"leaderboard_table": leaderboard_table})
+        # return leaderboard_table

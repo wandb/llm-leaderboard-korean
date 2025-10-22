@@ -63,10 +63,16 @@ def run_bfcl_from_configs(
     split = ds_cfg.get("split", "test")
     limit = ds_cfg.get("limit", None)
 
-    # Set dataset-specific parameters
+    # Set dataset-specific parameters (limit is deprecated in favor of limit_per_test_category)
     dataset_params = dict(ds_cfg.get("params") or {})
     if "limit" not in dataset_params:
         dataset_params["limit"] = limit
+        logger.info("Currently, the limit parameter is not used. Use limit_per_test_category instead.")
+
+    testmode = base_cfg.get("testmode", False)
+    if testmode:
+        dataset_params["limit_per_test_category"] = 1
+        logger.info("testmode enabled: overriding bfcl limit_per_test_category to 1 per test category")
 
     # Determine BFCL model name
     bfcl_model = (model_params or {}).get("model_name") or model_name
@@ -81,15 +87,25 @@ def run_bfcl_from_configs(
 
     # Prepare result and score directories (relative to this file)
     current_dir = Path(__file__).parent
-    result_dir = current_dir / "result"
-    score_dir = current_dir / "score"
+    if testmode:
+        result_dir = current_dir / "result_temp"
+        score_dir = current_dir / "score_temp"
+    else:
+        result_dir = current_dir / "result"
+        score_dir = current_dir / "score"
     result_dir.mkdir(parents=True, exist_ok=True)
     score_dir.mkdir(parents=True, exist_ok=True)
+
 
     # ---------- Model Inference ----------
     try:
         logger.info(f"[BFCL] Running model inference for {len(test_categories)} categories")
         from .bfcl_eval._llm_response_generation import main as generation_main
+
+        # Read concurrency from config (default: 32 if not provided)
+        bfcl_params: Dict[str, Any] = (ds_cfg.get("params") or {})
+        num_threads_cfg: Optional[int] = bfcl_params.get("num_threads") or ds_cfg.get("num_threads")
+        num_threads = int(num_threads_cfg) if num_threads_cfg is not None else 32
 
         args = SimpleNamespace(
             model=[bfcl_model],
@@ -98,14 +114,15 @@ def run_bfcl_from_configs(
             include_input_log=False,
             exclude_state_log=False,
             num_gpus=1,
-            num_threads=1,
+            num_threads=num_threads,
             gpu_memory_utilization=0.9,
             backend="sglang",
             skip_server_setup=False,
             local_model_path=None,
             result_dir=str(result_dir),
             allow_overwrite=True,
-            run_ids=True,
+            run_ids=True,  # Currently always True, so the test_case_ids_to_generate.json file is used to run the test cases
+            limit_per_test_category=dataset_params.get("limit_per_test_category", None),
         )
         generation_main(args)
         logger.info(f"[BFCL] Successfully completed model inference")

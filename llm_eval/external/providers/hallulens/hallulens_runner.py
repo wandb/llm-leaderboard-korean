@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 import wandb
 import weave
+import time
 
 from llm_eval.external.providers.hallulens.tasks.longwiki.longwiki_main import run_eval
 
@@ -88,7 +89,8 @@ def precise_wikiqa_runner(
     # Weave Evals logging
     try:
         model_name = model.split("/")[-1]
-        gen_path = f"output/{TASKNAME}/{model_name}/generation.jsonl"
+        gen_path = f"./output/{time.strftime('%Y%m%d%H%M%S')}/{TASKNAME}/{model_name}/generation.jsonl"
+        os.makedirs(os.path.dirname(gen_path), exist_ok=True)
         gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
         # zip evaluation flags per index
         abstentions: List[bool] = eval_result.get("abstantion", []) or []
@@ -127,6 +129,8 @@ def precise_wikiqa_runner(
         )
     except Exception as e:
         print(f"[Weave] precise_wikiqa logging skipped: {e}")
+    
+    return pd.DataFrame([eval_result])
 
 
 
@@ -234,12 +238,14 @@ def longwiki_runner(
     except Exception as e:
         print(f"[Weave] longwiki logging skipped: {e}")
 
+    return pd.DataFrame([eval_result])
+
 
 def non_mixed_entity_runner(
         exp='nonsense_all',
         infer_overwrite=False,
         eval_overwrite=False,
-        output_base_dir="output",
+        output_base_dir=f"./output/{time.strftime('%Y%m%d%H%M%S')}",
         prompt_path=None,
         tested_model='meta-llama/Llama-3.1-405B-Instruct-FP8',
         N=2000,
@@ -272,7 +278,7 @@ def non_mixed_entity_runner(
     res, task_path = eval.run_eval(eval_overwrite)
 
     # Log to evaluation result to wandb
-    _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
+    result_df = _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
 
     # Weave Evals logging
     try:
@@ -306,13 +312,13 @@ def non_mixed_entity_runner(
     except Exception as e:
         print(f"[Weave] non_mixed_entity logging skipped: {e}")
 
-    return res
+    return result_df
 
 
 def non_generated_entity_runner(
         infer_overwrite=False,
         eval_overwrite=False,
-        output_base_dir="output",
+        output_base_dir=f"./output/{time.strftime('%Y%m%d%H%M%S')}",
         prompt_path=None,
         generate_model='meta-llama/Llama-3.1-8B-Instruct',
         inference_method='together',
@@ -335,7 +341,7 @@ def non_generated_entity_runner(
     print(f"[{res['model']}] || Refusal rate: {refusal_rate} || N = {N}")
 
     # Log to evaluation result to wandb
-    _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
+    result_df = _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
 
     # Weave Evals logging
     try:
@@ -369,7 +375,7 @@ def non_generated_entity_runner(
     except Exception as e:
         print(f"[Weave] non_generated_entity logging skipped: {e}")
 
-    return res
+    return result_df
 
 
 def _log_non_refusal_result_to_wandb(task_path: str, task_name: str):
@@ -394,10 +400,13 @@ def _log_non_refusal_result_to_wandb(task_path: str, task_name: str):
     # TODO: This evaluation detail log is too large to upload to wandb. If it needs, consider a way to upload it.
     # _log_to_wandb(eval_result_with_prompt_info, f"{score['model']}_{task_name}_detailed")
 
+    return score
+
 
 def _log_to_wandb(result_df: pd.DataFrame, model_task_name: str) -> None:
     """Log evaluation summary to Weights & Biases if configured."""
     from llm_eval.wandb_singleton import WandbConfigSingleton
     leaderboard_table = wandb.Table(dataframe=result_df)
+    WandbConfigSingleton.collect_leaderboard_table(model_task_name, result_df)
     run = WandbConfigSingleton.get_instance().run
     run.log({model_task_name+'_leaderboard_table': leaderboard_table})

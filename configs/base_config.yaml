@@ -6,7 +6,7 @@ wandb:
     project_dataset: horangi4-dataset
 
 # testmode configurations
-testmode: false
+testmode: true
 
 # dataset configurations
 
@@ -190,6 +190,8 @@ bfcl:
     multi_turn_miss_param,
   ]
   limit: 1000
+  # 동시성 제어: BFCL 모델 inference 시 동시에 보낼 스레드 개수
+  num_threads: 32
   evaluation:
     model: gpt-4o-2024-11-20
 
