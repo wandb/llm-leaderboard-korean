@@ -5,7 +5,7 @@ from . import register_evaluator
 from math_verify import parse, verify
 from math_verify import LatexExtractionConfig, ExprExtractionConfig
 from llm_eval.utils.logging import get_logger
-from llm_eval.utils.prompt_template import extract_final_answer  # Import extract_final_answer
+from llm_eval.utils.prompt_template import extract_final_answer
 import logging
 from tqdm import tqdm
 
@@ -54,7 +54,7 @@ class MathMatchEvaluator(BaseEvaluator):
         latex_only: bool = True,  # If True, only use LaTeX extraction
         expr_only: bool = False,  # If True, only use expression extraction
         extract_final_answer: bool = True,  # Extract final answer using extract_final_answer
-        answer_patterns: List[str] = None,  # Custom regex patterns for answer extraction (not used in this implementation)
+        answer_patterns: List[str] | None = None,  # Custom regex patterns for answer extraction (not used in this implementation)
         *args,
         **kwargs
     ):
@@ -96,16 +96,23 @@ class MathMatchEvaluator(BaseEvaluator):
         Extracts the final answer from a Chain-of-Thought (CoT) text.
         If extract_final_answer is enabled, it uses the extract_final_answer function
         to retrieve the answer following keywords like "정답:" or "Answer:".
-        If the extracted answer spans multiple lines, only the first non-empty line is returned.
+        It prioritizes extracting content from \\boxed{...} if present, otherwise
+        it takes the last non-empty line from the extracted text.
         """
         if not text or not self.extract_final_answer:
             return text
 
-        # Use extract_final_answer function to get the final answer portion
-        text = extract_final_answer(text)
-        # Split into lines and return the first non-empty line
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        return lines[0] if lines else text
+        # extract_final_answer 함수를 사용해 정답 부분 추출
+        answer_text = extract_final_answer(text)
+
+        # 1. \boxed{...} 패턴이 있는지 확인하고, 있다면 그 안의 내용을 반환
+        boxed_match = re.search(r"\\boxed{(.+?)}", answer_text, re.DOTALL)
+        if boxed_match:
+            return boxed_match.group(1).strip()
+
+        # 2. \boxed{...} 패턴이 없다면, 비어있지 않은 마지막 줄을 반환
+        lines = [line.strip() for line in answer_text.splitlines() if line.strip()]
+        return lines[-1] if lines else answer_text
 
     def parse_math(self, text: str) -> Any:
         """
