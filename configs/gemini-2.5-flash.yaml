@@ -1,0 +1,9 @@
+model:
+  name: litellm
+  params:
+    provider: gemini
+    model_name: gemini-2.5-flash
+    batch_size: 32
+    max_tokens: 1024
+    temperature: 0.0
+  release_date: "2025-06-17"

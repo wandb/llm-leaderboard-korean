@@ -1,0 +1,13 @@
+model:
+  name: litellm
+  params:
+    provider: xai
+    model_name: grok-4-0709
+    batch_size: 32
+    max_tokens: 1024
+    temperature: 0.0
+  release_date: "2025-07-09"
+
+wandb:
+  params:
+    run_name: xai-grok-4-0709
