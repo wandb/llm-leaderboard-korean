@@ -24,6 +24,7 @@ from llm_eval.wandb_singleton import WandbConfigSingleton
 from llm_eval.models import load_model
 from swebench.inference.make_datasets.utils import repair_patch
 from swebench.inference.make_datasets.utils import extract_minimal_patch as _official_min_patch
+from llm_eval.wandb_controller import WeaveEvalsController
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1026,6 +1027,50 @@ def calculate_metrics(samples, results_or_queue, temp_dir):
             unresolved_set = set(results.get("unresolved_ids", []))
             error_set = set(results.get("error_ids", []))
             empty_set = set(results.get("empty_patch_ids", []))
+
+            # ----- Weave Evals logging (aggregated per-sample) -----
+            try:
+                weave_samples = []
+                for sample in samples:
+                    iid = sample.get("instance_id")
+                    status_eval = {
+                        "resolved": iid in resolved_set,
+                        "unresolved": iid in unresolved_set,
+                        "empty_patch": iid in empty_set,
+                        "error": iid in error_set,
+                    }
+                    input_text = sample.get("text") or sample.get("problem_statement", "")
+                    prediction_text = predictions_map.get(iid, {}).get("model_patch", "")
+                    weave_samples.append({
+                        "input": input_text,
+                        "prediction": prediction_text,
+                        "reference": None,
+                        "evaluation": status_eval,
+                        "id": iid,
+                        "_subset_name": "verified",
+                    })
+
+                metrics = {
+                    "resolution_rate": resolution_rate,
+                    "issues_resolved": resolved,
+                    "total_samples": total,
+                }
+                WeaveEvalsController.log(
+                    dataset_name="swe_bench_verified",
+                    subset="verified",
+                    split="test",
+                    model_backend_name="swebench_official_harness",
+                    model_name=model_name,
+                    scaling_method_name=None,
+                    evaluation_method_name="SWE-Bench-Verified",
+                    language_penalize=False,
+                    target_lang="en",
+                    samples=weave_samples,
+                    metrics=metrics,
+                    wandb_params={},
+                )
+            except Exception as e:
+                logger.warning(f"[Weave] SWE-Bench logging skipped: {e}")
 
             table_rows = []
             missing_images = []  # 不足しているイメージを記録
