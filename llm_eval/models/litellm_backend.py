@@ -66,6 +66,12 @@ class LiteLLMBackend(BaseModel):
         self.cot_trigger = cot_trigger
         self.cot_parser = cot_parser
         self.extra_kwargs = kwargs
+        # Optional throttling controls (seconds). Can be overridden via model params.
+        self.request_delay_sec: float = float(kwargs.pop("request_delay_sec", 0.0))
+        self.request_jitter_sec: float = float(kwargs.pop("request_jitter_sec", 0.0))
+        # Retry configs (optional)
+        self.retry_max: int = int(kwargs.pop("retry_max", 3))
+        self.retry_base_delay: float = float(kwargs.pop("retry_base_delay", 1.0))
 
         # Configure API settings specific to LiteLLM (align with latest docs)
         self.completion_kwargs = {}
@@ -199,16 +205,23 @@ class LiteLLMBackend(BaseModel):
             completion_kwargs = self._prepare_completion_kwargs(prompt, until=until)
             async with semaphore:
                 try:
+                    # Throttle before sending if configured
+                    if self.request_delay_sec or self.request_jitter_sec:
+                        jitter = 0.0
+                        if self.request_jitter_sec:
+                            # simple uniform jitter in [0, request_jitter_sec]
+                            import random
+                            jitter = random.random() * float(self.request_jitter_sec)
+                        await asyncio.sleep(float(self.request_delay_sec) + jitter)
                     prediction = await self._generate_with_retry_async(
                         completion_kwargs,
                         max_attempts=getattr(self, "retry_max", 3),
                         initial_wait=getattr(self, "retry_base_delay", 1.0),
                     )
-                    result_item = {
-                        "input": item.get("input", ""),
-                        "reference": reference,
-                        "prediction": prediction,
-                    }
+                    # Preserve original fields (e.g., _subset_name, metadata) and add prediction
+                    result_item = dict(item)
+                    result_item["reference"] = reference
+                    result_item["prediction"] = prediction
                     if self.cot and self.cot_parser:
                         try:
                             chain_of_thought, final_answer = self.cot_parser(prediction)
@@ -219,11 +232,10 @@ class LiteLLMBackend(BaseModel):
                     return result_item
                 except Exception as e:
                     logger.error(f"[LiteLLMBackend] Error generating completion: {str(e)}")
-                    return {
-                        "input": prompt,
-                        "reference": reference,
-                        "prediction": f"Error: {str(e)}",
-                    }
+                    err_item = dict(item)
+                    err_item["reference"] = reference
+                    err_item["prediction"] = f"Error: {str(e)}"
+                    return err_item
 
         tasks = [_worker(item) for item in inputs]
         results: List[Dict[str, Any]] = []
