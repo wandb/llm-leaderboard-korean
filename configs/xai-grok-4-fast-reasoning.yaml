@@ -1,12 +1,9 @@
 model:
-  name: litellm
+  name: openai
   params:
-    provider: xai
     model_name: grok-4-fast-reasoning
+    api_base: https://api.x.ai/v1
     batch_size: 32
     max_tokens: 1024
     temperature: 0.0
   release_date: "2025-07-09"
-# wandb:
-#   params:
-#     run_name: xai-grok-4-fast-reasoning
