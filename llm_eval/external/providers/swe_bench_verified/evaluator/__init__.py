@@ -22,7 +22,13 @@ logger = get_logger(name="swebench_verified_evaluator", level=20)
 
 def _infer_max_tokens(model_cfg: Dict[str, Any], default_val: int = 32768) -> int:
     try:
-        return int(((model_cfg.get("model") or {}).get("params") or {}).get("max_tokens", default_val))
+        if "max_tokens" in model_cfg['model']['params']:
+            return int(model_cfg['model']['params'].get("max_tokens", default_val))
+        elif "max_completion_tokens" in model_cfg['model']['params']:
+            return int(model_cfg['model']['params'].get("max_completion_tokens", default_val))
+        else:
+            return default_val
+        # return int(((model_cfg.get("model") or {}).get("params") or {}).get("max_tokens", default_val))
     except Exception:
         return default_val
 
@@ -78,7 +84,6 @@ def run_swebench_verified_from_configs(*, base_config_path: str, model_config_pa
         "prebuild_images": False,
         "private_registry": None,
         "max_samples": int(sb_cfg.get("limit") or 500),
-        "max_tokens": int(model_params.get("max_tokens", 32768)),
         "max_workers": int(sb_cfg.get("max_workers", 4)),
         "background_eval": False,
         "images": {"namespace": "swebench", "tag": "latest"},
@@ -93,6 +98,9 @@ def run_swebench_verified_from_configs(*, base_config_path: str, model_config_pa
             "tag": "latest",
         },
     }
+    for key in ["max_tokens", "max_completion_tokens"]:
+        if key in model_params:
+            swebench_cfg[key] = int(model_params[key])
     try:
         # OmegaConf or dict both supported
         instance.config.swebench = swebench_cfg
@@ -116,7 +124,11 @@ def run_swebench_verified_from_configs(*, base_config_path: str, model_config_pa
             pass
 
     max_tokens = _infer_max_tokens(model_cfg)
-    generator_config = {"max_tokens": max_tokens}
+    generator_config = model_params.copy()
+    generator_config.pop('model_name', None)
+    generator_config.pop('api_base', None)
+    generator_config.pop('batch_size', None)
+    
 
     # 임시 디렉터리 및 파일 경로
     temp_dir = Path(tempfile.mkdtemp(prefix="swebench_eval_"))
