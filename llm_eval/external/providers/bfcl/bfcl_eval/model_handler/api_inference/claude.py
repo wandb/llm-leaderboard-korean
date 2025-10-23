@@ -73,6 +73,14 @@ class ClaudeHandler(BaseHandler):
             return 64000
         elif "claude-3-5-haiku-20241022" in self.model_name:
             return 8192
+        elif "claude-haiku-4-5-20251001" in self.model_name:
+            return 8192
+        elif "opus" in self.model_name:
+            return 32000
+        elif "sonnet" in self.model_name:
+            return 64000
+        elif "haiku" in self.model_name:
+            return 8192
         else:
             raise ValueError(f"Unsupported model: {self.model_name}")
 

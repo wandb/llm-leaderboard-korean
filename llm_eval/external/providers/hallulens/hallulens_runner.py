@@ -38,6 +38,7 @@ def precise_wikiqa_runner(
         limit: int = None,
         evaluator_abstention_model: str | None = None,
         evaluator_halu_model: str | None = None,
+        backend_kwargs: dict | None = None,
 ):
     """
     Args:
@@ -70,6 +71,7 @@ def precise_wikiqa_runner(
         model_path=model,
         all_prompts=QAs_df,
         inference_method=inference_method, \
+        backend_kwargs=backend_kwargs,
         max_tokens=max_inference_tokens,
         max_workers=inf_batch_size)
     print('Inference completed')
@@ -149,6 +151,7 @@ def longwiki_runner(
         max_tokens: int = 1024,
         max_workers: int = 64,
         limit: int = None,
+        backend_kwargs: dict | None = None,
 ):
     TASKNAME = "longwiki"
 
@@ -174,6 +177,7 @@ def longwiki_runner(
                 model_path=model,
                 all_prompts=all_prompts,
                 inference_method=inference_method,
+                backend_kwargs=backend_kwargs,
                 max_tokens=max_tokens,
                 max_workers=max_workers,
                 )
@@ -247,11 +251,12 @@ def non_mixed_entity_runner(
         eval_overwrite=False,
         output_base_dir=f"./output/{time.strftime('%Y%m%d%H%M%S')}",
         prompt_path=None,
-        tested_model='meta-llama/Llama-3.1-405B-Instruct-FP8',
+        tested_model='meta-llama/Llama-3.1-70B-Instruct-FP8',
         N=2000,
         seed=1,
         inference_method='together',
         limit: int = None,
+        backend_kwargs: dict | None = None,
         evaluator_model: str = "gpt-4o",
 ):
     # set variables
@@ -263,7 +268,7 @@ def non_mixed_entity_runner(
 
     # run inference
     inference = NonsenseMixedInference(TASKNAME, output_base_dir, tested_model, prompt_path, seed,
-                                       inference_method, limit=limit)
+                                       inference_method, limit=limit, backend_kwargs=backend_kwargs)
     if infer_overwrite:
         inference.remove_existing_files()
     inference.run_inference()
@@ -324,12 +329,13 @@ def non_generated_entity_runner(
         inference_method='together',
         seed=0,
         limit: int = None,
+        backend_kwargs: dict | None = None,
         evaluator_model: str = "gpt-4o",
 ):
     if prompt_path == None:
         raise Exception("No prompt path provided")
 
-    inference = NonsenseNameInference(output_base_dir, generate_model, prompt_path, seed, inference_method, limit=limit)
+    inference = NonsenseNameInference(output_base_dir, generate_model, prompt_path, seed, inference_method, limit=limit, backend_kwargs=backend_kwargs)
     if infer_overwrite:
         inference.remove_existing_files()
     inference.run_inference()

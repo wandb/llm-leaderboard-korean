@@ -7,6 +7,7 @@ from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import os
+import weave
 import openai
 from tqdm import tqdm
 
@@ -69,6 +70,7 @@ class OpenAIModel(BaseModel):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        print('model_name, api_base', model_name, api_base)
         if not model_name or not api_base:
             raise ValueError("model_name and api_base are required")
 
@@ -88,10 +90,7 @@ class OpenAIModel(BaseModel):
         self.default_params = kwargs
 
         # Single OpenAI client (async) used for both text and vision models
-        self.api_base = api_base if api_key else None
-        if "openai.com" in api_base:
-            self.api_key = os.getenv("OPENAI_API_KEY")
-        elif "anthropic" in api_base:
+        if "anthropic" in api_base:
             self.api_key = os.getenv("ANTHROPIC_API_KEY")
         elif "x.ai" in api_base:
             self.api_key = os.getenv("XAI_API_KEY")
@@ -99,6 +98,8 @@ class OpenAIModel(BaseModel):
             self.api_key = os.getenv("GOOGLE_API_KEY")
         elif "upstage" in api_base:
             self.api_key = os.getenv("UPSTAGE_API_KEY")
+        else:
+            self.api_key = os.getenv("OPENAI_API_KEY")
         self.client = openai.AsyncOpenAI(
             api_key=self.api_key,
             base_url=api_base,
@@ -164,6 +165,10 @@ class OpenAIModel(BaseModel):
                 if isinstance(until, str):
                     until = [until]
                 payload["stop"] = until
+            # Pass-through tool calling related params if provided
+            for k in ["tools", "parallel_tool_calls", "extra_body", "store", "stream", "stream_options"]:
+                if k in params:
+                    payload[k] = params[k]
         else:
             prompt_text = inputs if not (
                 cot and self.cot_trigger) else f"{inputs}\n{self.cot_trigger}\n"
@@ -176,7 +181,13 @@ class OpenAIModel(BaseModel):
                 payload["stop"] = until
 
         # Add common parameters (if provided) such as max_tokens, temperature, etc.
-        for param in ["max_tokens", "temperature", "top_p", "frequency_penalty", "presence_penalty"]:
+        # Normalize token params: accept either max_tokens or max_completion_tokens
+        if "max_tokens" in params:
+            payload["max_tokens"] = params["max_tokens"]
+        elif "max_completion_tokens" in params:
+            payload["max_completion_tokens"] = params["max_completion_tokens"]
+
+        for param in ["temperature", "top_p", "frequency_penalty", "presence_penalty"]:
             if param in params:
                 payload[param] = params[param]
 
@@ -216,7 +227,7 @@ class OpenAIModel(BaseModel):
         except (KeyError, IndexError):
             return json.dumps(resp_data, indent=2)
 
-
+    @weave.op(name="default_openai_backend")
     async def _send_single_request_async(
         self,
         client: openai.AsyncOpenAI,
@@ -240,6 +251,8 @@ class OpenAIModel(BaseModel):
                     result = {
                         "prediction": response.choices[0].message.content,
                         "finish_reason": response.choices[0].finish_reason,
+                        "usage": getattr(response, "usage", None),
+                        "tool_calls": getattr(response.choices[0].message, "tool_calls", None),
                     }
                     if return_logits and hasattr(response.choices[0], "logprobs"):
                         result["logprobs"] = response.choices[0].logprobs
@@ -248,6 +261,7 @@ class OpenAIModel(BaseModel):
                     result = {
                         "prediction": response.choices[0].text,
                         "finish_reason": response.choices[0].finish_reason,
+                        "usage": getattr(response, "usage", None),
                     }
                     if return_logits and hasattr(response.choices[0], "logprobs"):
                         result.update({

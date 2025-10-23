@@ -6,9 +6,12 @@
 # LICENSE file in the root directory of this source tree.
 
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+import os
 from tqdm.contrib.concurrent import thread_map
 
 from llm_eval.external.providers.hallulens.utils import lm
+from llm_eval.models import load_model
 
 def run_exp(
     task: str,
@@ -19,7 +22,8 @@ def run_exp(
     inference_method="together",
     max_workers=64,
     max_tokens=512,
-    return_gen = False
+    return_gen = False,
+    backend_kwargs: Optional[Dict[str, Any]] = None,
 ):  
     if not generations_file_path:
         base_path = Path(base_path)
@@ -34,44 +38,121 @@ def run_exp(
     prompts =  all_prompts.prompt.to_list()
 
     # get the response from the model
-    if inference_method == 'openai':
-        all_prompts["generation"] = thread_map(
-            lambda p: lm.openai_generate(p, model=model_path, temperature=0.0, top_p=1.0, max_tokens=max_tokens),
-            prompts,
-            max_workers=max_workers,
-            desc="Predict openai",
+    # if inference_method == 'openai':
+    #     all_prompts["generation"] = thread_map(
+    #         lambda p: lm.openai_generate(p, model=model_path, temperature=0.0, top_p=1.0, max_tokens=max_tokens),
+    #         prompts,
+    #         max_workers=max_workers,
+    #         desc="Predict openai",
+    #     )
+    # elif inference_method == "vllm":
+    #     port = None
+    #     all_prompts["generation"] = thread_map(
+    #         lambda p: lm.call_vllm_api(p, model=model_path, temperature=0.0, top_p=1.0,  max_tokens=max_tokens, port=port),
+    #         prompts,
+    #         max_workers=max_workers,
+    #         desc="Predict on vllm",
+    #     )
+    # elif inference_method == "custom":
+    #     all_prompts["generation"] = thread_map(
+    #         lambda p: lm.generate(p, model=model_path, temperature=0.0, top_p=1.0, max_tokens=max_tokens ),
+    #         prompts,
+    #         max_workers=max_workers,
+    #         desc="Predict on custom API",
+    #     )
+    # elif inference_method == "anthropic":
+    #     all_prompts["generation"] = thread_map(
+    #         lambda p: lm.claude_generate(p, model=model_path, temperature=0.0, top_p=1.0, max_tokens=max_tokens),
+    #         prompts,
+    #         max_workers=max_workers,
+    #         desc="Predict on Claude API",
+    #     )
+    # elif inference_method == "together":
+    #     all_prompts["generation"] = thread_map(
+    #         lambda p: lm.call_together_api(p, model=model_path, temperature=0.0, top_p=1.0, max_tokens=max_tokens),
+    #         prompts,
+    #         max_workers=max_workers,
+    #         desc="Predict on together API",
+    #     )
+    # elif inference_method in ("openai_backend", "litellm_backend", "huggingface_backend", "vllm_backend"):
+        # Use llm_eval/models backends via registry
+    backend_kwargs = backend_kwargs or {}
+
+    # Build inputs for batch generation
+    inputs: List[Dict[str, Any]] = [{"input": p} for p in prompts]
+
+    if inference_method == "openai":
+        # Registry name is "openai"
+        api_base = backend_kwargs.get(
+            "api_base",
         )
+        batch_size = int(backend_kwargs.get("batch_size", max_workers))
+        model = load_model(
+            name="openai",
+            use_chat_api=True,
+            **backend_kwargs,
+        )
+        results = model.generate_batch(inputs, show_progress=True)
+        generations = [(r.get("prediction") or "") for r in results]
+        all_prompts["generation"] = generations
+    elif inference_method == "litellm":
+        # Registry name is "litellm"
+        provider = backend_kwargs.get("provider", "openai")
+        api_key = backend_kwargs.get("api_key", os.environ.get("OPENAI_API_KEY"))
+        batch_size = int(backend_kwargs.get("batch_size", max_workers))
+        model = load_model(
+            name="litellm",
+            provider=provider,
+            model_name=model_path,
+            api_key=api_key,
+            batch_size=batch_size,
+            max_new_tokens=max_tokens,
+        )
+        results = model.generate_batch(inputs, show_progress=True)
+        generations = [(r.get("prediction") or "") for r in results]
+        all_prompts["generation"] = generations
+    elif inference_method == "huggingface":
+        # Registry name is "huggingface"
+        batch_size = int(backend_kwargs.get("batch_size", 1))
+        device = backend_kwargs.get("device")
+        dtype = backend_kwargs.get("dtype", "auto")
+        model = load_model(
+            name="huggingface",
+            model_name_or_path=model_path,
+            batch_size=batch_size,
+            max_new_tokens=max_tokens,
+            device=device,
+            dtype=dtype,
+        )
+        results = model.generate_batch(inputs, return_logits=False, show_progress=True)
+        generations = [(r.get("prediction") or "") for r in results]
+        all_prompts["generation"] = generations
     elif inference_method == "vllm":
-        port = None
-        all_prompts["generation"] = thread_map(
-            lambda p: lm.call_vllm_api(p, model=model_path, temperature=0.0, top_p=1.0,  max_tokens=max_tokens, port=port),
-            prompts,
-            max_workers=max_workers,
-            desc="Predict on vllm",
+        # Registry name is "vllm" (requires vllm installed and GPU)
+        temperature = backend_kwargs.get("temperature", 0.0)
+        top_p = backend_kwargs.get("top_p", 1.0)
+        stop = backend_kwargs.get("stop")  # Optional[List[str]]
+        dtype = backend_kwargs.get("dtype", "auto")
+        tensor_parallel_size = int(backend_kwargs.get("tensor_parallel_size", 1))
+        gpu_memory_utilization = float(backend_kwargs.get("gpu_memory_utilization", 0.9))
+        model = load_model(
+            name="vllm",
+            model_name_or_path=model_path,
+            temperature=temperature,
+            top_p=top_p,
+            max_tokens=max_tokens,
+            stop=stop,
+            dtype=dtype,
+            tensor_parallel_size=tensor_parallel_size,
+            gpu_memory_utilization=gpu_memory_utilization,
         )
-    elif inference_method == "custom":
-        all_prompts["generation"] = thread_map(
-            lambda p: lm.generate(p, model=model_path, temperature=0.0, top_p=1.0, max_tokens=max_tokens ),
-            prompts,
-            max_workers=max_workers,
-            desc="Predict on custom API",
-        )
-    elif inference_method == "anthropic":
-        all_prompts["generation"] = thread_map(
-            lambda p: lm.claude_generate(p, model=model_path, temperature=0.0, top_p=1.0, max_tokens=max_tokens),
-            prompts,
-            max_workers=max_workers,
-            desc="Predict on Claude API",
-        )
-    elif inference_method == "together":
-        all_prompts["generation"] = thread_map(
-            lambda p: lm.call_together_api(p, model=model_path, temperature=0.0, top_p=1.0, max_tokens=max_tokens),
-            prompts,
-            max_workers=max_workers,
-            desc="Predict on together API",
-        )
+        results = model.generate_batch(inputs, show_progress=True)
+        generations = [(r.get("prediction") or "") for r in results]
+        all_prompts["generation"] = generations
     else:
-        raise NotImplementedError(f"No method {inference_method}")
+        raise NotImplementedError(f"Unsupported backend method: {inference_method}")
+    # else:
+    #     raise NotImplementedError(f"No method {inference_method}")
 
     # save the results
     all_prompts.to_json(generations_file_path, lines=True, orient="records")
