@@ -58,7 +58,6 @@ class MRCRDataset(BaseDataset):
         split: str = "train",
         **kwargs: Any,
     ) -> None:
-        self.dev_mode = kwargs.pop("dev", False)
         super().__init__(dataset_name, split=split, subset=subset, **kwargs)
         # subset은 4k/8k/16k... 같은 레이블 용도이며, 필터링에는 사용하지 않음
 
@@ -99,10 +98,6 @@ class MRCRDataset(BaseDataset):
             dataset = split_obj if isinstance(split_obj, list) else []
 
         samples: List[Dict[str, Any]] = []
-        print("_____________________")
-        print(dataset[0].keys())
-        print(len(dataset))
-        print("_____________________")
 
         for row in dataset:
             prompt_raw = row.get("prompt")
@@ -133,12 +128,10 @@ class MRCRDataset(BaseDataset):
             }
 
             samples.append(sample)
-
             if getattr(self, "dev_mode", False) and len(samples) >= 2:
                 break
             if getattr(self, "limit", None) and len(samples) >= self.limit:
                 break
-
         return samples
 
     def get_raw_samples(self) -> Any:
