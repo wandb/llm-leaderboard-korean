@@ -88,13 +88,17 @@ class OpenAIModel(BaseModel):
         self.default_params = kwargs
 
         # Single OpenAI client (async) used for both text and vision models
-        self.api_base = api_base
-        if api_key:
-            self.api_key = api_key
-        elif "upstage" in api_base:
-            self.api_key = os.getenv("UPSTAGE_API_KEY")
+        self.api_base = api_base if api_key else None
+        if "openai.com" in api_base:
+            self.api_key = os.getenv("OPENAI_API_KEY")
+        elif "anthropic" in api_base:
+            self.api_key = os.getenv("ANTHROPIC_API_KEY")
         elif "x.ai" in api_base:
             self.api_key = os.getenv("XAI_API_KEY")
+        elif "google" in api_base:
+            self.api_key = os.getenv("GOOGLE_API_KEY")
+        elif "upstage" in api_base:
+            self.api_key = os.getenv("UPSTAGE_API_KEY")
         self.client = openai.AsyncOpenAI(
             api_key=self.api_key,
             base_url=api_base,
