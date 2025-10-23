@@ -97,17 +97,17 @@ def run_exp(
         all_prompts["generation"] = generations
     elif inference_method == "litellm":
         # Registry name is "litellm"
-        provider = backend_kwargs.get("provider", "openai")
-        api_key = backend_kwargs.get("api_key", os.environ.get("OPENAI_API_KEY"))
+        # provider = backend_kwargs.get("provider", "openai")
+        # api_key = backend_kwargs.get("api_key", os.environ.get("OPENAI_API_KEY"))
         batch_size = int(backend_kwargs.get("batch_size", max_workers))
-        model = load_model(
-            name="litellm",
-            provider=provider,
-            model_name=model_path,
-            api_key=api_key,
-            batch_size=batch_size,
-            max_new_tokens=max_tokens,
-        )
+        model = load_model(name="litellm", **backend_kwargs)
+        #     name="litellm",
+        #     provider=provider,
+        #     model_name=model_path,
+        #     api_key=api_key,
+        #     batch_size=batch_size,
+        #     max_new_tokens=max_tokens,
+        # )
         results = model.generate_batch(inputs, show_progress=True)
         generations = [(r.get("prediction") or "") for r in results]
         all_prompts["generation"] = generations

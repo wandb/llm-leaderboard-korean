@@ -39,6 +39,7 @@ def precise_wikiqa_runner(
         evaluator_abstention_model: str | None = None,
         evaluator_halu_model: str | None = None,
         backend_kwargs: dict | None = None,
+        output_base_dir: str = f"./output/{time.strftime('%Y%m%d%H%M%S')}",
 ):
     """
     Args:
@@ -83,7 +84,7 @@ def precise_wikiqa_runner(
         pq.abtention_evaluator = evaluator_abstention_model
     if evaluator_halu_model:
         pq.halu_evaluator = evaluator_halu_model
-    eval_result = pq.run_eval()
+    eval_result, task_path = pq.run_eval()
     print(f'{TASKNAME} Evaluation completed')
 
     _log_to_wandb(pd.DataFrame([eval_result]), TASKNAME)
@@ -91,7 +92,7 @@ def precise_wikiqa_runner(
     # Weave Evals logging
     try:
         model_name = model.split("/")[-1]
-        gen_path = f"./output/{time.strftime('%Y%m%d%H%M%S')}/{TASKNAME}/{model_name}/generation.jsonl"
+        gen_path = f"./output/{TASKNAME}/{model_name}/generation.jsonl"
         os.makedirs(os.path.dirname(gen_path), exist_ok=True)
         gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
         # zip evaluation flags per index
