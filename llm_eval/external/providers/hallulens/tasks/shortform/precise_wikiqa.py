@@ -165,7 +165,7 @@ class PreciseQAEval:
         }
 
         # save the results
-        res_path = f'output/{self.task_name}/{self.model_name}/eval_results.json'
+        res_path = f'{self.output_path}/eval_results.json'
         with open(res_path, 'w') as f:
             json.dump(res, f, indent=4)
 
@@ -183,4 +183,4 @@ class PreciseQAEval:
         print(f"  False Refusal Rate: {refusal_rate:.3f} %")
         print(f"  Correct Rate: {correct_rate:.3f} %")
         print("-" * 80)
-        return res
+        return res, self.output_path
