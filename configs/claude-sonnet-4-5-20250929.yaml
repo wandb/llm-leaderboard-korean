@@ -1,8 +1,8 @@
 model:
-  name: litellm
+  name: openai
   params:
-    provider: anthropic
-    model_name: claude-haiku-4-5-20251001
+    model_name: claude-sonnet-4-5-20250929
+    api_base: https://api.anthropic.com/v1/
     batch_size: 32
     max_tokens: 1024
     temperature: 0.0
