@@ -45,7 +45,7 @@ class WandbConfigSingleton:
         cls._instance.leaderboard_tables[table_name] = leaderboard_table
 
     @classmethod
-    def log_overall_leaderboard_table(cls, model_name: str, dataset_names: List[str]) -> wandb.Table:
+    def log_overall_leaderboard_table(cls, model_name: str, release_date: str, size_category: str, model_size: str, dataset_names: List[str]) -> wandb.Table:
         final_score_key_dict = {
             "mt_bench": {
                 "columns": ["model_name", "roleplay/average_judge_score", "humanities/average_judge_score", "writing/average_judge_score", "reasoning/average_judge_score"],
@@ -213,10 +213,11 @@ class WandbConfigSingleton:
             table = pd.merge(table, new_table, left_index=True, right_index=True)
         table.columns = table.columns.str.replace(r'(_[xy]$)|(\.\d+$)', '', regex=True)
         table_mean = table.T.groupby(table.columns).mean().T
-        glp_columns = table_mean.columns[table_mean.columns.str.contains('GLP_')]
-        alt_columns = table_mean.columns[table_mean.columns.str.contains('ALT_')]
         table_mean['범용언어성능(GLP)_AVG'] = weighted_average(table_mean, GLP_COLUMN_WEIGHT)
         table_mean['가치정렬성능(ALT)_AVG'] = weighted_average(table_mean, ALT_COLUMN_WEIGHT)
+        table_mean['release_date'] = release_date
+        table_mean['size_category'] = 'None' if size_category is None else size_category
+        table_mean['model_size'] = 'None' if model_size is None else model_size
         leaderboard_table = wandb.Table(dataframe=table_mean.reset_index())
         cls._instance.run.log({"leaderboard_table": leaderboard_table})
         # return leaderboard_table
