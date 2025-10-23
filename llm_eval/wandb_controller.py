@@ -145,10 +145,9 @@ class WeaveEvalsController:
 
             pred_logger = elog.log_prediction(inputs=inputs_payload, output=prediction_text)
 
-            # 1) 평가 모듈이 만든 모든 스칼라 메트릭(숫자/불리언)은 이름 그대로 로깅
+            # 1) 평가 모듈이 만든 모든 메트릭은 이름 그대로 로깅
             for key, value in evaluation_fields.items():
-                if isinstance(value, (int, float, bool)):
-                    pred_logger.log_score(scorer=str(key), score=value)
+                pred_logger.log_score(scorer=str(key), score=value)
 
             # 2) 러너 레벨에서 추가한 보조 스코어도 함께 기록(있을 때)
             if "language_penalizer" in item:
