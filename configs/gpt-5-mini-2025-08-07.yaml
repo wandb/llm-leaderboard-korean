@@ -1,8 +1,11 @@
 model:
-  name: openai
+  name: litellm
   params:
     model_name: gpt-5-mini-2025-08-07
-    api_base: https://api.openai.com/v1
+    provider: openai
     batch_size: 32
     max_completion_tokens: 1024
     temperature: 1
+  release_date: "2025-08-07"
+  model_size: None
+  size_category: mini

@@ -19,7 +19,7 @@ komoral:
 
 mt_bench:
   split: test
-  subset: default
+  subset: ["roleplay", "humanities", "writing", "reasoning"]
   limit: 100
   evaluation:
     method: "mt_bench_judge"
@@ -34,14 +34,14 @@ mt_bench:
 kobbq:
   split: test
   subset: default
-  limit: 1000
+  limit: 100
   evaluation:
     method: string_match
 
 squad_kor_v1:
   split: test
   subset: default
-  limit: 1000
+  limit: 100
   evaluation:
     method: char_f1
 
@@ -61,6 +61,14 @@ mrcr_2_needles:
       prefix_key: random_string_to_prepend
       require_prefix: true
       strip_prefix: true
+  # 모델 파라미터 오버라이드: Anthropic 레이트리밋 회피용
+  model_params:
+    # LiteLLM 백엔드 파라미터 기준
+    batch_size: 2           # 동시성 축소
+    request_delay_sec: 0.3  # 고정 지연(초)
+    request_jitter_sec: 0.5 # 추가 지터(0~이 값 사이 균등)
+    retry_max: 4
+    retry_base_delay: 1.5
 
 haerae_bench_v1:
   subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history, reading_comprehension]
@@ -80,7 +88,7 @@ korean_parallel_corpora:
 korean_hate_speech:
   split: train
   subset: default
-  limit: 1000
+  limit: 100
   evaluation:
     method: string_match
 
@@ -110,7 +118,7 @@ kmmlu_hard:
 
 kobalt_700:
   split: test
-  limit: 1000
+  limit: 50
   subset: ["Syntax", "Semantics"] #, "Pragmatics", "Phonetics/Phonology", "Morphology"]
   evaluation:
     method: "string_match"
@@ -119,7 +127,7 @@ kobalt_700:
 
 aime2025:
   split: test
-  limit: 100
+  limit: 50
   subset: ["AIME2025-I", "AIME2025-II"]
   evaluation:
     method: "math_match"
@@ -129,7 +137,7 @@ aime2025:
 hrm8k:
   split: test
   subset: ["GSM8K", "KSM", "MATH", "MMMLU", "OMNI_MATH"]
-  limit: 10
+  limit: 20
   evaluation:
     method: "math_match"
     params:
@@ -138,40 +146,26 @@ hrm8k:
 hle:
   subset: ["Other", "Humanities/Social Science", "Math", "Physics", "Computer Science/AI", "Biology/Medicine", "Chemistry", "Engineering"]
   split: test
-  limit: 1000
+  limit: 100
   evaluation:
     method: "string_match"
 
 arc_agi:
   split: evaluation
   subset: default
-  limit: 1000
+  limit: 100
   evaluation:
     method: "grid_match"
 
 halluLens:
   split: test
   subset: [precise_wikiqa, mixed_entities, generated_entities]
-  limit: 1000
+  limit: 100
   evaluation:
     abstention:
       model: gpt-4o-mini
     hallucination:
       model: gpt-4o
-
-# SWE-bench Verified 설정
-swe_bench_verified:
-  split: test
-  subset: official_80
-  limit: 80
-  evaluation:
-    method: "swebench_verified"
-  # 원격 SWE-bench API 서버 설정 (있을 경우 실제 실행)
-  server:
-    url: ""  # 예: https://swebench-api.my-domain.com
-    token: ""  # 필요 시 토큰
-    poll_interval_sec: 10
-    max_wait_sec: 36000
 
 bfcl:
   split: test
@@ -189,11 +183,26 @@ bfcl:
     multi_turn_miss_func,
     multi_turn_miss_param,
   ]
-  limit: 1000
+  limit: 100
   # 동시성 제어: BFCL 모델 inference 시 동시에 보낼 스레드 개수
   num_threads: 32
   evaluation:
     model: gpt-4o-2024-11-20
+
+# SWE-bench Verified 설정
+swe_bench_verified:
+  split: test
+  subset: official_80
+  limit: 80
+  evaluation:
+    method: "swebench_verified"
+  # 원격 SWE-bench API 서버 설정 (있을 경우 실제 실행)
+  server:
+    url: ""  # 예: https://swebench-api.my-domain.com
+    token: ""  # 필요 시 토큰
+    poll_interval_sec: 10
+    max_wait_sec: 36000
+
 
 # arc_agi2:
 #   split: evaluation

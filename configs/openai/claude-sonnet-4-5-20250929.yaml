@@ -1,11 +1,9 @@
 model:
-  name: litellm
+  name: openai
   params:
     model_name: claude-sonnet-4-5-20250929
-    provider: anthropic
+    api_base: https://api.anthropic.com/v1/
     batch_size: 32
     max_tokens: 1024
     temperature: 0.0
-  release_date: "2025-09-29"
-  model_size: None
-  size_category: middle
+  release_date: "2025-10-01"
