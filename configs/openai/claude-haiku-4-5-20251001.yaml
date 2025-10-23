@@ -1,11 +1,9 @@
 model:
-  name: litellm
+  name: openai
   params:
     model_name: claude-haiku-4-5-20251001
-    provider: anthropic
+    api_base: https://api.anthropic.com/v1/
     batch_size: 32
     max_tokens: 1024
     temperature: 0.0
-  release_date: "2025-09-29"
-  model_size: None
-  size_category: mini
+  release_date: "2025-10-01"
