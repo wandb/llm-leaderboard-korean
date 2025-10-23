@@ -160,6 +160,14 @@ class MTBenchDataset(BaseDataset):
                 if isinstance(turns, list):
                     qid_to_ref[qid] = [str(x) for x in turns]
 
+        # Prepare allowed subset filter (categories)
+        allowed_subsets = None
+        if isinstance(self.subset, str):
+            if self.subset and self.subset.lower() != "default":
+                allowed_subsets = {self.subset.lower()}
+        elif isinstance(self.subset, (list, tuple, set)):
+            allowed_subsets = {str(s).lower() for s in self.subset}
+
         # Build samples (single-turn focus: use turns[0])
         results: List[Dict[str, Any]] = []
         added = 0
@@ -175,6 +183,11 @@ class MTBenchDataset(BaseDataset):
 
                 # Determine category key for counting (normalize None)
                 cat_key = str(category) if category is not None else "uncategorized"
+                cat_norm = str(category).lower() if category is not None else "uncategorized"
+
+                # Filter by allowed subsets if provided
+                if allowed_subsets is not None and cat_norm not in allowed_subsets:
+                    continue
                 # If in dev_mode, limit to 2 samples per category
                 if getattr(self, "dev_mode", False) and category_counts.get(cat_key, 0) >= 2:
                     continue
@@ -201,7 +214,7 @@ class MTBenchDataset(BaseDataset):
                     "input": model_input,
                     "reference": "",  # generation 정답 없음
                     "judge_type": "rubric_and_response",  # 파서 호환을 위해 유지
-                    "_subset_name": category,
+                    "_subset_name": cat_norm,
                     "question_1": question_1,
                     "metadata": {
                         "question_id": qid,

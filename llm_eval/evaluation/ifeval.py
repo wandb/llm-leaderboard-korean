@@ -23,17 +23,16 @@ class IFEvalStrictEvaluator(BaseEvaluator):
         inst_correct = 0
         inst_total = 0
 
-        # subset 별 집계를 위한 통계 구조
-        # 요청된 subsets 기준 초기화
+        # subset 정규화 및 통계 구조 초기화
         subset_stats = {}
-        if subsets:
-            for s in subsets:
-                subset_stats[s] = {
-                    "prompt_correct": 0,
-                    "total_prompts": 0,
-                    "inst_correct": 0,
-                    "inst_total": 0,
-                }
+        normalized_subsets = None
+        if isinstance(subsets, str):
+            # 문자열은 단일 라벨 또는 'default'로 간주
+            normalized = subsets.strip().lower()
+            if normalized and normalized != "default":
+                normalized_subsets = [subsets]
+        elif isinstance(subsets, (list, tuple, set)):
+            normalized_subsets = list(subsets)
 
         for sample in samples:
             subset_name = sample.get("_subset_name")
@@ -88,7 +87,7 @@ class IFEvalStrictEvaluator(BaseEvaluator):
         metrics["AVG"] = (metrics["prompt_level_strict_accuracy"] + metrics["instruction_level_strict_accuracy"]) / 2
 
         # subsets 전달 여부에 따라 분기
-        if subsets:
+        if normalized_subsets:
             for sname, st in subset_stats.items():
                 s_prompt_acc = (st["prompt_correct"] / st["total_prompts"]) if st["total_prompts"] > 0 else 0.0
                 s_inst_acc = (st["inst_correct"] / st["inst_total"]) if st["inst_total"] > 0 else 0.0
@@ -114,17 +113,15 @@ class IFEvalLooseEvaluator(BaseEvaluator):
         inst_correct = 0
         inst_total = 0
 
-        # subset 별 집계를 위한 통계 구조
-        # 요청된 subsets 기준 초기화
+        # subset 정규화 및 통계 구조 초기화
         subset_stats = {}
-        if subsets:
-            for s in subsets:
-                subset_stats[s] = {
-                    "prompt_correct": 0,
-                    "total_prompts": 0,
-                    "inst_correct": 0,
-                    "inst_total": 0,
-                }
+        normalized_subsets = None
+        if isinstance(subsets, str):
+            normalized = subsets.strip().lower()
+            if normalized and normalized != "default":
+                normalized_subsets = [subsets]
+        elif isinstance(subsets, (list, tuple, set)):
+            normalized_subsets = list(subsets)
 
         for sample in samples:
             subset_name = sample.get("_subset_name")
@@ -179,7 +176,7 @@ class IFEvalLooseEvaluator(BaseEvaluator):
         metrics["AVG"] = (metrics["prompt_level_loose_accuracy"] + metrics["instruction_level_loose_accuracy"]) / 2
 
         # subsets 전달 여부에 따라 분기
-        if subsets:
+        if normalized_subsets:
             for sname, st in subset_stats.items():
                 s_prompt_acc = (st["prompt_correct"] / st["total_prompts"]) if st["total_prompts"] > 0 else 0.0
                 s_inst_acc = (st["inst_correct"] / st["inst_total"]) if st["inst_total"] > 0 else 0.0
