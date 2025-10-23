@@ -16,8 +16,8 @@ from llm_eval.external.providers.hallulens.tasks.refusal_test.entities_generatio
 
 
 class NonsenseMixedInference(NonsenseNameInference):
-    def __init__(self, taskname, output_base_dir, generate_model, prompt_path, seed, method='vllm', limit=None):
-        super().__init__(output_base_dir, generate_model, prompt_path, seed, method, limit=limit)
+    def __init__(self, taskname, output_base_dir, generate_model, prompt_path, seed, method='vllm', limit=None, backend_kwargs=None):
+        super().__init__(output_base_dir, generate_model, prompt_path, seed, method, limit=limit, backend_kwargs=backend_kwargs)
 
         self.output_base_dir = output_base_dir
         self.generate_model = generate_model
