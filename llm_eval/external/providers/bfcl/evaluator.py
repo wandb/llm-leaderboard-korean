@@ -181,6 +181,7 @@ def run_bfcl_from_configs(
 
     # remove temporary result and score directories
     if testmode:
+        import shutil
         shutil.rmtree(result_dir)
         shutil.rmtree(score_dir)
 
