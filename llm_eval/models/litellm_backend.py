@@ -103,12 +103,17 @@ class LiteLLMBackend(BaseModel):
         Returns:
             Dict[str, Any]: Dictionary of completion parameters.
         """
-        # Append the CoT trigger if chain-of-thought is enabled.
-        if self.cot and self.cot_trigger:
-            prompt = f"{prompt}\n{self.cot_trigger}"
-            
+        # Build messages: accept either a list of chat messages or a plain string
+        if isinstance(prompt, list):
+            messages = prompt
+        else:
+            # Append the CoT trigger if chain-of-thought is enabled.
+            if self.cot and self.cot_trigger:
+                prompt = f"{prompt}\n{self.cot_trigger}"
+            messages = [{"role": "user", "content": prompt}]
+
         completion_kwargs = {
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "max_tokens": self.max_new_tokens,
             "temperature": self.temperature,
             **self.completion_kwargs,
