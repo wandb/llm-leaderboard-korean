@@ -4,9 +4,13 @@ wandb:
     entity: horangi
     project: horangi4-dev
     project_dataset: horangi4-dataset
+  run_name: swebench-o4mini-2
 
 # testmode configurations
 testmode: false
+
+# LLM 호출 간 간격(초). 누락 시 오류 방지를 위해 기본값 제공
+inference_interval: 0.0
 
 mt_bench:
   split: test
@@ -23,18 +27,7 @@ mt_bench:
       temperature: 0.0
 # dataset configurations
 # SWE-bench Verified 설정
-swe_bench_verified:
-  split: test
-  subset: official_80
-  limit: 80
-  evaluation:
-    method: "swebench_verified"
-  # 원격 SWE-bench API 서버 설정 (있을 경우 실제 실행)
-  server:
-    url: ""  # 예: https://swebench-api.my-domain.com
-    token: ""  # 필요 시 토큰
-    poll_interval_sec: 10
-    max_wait_sec: 36000
+
 
 komoral:
   split: test
@@ -202,6 +195,43 @@ bfcl:
   num_threads: 32
   evaluation:
     model: gpt-4o-2024-11-20
+
+# ================= SWE-bench (integrated) =================
+swebench:
+  max_samples: 10
+  max_workers: 2
+  background_eval: false
+  fc_enabled: true
+  prebuild_images: false
+  images:
+    namespace: swebench
+    tag: latest
+  api_server:
+    enabled: true
+    endpoint: http://localhost:8000
+    timeout_sec: 1800
+    concurrency: 2
+  artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v1
+  dataset_dir: .
+
+# Global LLM settings for SWE-bench run
+api: openai_responses
+model:
+  pretrained_model_name_or_path: o4-mini
+generator:
+  # Responses API는 max_output_tokens를 사용
+  max_output_tokens: 4096
+  temperature: 1
+  # extra_body:
+  #   reasoning:
+  #     effort: "high"
+  #     summary: "auto"
+network:
+  http_timeout:
+    connect: 10
+    read: 300
+    write: 300
+    pool: 30
 
 # arc_agi2:
 #   split: evaluation
