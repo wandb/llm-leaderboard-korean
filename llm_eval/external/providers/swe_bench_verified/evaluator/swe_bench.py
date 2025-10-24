@@ -20,11 +20,10 @@ import os
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
-from llm_eval.wandb_singleton import WandbConfigSingleton
-from llm_eval.models import load_model
+from config_singleton import WandbConfigSingleton
+from .evaluate_utils.llm_async_processor import LLMAsyncProcessor
 from swebench.inference.make_datasets.utils import repair_patch
 from swebench.inference.make_datasets.utils import extract_minimal_patch as _official_min_patch
-from llm_eval.wandb_controller import WeaveEvalsController
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -304,7 +303,7 @@ def build_prompt(instance: Dict) -> str:
     return format_problem_statement(instance)
 
 def generate_predictions(samples: List[Dict], llm, generator_config, output_file: Path, model_name: str):
-    """パッチ生成とJSONL保存（プロジェクト 모델백엔드 지원)"""
+    """パッチ生成とJSONL保存（並列処理版）"""
     print(f"Generating patches for {len(samples)} samples...")
     
     # 全サンプルのプロンプトを事前に準備
@@ -391,35 +390,12 @@ def generate_predictions(samples: List[Dict], llm, generator_config, output_file
             "sample": sample
         })
     
-    # 프로젝트 모델 백엔드가 주어졌다면 배치 API 사용
-    responses = []
-    if hasattr(llm, "generate_batch"):
-        batch_inputs = [{"input": msgs} for msgs, _ in all_inputs]
-        try:
-            # generator_config에 있는 파라미터를 그대로 전달 (예: max_tokens)
-            batch_res = llm.generate_batch(batch_inputs, show_progress=False, **(generator_config or {}))
-            # OpenAI 백엔드 기준: 각 항목 dict에 prediction 키로 텍스트 포함
-            for br in batch_res:
-                responses.append(br.get("prediction", ""))
-        except Exception as e:
-            logger.error(f"Batch generation failed, falling back to sequential: {e}")
-            responses = []
-    
-    # 백엔드 미제공 또는 배치 실패 시 순차 호출로 폴백
-    if not responses or len(responses) != len(all_inputs):
-        responses = []
-        for messages, gen_kwargs in all_inputs:
-            try:
-                if hasattr(llm, "generate_batch"):
-                    one = llm.generate_batch([{"input": messages}], show_progress=False, **(gen_kwargs or {}))
-                    responses.append((one[0] or {}).get("prediction", ""))
-                else:
-                    # 과거 콜러블 llm 형태 지원
-                    out = llm(messages, **(gen_kwargs or {}))
-                    responses.append(out)
-            except Exception as e:
-                logger.error(f"LLM call failed: {e}")
-                responses.append("")
+    # 並列処理でLLM呼び出し
+    llm_ap = LLMAsyncProcessor(
+        llm=llm,
+        inputs=all_inputs,
+    )
+    responses = llm_ap.get_results()
     
     # 結果を処理
     for i, (response, sample_info) in enumerate(zip(responses, sample_data)):
@@ -673,7 +649,7 @@ def run_swebench_evaluation(predictions_file: Path, max_workers: int = 4, instan
 
     # Fallback to local official harness
     # run_id生成
-    run_id = f"horangi_{int(time.time())}"
+    run_id = f"nejumi_{int(time.time())}"
     
     print(f"Running SWE-bench evaluation (run_id: {run_id})...")
     
@@ -839,6 +815,7 @@ def evaluate():
     dataset_name = "swebench"
     
     # データセットダウンロード
+    print(cfg[dataset_name])
     artifact = run.use_artifact(cfg[dataset_name].artifacts_path, type="dataset")
     artifact_dir = artifact.download()
     dataset_dir = Path(artifact_dir) / cfg[dataset_name].dataset_dir
@@ -873,10 +850,9 @@ def evaluate():
     
     try:
         # 生成パラメータ
-        max_tokens = cfg.swebench.get("max_tokens", 32768)
         model_name = cfg.model.pretrained_model_name_or_path
-        
-        generator_config = {"max_tokens": max_tokens}
+        # パラメータ는 클라이언트 생성 시 cfg.generator로 전달되므로 여기서는 비움
+        generator_config = {}
         
         # パッチ生成
         generate_predictions(samples, llm, generator_config, predictions_file, model_name)
@@ -999,7 +975,6 @@ def calculate_metrics(samples, results_or_queue, temp_dir):
 
             leaderboard_data = {
                 "model_name": model_name,
-                "AVG": resolution_rate,
                 "total_samples": total,
                 "issues_resolved": resolved,
                 "resolution_rate": resolution_rate,
@@ -1007,9 +982,8 @@ def calculate_metrics(samples, results_or_queue, temp_dir):
             }
             
             leaderboard_table = pd.DataFrame([leaderboard_data])
-            run.log({"swe_bench_verified_leaderboard_table": wandb.Table(dataframe=leaderboard_table)})
-            run.log({"swe_bench_verified_results": results})
-            WandbConfigSingleton.collect_leaderboard_table("swe_bench_verified", leaderboard_table)
+            run.log({"swebench_leaderboard_table": wandb.Table(dataframe=leaderboard_table)})
+            run.log({"swebench_results": results})
         
         # -------- per-instance table (inputs / outputs / status) --------
         print("Logging per-instance output table to WandB...")
@@ -1027,50 +1001,6 @@ def calculate_metrics(samples, results_or_queue, temp_dir):
             unresolved_set = set(results.get("unresolved_ids", []))
             error_set = set(results.get("error_ids", []))
             empty_set = set(results.get("empty_patch_ids", []))
-
-            # ----- Weave Evals logging (aggregated per-sample) -----
-            try:
-                weave_samples = []
-                for sample in samples:
-                    iid = sample.get("instance_id")
-                    status_eval = {
-                        "resolved": iid in resolved_set,
-                        "unresolved": iid in unresolved_set,
-                        "empty_patch": iid in empty_set,
-                        "error": iid in error_set,
-                    }
-                    input_text = sample.get("text") or sample.get("problem_statement", "")
-                    prediction_text = predictions_map.get(iid, {}).get("model_patch", "")
-                    weave_samples.append({
-                        "input": input_text,
-                        "prediction": prediction_text,
-                        "reference": None,
-                        "evaluation": status_eval,
-                        "id": iid,
-                        "_subset_name": "verified",
-                    })
-
-                metrics = {
-                    "resolution_rate": resolution_rate,
-                    "issues_resolved": resolved,
-                    "total_samples": total,
-                }
-                WeaveEvalsController.log(
-                    dataset_name="swe_bench_verified",
-                    subset="verified",
-                    split="test",
-                    model_backend_name="swebench_official_harness",
-                    model_name=model_name,
-                    scaling_method_name=None,
-                    evaluation_method_name="SWE-Bench-Verified",
-                    language_penalize=False,
-                    target_lang="en",
-                    samples=weave_samples,
-                    metrics=metrics,
-                    wandb_params={},
-                )
-            except Exception as e:
-                logger.warning(f"[Weave] SWE-Bench logging skipped: {e}")
 
             table_rows = []
             missing_images = []  # 不足しているイメージを記録
@@ -1148,7 +1078,7 @@ def calculate_metrics(samples, results_or_queue, temp_dir):
                 logger.info("✅ All Docker images are available")
 
             instance_df = pd.DataFrame(table_rows)
-            run.log({"swe_bench_verified_output_table": wandb.Table(dataframe=instance_df)})
+            run.log({"swebench_output_table": wandb.Table(dataframe=instance_df)})
             print("Per-instance table logged to WandB.")
         except Exception as e:
             logger.warning(f"Failed to log per-instance table: {e}")
