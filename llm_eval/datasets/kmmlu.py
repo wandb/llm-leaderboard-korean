@@ -80,16 +80,15 @@ class KMMLUDataset(BaseDataset):
         """
         # Default subset list
         default_subsets = [
-            'Accounting', 'Agricultural-Sciences', 'Aviation-Engineering-and-Maintenance', 'Biology',
-            'Chemical-Engineering', 'Chemistry', 'Civil-Engineering', 'Computer-Science', 'Construction',
-            'Criminal-Law', 'Ecology', 'Economics', 'Education', 'Electrical-Engineering', 'Electronics-Engineering',
-            'Energy-Management', 'Environmental-Science', 'Fashion', 'Food-Processing',
-            'Gas-Technology-and-Engineering', 'Geomatics', 'Health', 'Industrial-Engineer',
-            'Information-Technology', 'Interior-Architecture-and-Design', 'Law', 'Machine-Design-and-Manufacturing',
-            'Management', 'Maritime-Engineering', 'Marketing', 'Materials-Engineering', 'Mechanical-Engineering',
-            'Nondestructive-Testing', 'Patent', 'Political-Science-and-Sociology', 'Psychology', 'Public-Safety',
-            'Railway-and-Automotive-Engineering', 'Real-Estate', 'Refrigerating-Machinery', 'Social-Welfare',
-            'Taxation', 'Telecommunications-and-Wireless-Technology', 'Korean-History', 'Math'
+            'Accounting', 'Agricultural-Sciences', 'Aviation-Engineering-and-Maintenance', 'Biology', 'Chemical-Engineering',
+            'Chemistry', 'Civil-Engineering', 'Computer-Science', 'Construction', 'Criminal-Law',
+            'Ecology', 'Economics', 'Education', 'Electrical-Engineering', 'Electronics-Engineering',
+            'Energy-Management', 'Environmental-Science', 'Fashion', 'Food-Processing', 'Gas-Technology-and-Engineering',
+            'Geomatics', 'Health', 'Industrial-Engineer', 'Information-Technology', 'Interior-Architecture-and-Design',
+            'Law', 'Machine-Design-and-Manufacturing', 'Management', 'Maritime-Engineering', 'Marketing',
+            'Materials-Engineering', 'Mechanical-Engineering','Nondestructive-Testing', 'Patent', 'Political-Science-and-Sociology',
+            'Psychology', 'Public-Safety', 'Railway-and-Automotive-Engineering', 'Real-Estate', 'Refrigerating-Machinery',
+            'Social-Welfare', 'Taxation', 'Telecommunications-and-Wireless-Technology', 'Korean-History', 'Math'
         ]
 
         if self.subset is None:

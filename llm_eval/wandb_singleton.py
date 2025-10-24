@@ -32,7 +32,7 @@ class WandbConfigSingleton:
     @classmethod
     def download_artifact(cls, dataset_name: str):
         api = wandb.Api()
-        if "mt_bench" in dataset_name:
+        if "mtbench" in dataset_name:
             artifact = api.artifact(f"wandb-korea/korean-llm-leaderboard/{dataset_name}:latest")
             artifact_path = artifact.download()
             return artifact_path

@@ -6,20 +6,11 @@ wandb:
     project_dataset: horangi4-dataset
 
 # testmode configurations
-testmode: true
-
-# dataset configurations
-
-komoral:
-  split: test
-  subset: default
-  limit: 100
-  evaluation:
-    method: string_match
+testmode: false
 
 mt_bench:
   split: test
-  subset: ["roleplay", "humanities", "writing", "reasoning"]
+  subset: ["roleplay", "humanities", "writing", "reasoning", "coding"]
   limit: 100
   evaluation:
     method: "mt_bench_judge"
@@ -30,6 +21,28 @@ mt_bench:
       batch_size: 10
       max_tokens: 512
       temperature: 0.0
+# dataset configurations
+# SWE-bench Verified 설정
+swe_bench_verified:
+  split: test
+  subset: official_80
+  limit: 80
+  evaluation:
+    method: "swebench_verified"
+  # 원격 SWE-bench API 서버 설정 (있을 경우 실제 실행)
+  server:
+    url: ""  # 예: https://swebench-api.my-domain.com
+    token: ""  # 필요 시 토큰
+    poll_interval_sec: 10
+    max_wait_sec: 36000
+
+komoral:
+  split: test
+  subset: default
+  limit: 100
+  evaluation:
+    method: string_match
+
 
 kobbq:
   split: test
@@ -72,6 +85,7 @@ mrcr_2_needles:
 
 haerae_bench_v1:
   subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history, reading_comprehension]
+  limit: 20
   split: test
   evaluation:
     method: string_match
@@ -81,7 +95,7 @@ haerae_bench_v1:
 korean_parallel_corpora:
   subset: [e2k, k2e]
   split: test
-  limit: 100
+  limit: 50
   evaluation:
     method: comet_score
 
@@ -94,7 +108,7 @@ korean_hate_speech:
 
 kmmlu:
   split: test
-  limit: 100
+  limit: 3
   evaluation:
     method: "string_match"
     params:
@@ -102,23 +116,23 @@ kmmlu:
     
 kmmlu_pro:
   split: test
-  limit: 100
+  limit: 2
   evaluation:
     method: "string_match"
     params:
       mcqa: true
 
-kmmlu_hard:
-  split: test
-  limit: 10
-  evaluation:
-    method: "string_match"
-    params:
-      mcqa: true
+# kmmlu_hard:
+#   split: test
+#   limit: 10
+#   evaluation:
+#     method: "string_match"
+#     params:
+#       mcqa: true
 
 kobalt_700:
   split: test
-  limit: 50
+  limit: 100
   subset: ["Syntax", "Semantics"] #, "Pragmatics", "Phonetics/Phonology", "Morphology"]
   evaluation:
     method: "string_match"
@@ -146,7 +160,7 @@ hrm8k:
 hle:
   subset: ["Other", "Humanities/Social Science", "Math", "Physics", "Computer Science/AI", "Biology/Medicine", "Chemistry", "Engineering"]
   split: test
-  limit: 100
+  limit: 13
   evaluation:
     method: "string_match"
 
@@ -183,26 +197,11 @@ bfcl:
     multi_turn_miss_func,
     multi_turn_miss_param,
   ]
-  limit: 100
+  limit: 10
   # 동시성 제어: BFCL 모델 inference 시 동시에 보낼 스레드 개수
   num_threads: 32
   evaluation:
     model: gpt-4o-2024-11-20
-
-# SWE-bench Verified 설정
-swe_bench_verified:
-  split: test
-  subset: official_80
-  limit: 80
-  evaluation:
-    method: "swebench_verified"
-  # 원격 SWE-bench API 서버 설정 (있을 경우 실제 실행)
-  server:
-    url: ""  # 예: https://swebench-api.my-domain.com
-    token: ""  # 필요 시 토큰
-    poll_interval_sec: 10
-    max_wait_sec: 36000
-
 
 # arc_agi2:
 #   split: evaluation
