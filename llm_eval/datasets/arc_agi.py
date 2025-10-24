@@ -75,7 +75,6 @@ class ARCAGIDataset(BaseDataset):
         split: str = "evaluation",
         subset: Optional[Union[str, list]] = "default",
         base_prompt_template: Optional[str] = DEFAULT_ARC_PROMPT_TEMPLATE,
-        limit: Optional[int] = None,
         **kwargs: Any
     ):
         super().__init__(
