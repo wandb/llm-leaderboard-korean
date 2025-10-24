@@ -1,13 +1,11 @@
 model:
   name: litellm
   params:
+    model_name: grok-4-fast-non-reasoning
     provider: xai
-    model_name: grok-4-non-reasoning
-    batch_size: 32
     max_tokens: 1024
     temperature: 0.0
+    batch_size: 32
   release_date: "2025-07-09"
-
-wandb:
-  params:
-    run_name: xai-grok-4-non-reasoning
+  model_size: None
+  size_category: middle

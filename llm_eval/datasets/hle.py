@@ -99,6 +99,7 @@ class HLEDataset(BaseDataset):
             items = split_data.get(subset_name, [])
             if not isinstance(items, list):
                 continue
+            added = 0
             for item in items:
                 try:
                     question_text = (item.get("question") or "").strip()
@@ -122,10 +123,10 @@ class HLEDataset(BaseDataset):
                             },
                         }
                     )
-
-                    if getattr(self, "dev_mode", False) and len(processed_list) >= 2:
+                    added += 1  
+                    if getattr(self, "dev_mode", False) and added >= 2:
                         break
-                    if getattr(self, "limit", None) and len(processed_list) >= self.limit:
+                    if getattr(self, "limit", None) and added >= self.limit:
                         break
                 except Exception as e:
                     logger.error(f"Failed to process item: {e}")

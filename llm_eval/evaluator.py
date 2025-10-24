@@ -358,9 +358,6 @@ def run_multiple_from_configs(
 
         logger.info(f"Running dataset '{ds_key}' with split='{split}', subset='{subset}', eval='{eval_method}'")
 
-        print("dataset_params", dataset_params)
-        print("--------------------")
-
         # Branch out HalluLens to external evaluator module
         if str(ds_key).lower() == "hallulens":
             from llm_eval.external.providers.hallulens.evaluator import run_hallulens_from_configs
@@ -400,6 +397,10 @@ def run_multiple_from_configs(
             judge_name = eval_params.get("judge_backend_name")
             judge_params = {k: v for k, v in eval_params.items() if k != "judge_backend_name"}
 
+        # Merge dataset-specific model params override if provided
+        ds_model_params_override = ds_cfg.get("model_params") or {}
+        merged_model_params = {**model_params, **ds_model_params_override}
+
         result = evaluator.run(
             model=model_name,
             judge_model=judge_name,
@@ -408,7 +409,7 @@ def run_multiple_from_configs(
             split=split,
             evaluation_method=eval_method,
             dataset_params=dataset_params,
-            model_params=model_params,
+            model_params=merged_model_params,
             judge_params=judge_params,
             evaluator_params=eval_params,
             wandb_params=wandb_params,

@@ -36,7 +36,6 @@ class HaeraeDatasetV1(BaseDataset):
         self, 
         dataset_name: str = "haerae_bench_v1",
         subset: Optional[Union[str, list]] = ["standard_nomenclature", "loan_words", "rare_words", "general_knowledge", "history", "reading_comprehension"],
-        limit: Optional[int] = 100,
         split: str = "test",
         base_prompt_template: Optional[str] = None,
         **kwargs
@@ -88,6 +87,8 @@ class HaeraeDatasetV1(BaseDataset):
             subset_list = [self.subset]
 
         results: List[Dict[str, Any]] = []
+        print(self.limit)
+        print(subset_list)
         for subset_name in subset_list:
             items = split_data.get(subset_name, [])
             if not isinstance(items, list):
@@ -112,8 +113,13 @@ class HaeraeDatasetV1(BaseDataset):
                 # dev/limit 처리
                 if getattr(self, "dev_mode", False) and added >= 2:
                     break
-                if getattr(self, "limit", None) and added >= self.limit:
-                    break
+                if subset_name == "reading_comprehension":
+                    if getattr(self, "limit", None) and added >= 100:
+                        break
+                else:
+                    if getattr(self, "limit", None) and added >= self.limit:
+                        break
+                
 
         return results
 

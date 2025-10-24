@@ -38,6 +38,8 @@ def precise_wikiqa_runner(
         limit: int = None,
         evaluator_abstention_model: str | None = None,
         evaluator_halu_model: str | None = None,
+        backend_kwargs: dict | None = None,
+        output_base_dir: str = f"./output/{time.strftime('%Y%m%d%H%M%S')}",
 ):
     """
     Args:
@@ -70,6 +72,7 @@ def precise_wikiqa_runner(
         model_path=model,
         all_prompts=QAs_df,
         inference_method=inference_method, \
+        backend_kwargs=backend_kwargs,
         max_tokens=max_inference_tokens,
         max_workers=inf_batch_size)
     print('Inference completed')
@@ -81,7 +84,7 @@ def precise_wikiqa_runner(
         pq.abtention_evaluator = evaluator_abstention_model
     if evaluator_halu_model:
         pq.halu_evaluator = evaluator_halu_model
-    eval_result = pq.run_eval()
+    eval_result, task_path = pq.run_eval()
     print(f'{TASKNAME} Evaluation completed')
 
     _log_to_wandb(pd.DataFrame([eval_result]), TASKNAME)
@@ -89,7 +92,7 @@ def precise_wikiqa_runner(
     # Weave Evals logging
     try:
         model_name = model.split("/")[-1]
-        gen_path = f"./output/{time.strftime('%Y%m%d%H%M%S')}/{TASKNAME}/{model_name}/generation.jsonl"
+        gen_path = f"./output/{TASKNAME}/{model_name}/generation.jsonl"
         os.makedirs(os.path.dirname(gen_path), exist_ok=True)
         gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
         # zip evaluation flags per index
@@ -149,6 +152,7 @@ def longwiki_runner(
         max_tokens: int = 1024,
         max_workers: int = 64,
         limit: int = None,
+        backend_kwargs: dict | None = None,
 ):
     TASKNAME = "longwiki"
 
@@ -174,6 +178,7 @@ def longwiki_runner(
                 model_path=model,
                 all_prompts=all_prompts,
                 inference_method=inference_method,
+                backend_kwargs=backend_kwargs,
                 max_tokens=max_tokens,
                 max_workers=max_workers,
                 )
@@ -247,11 +252,12 @@ def non_mixed_entity_runner(
         eval_overwrite=False,
         output_base_dir=f"./output/{time.strftime('%Y%m%d%H%M%S')}",
         prompt_path=None,
-        tested_model='meta-llama/Llama-3.1-405B-Instruct-FP8',
+        tested_model='meta-llama/Llama-3.1-70B-Instruct-FP8',
         N=2000,
         seed=1,
         inference_method='together',
         limit: int = None,
+        backend_kwargs: dict | None = None,
         evaluator_model: str = "gpt-4o",
 ):
     # set variables
@@ -263,7 +269,7 @@ def non_mixed_entity_runner(
 
     # run inference
     inference = NonsenseMixedInference(TASKNAME, output_base_dir, tested_model, prompt_path, seed,
-                                       inference_method, limit=limit)
+                                       inference_method, limit=limit, backend_kwargs=backend_kwargs)
     if infer_overwrite:
         inference.remove_existing_files()
     inference.run_inference()
@@ -324,12 +330,13 @@ def non_generated_entity_runner(
         inference_method='together',
         seed=0,
         limit: int = None,
+        backend_kwargs: dict | None = None,
         evaluator_model: str = "gpt-4o",
 ):
     if prompt_path == None:
         raise Exception("No prompt path provided")
 
-    inference = NonsenseNameInference(output_base_dir, generate_model, prompt_path, seed, inference_method, limit=limit)
+    inference = NonsenseNameInference(output_base_dir, generate_model, prompt_path, seed, inference_method, limit=limit, backend_kwargs=backend_kwargs)
     if infer_overwrite:
         inference.remove_existing_files()
     inference.run_inference()

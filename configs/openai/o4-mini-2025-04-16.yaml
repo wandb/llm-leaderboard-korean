@@ -1,0 +1,9 @@
+model:
+  name: openai
+  params:
+    model_name: o4-mini-2025-04-16
+    api_base: https://api.openai.com/v1
+    batch_size: 32
+    temperature: 1
+    max_completion_tokens: 2048
+  release_date: "2025-04-16"
