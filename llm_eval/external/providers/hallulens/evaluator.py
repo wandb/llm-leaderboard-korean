@@ -87,8 +87,9 @@ def run_hallulens_from_configs(
     #     'generated_entities': '/Users/hyunwoooh/workspace/llm-leaderboard-korean/artifacts/non_entity_refusal:v0/generated_entity_1950.csv'
     # }
 
-    # 모델 문자열 결정
+    # 모델 문자열 결정 및 백엔드 인자 준비
     hl_model = (model_params or {}).get("model_name") or model_name
+    backend_kwargs = dict(model_params or {})
 
     # subset 순회 (리스트가 아니면 paths_dict 키 기준 실행)
     if isinstance(subset, list):
@@ -111,6 +112,7 @@ def run_hallulens_from_configs(
                 inference_method=inference_method_global,
                 evaluator_abstention_model=abstention_eval_model,
                 evaluator_halu_model=hallucination_eval_model,
+                backend_kwargs=backend_kwargs,
             )
         elif subset_name == "longwiki":
             result_df = longwiki_runner(
@@ -121,6 +123,7 @@ def run_hallulens_from_configs(
                 claim_extractor=longwiki_claim_extractor or hl_model,
                 abstain_evaluator=longwiki_abstain_evaluator or hl_model,
                 verifier=longwiki_verifier or hl_model,
+                backend_kwargs=backend_kwargs,
             )
         elif subset_name == "mixed_entities":
             result_df = non_mixed_entity_runner(
@@ -129,6 +132,7 @@ def run_hallulens_from_configs(
                 limit=dataset_params.get("limit"),
                 inference_method=inference_method_global,
                 evaluator_model=abstention_eval_model or "gpt-4o",
+                backend_kwargs=backend_kwargs,
             )
         elif subset_name == "generated_entities":
             result_df = non_generated_entity_runner(
@@ -137,6 +141,7 @@ def run_hallulens_from_configs(
                 limit=dataset_params.get("limit"),
                 inference_method=inference_method_global,
                 evaluator_model=abstention_eval_model or "gpt-4o",
+                backend_kwargs=backend_kwargs,
             )
         else:
             logger.warning(f"[HalluLens] Unknown subtask '{subset_name}', skipping.")

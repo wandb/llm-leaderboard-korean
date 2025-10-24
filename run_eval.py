@@ -22,6 +22,9 @@ def run_all_from_configs(
     with open(model_config_path, "r", encoding="utf-8") as f:
         model_cfg = yaml.safe_load(f) or {}
     model_name: Optional[str] = model_cfg.get("model").get("params").get("model_name")
+    release_date: Optional[str] = model_cfg.get("model").get("release_date")
+    size_category: Optional[str] = model_cfg.get("model").get("size_category")
+    model_size: Optional[str] = model_cfg.get("model").get("model_size")
 
     # Load base to extract wandb settings
     with open(base_config_path, "r", encoding="utf-8") as f:
@@ -39,14 +42,13 @@ def run_all_from_configs(
         target_lang=target_lang,
     )
 
-    WandbConfigSingleton.log_overall_leaderboard_table(model_name, selected_datasets)
+    WandbConfigSingleton.log_overall_leaderboard_table(model_name, release_date, size_category, model_size, selected_datasets)
 
     run.finish()
     return result
 
 
 if __name__ == "__main__":
-    # make parser
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", type=str, default=None)
@@ -59,7 +61,7 @@ if __name__ == "__main__":
         selected_datasets = [args.dataset]
     else:
         selected_datasets = ["mt_bench", "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "korean_parallel_corpora", "mrcr_2_needles", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi", "aime2025", "hrm8k", "bfcl"]#, "swe_bench_verified"]
-        # selected_datasets = ["ifeval_ko", "kobalt_700"]#, "bfcl"]
+        # selected_datasets = ["mt_bench", "halluLens", "hle", "aime2025", "hrm8k", "bfcl"]#, "swe_bench_verified"]
 
     result = run_all_from_configs(
         base_config_path=f"configs/{args.base_config_path}",

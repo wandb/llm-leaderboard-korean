@@ -64,7 +64,17 @@ def get_args():
 
 def build_handler(model_name, temperature):
     config = MODEL_CONFIG_MAPPING[model_name]
-    handler = config.model_handler(
+
+    # Centralized runtime override: if adapter is enabled and model is prompting (non-FC),
+    # route to LLMEval adapter without touching model_config entries.
+    use_adapter = os.getenv("BFCL_USE_LLMEVAL_ADAPTER") == "1" and not getattr(config, "is_fc_model", False)
+    if use_adapter:
+        from bfcl_eval.model_handler.api_inference.llmeval_adapter import LLMEvalBFCLHandler
+        handler_cls = LLMEvalBFCLHandler
+    else:
+        handler_cls = config.model_handler
+
+    handler = handler_cls(
         model_name=model_name,
         temperature=temperature,
         registry_name=model_name,

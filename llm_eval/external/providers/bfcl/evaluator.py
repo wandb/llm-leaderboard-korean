@@ -3,6 +3,7 @@ import yaml
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 from types import SimpleNamespace
+import os
 
 # Add the package root (parent of this file) to sys.path for import safety
 bfcl_provider_dir = Path(__file__).parent
@@ -107,6 +108,10 @@ def run_bfcl_from_configs(
         num_threads_cfg: Optional[int] = bfcl_params.get("num_threads") or ds_cfg.get("num_threads")
         num_threads = int(num_threads_cfg) if num_threads_cfg is not None else 32
 
+        # Pass llm-eval model config path to adapter via env var
+        os.environ["LLM_EVAL_MODEL_CONFIG"] = model_config_path
+        # Enable llm-eval adapter for BFCL
+
         args = SimpleNamespace(
             model=[bfcl_model],
             test_category=test_categories,
@@ -173,6 +178,12 @@ def run_bfcl_from_configs(
                 },
             )
         }
+
+    # remove temporary result and score directories
+    if testmode:
+        import shutil
+        shutil.rmtree(result_dir)
+        shutil.rmtree(score_dir)
 
     # Return aggregate result (actual scores are logged in the respective runner)
     return {

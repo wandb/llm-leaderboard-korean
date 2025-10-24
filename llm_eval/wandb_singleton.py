@@ -32,7 +32,7 @@ class WandbConfigSingleton:
     @classmethod
     def download_artifact(cls, dataset_name: str):
         api = wandb.Api()
-        if "mt_bench" in dataset_name:
+        if "mtbench" in dataset_name:
             artifact = api.artifact(f"wandb-korea/korean-llm-leaderboard/{dataset_name}:latest")
             artifact_path = artifact.download()
             return artifact_path
@@ -45,15 +45,16 @@ class WandbConfigSingleton:
         cls._instance.leaderboard_tables[table_name] = leaderboard_table
 
     @classmethod
-    def log_overall_leaderboard_table(cls, model_name: str, dataset_names: List[str]) -> wandb.Table:
+    def log_overall_leaderboard_table(cls, model_name: str, release_date: str, size_category: str, model_size: str, dataset_names: List[str]) -> wandb.Table:
         final_score_key_dict = {
             "mt_bench": {
-                "columns": ["model_name", "roleplay/average_judge_score", "humanities/average_judge_score", "writing/average_judge_score", "reasoning/average_judge_score"],
+                "columns": ["model_name", "roleplay/average_judge_score", "humanities/average_judge_score", "writing/average_judge_score", "reasoning/average_judge_score", "coding/average_judge_score"],
                 "mapper": {
                     "roleplay/average_judge_score": "GLP_표현",
                     "humanities/average_judge_score": "GLP_표현",
                     "writing/average_judge_score": "GLP_표현",
-                    "reasoning/average_judge_score": "GLP_논리적추론"
+                    "reasoning/average_judge_score": "GLP_논리적추론",
+                    "coding/average_judge_score": "GLP_코딩능력"
                 }
             },
             "hle": 
@@ -213,10 +214,15 @@ class WandbConfigSingleton:
             table = pd.merge(table, new_table, left_index=True, right_index=True)
         table.columns = table.columns.str.replace(r'(_[xy]$)|(\.\d+$)', '', regex=True)
         table_mean = table.T.groupby(table.columns).mean().T
-        glp_columns = table_mean.columns[table_mean.columns.str.contains('GLP_')]
-        alt_columns = table_mean.columns[table_mean.columns.str.contains('ALT_')]
         table_mean['범용언어성능(GLP)_AVG'] = weighted_average(table_mean, GLP_COLUMN_WEIGHT)
         table_mean['가치정렬성능(ALT)_AVG'] = weighted_average(table_mean, ALT_COLUMN_WEIGHT)
-        leaderboard_table = wandb.Table(dataframe=table_mean.reset_index())
+        table_mean['TOTAL_AVG'] = (table_mean['범용언어성능(GLP)_AVG'] + table_mean['가치정렬성능(ALT)_AVG']) / 2
+        table_mean['release_date'] = release_date
+        table_mean['size_category'] = 'None' if size_category is None else size_category
+        table_mean['model_size'] = 'None' if model_size is None else model_size
+        table_mean = table_mean.reset_index()
+        table_mean = table_mean[['model_name', 'size_category', 'TOTAL_AVG', '범용언어성능(GLP)_AVG', '가치정렬성능(ALT)_AVG']+list(GLP_COLUMN_WEIGHT.keys())+list(ALT_COLUMN_WEIGHT.keys())]
+        
+        leaderboard_table = wandb.Table(dataframe=table_mean)
         cls._instance.run.log({"leaderboard_table": leaderboard_table})
         # return leaderboard_table

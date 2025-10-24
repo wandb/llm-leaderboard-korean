@@ -1,0 +1,9 @@
+model:
+  name: openai
+  params:
+    model_name: qwen-plus-2025-09-11
+    api_base: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+    batch_size: 32
+    max_tokens: 1024
+    temperature: 0.0
+  release_date: "2025-09-11"

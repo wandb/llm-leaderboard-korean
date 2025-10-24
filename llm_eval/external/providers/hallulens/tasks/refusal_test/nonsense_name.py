@@ -19,13 +19,14 @@ def remove_file(file_path):
 
 class NonsenseNameInference:
     """method = together, openai, vllm, custom"""
-    def __init__(self, output_base_dir, generate_model, prompt_path, seed, method='together', limit=None):
+    def __init__(self, output_base_dir, generate_model, prompt_path, seed, method='together', limit=None, backend_kwargs=None):
         self.output_base_dir = output_base_dir
         self.generate_model = generate_model
         self.inference_method = method
         self.prompt_path = prompt_path
         self.seed = seed
         self.limit = limit
+        self.backend_kwargs = backend_kwargs or {}
         self.TASKNAME = prompt_path.split('/')[-1].replace('_all_not_exist.csv', '') #  f"{seed}_{BUSINESS_N}_{EVENT_N}_{PRODUCT_N}"
         print('INFER TASKNAME', self.TASKNAME)
     
@@ -52,7 +53,8 @@ class NonsenseNameInference:
                     all_prompts=all_prompts, 
                     inference_method=self.inference_method, 
                     max_tokens=256, 
-                    base_path=self.output_base_dir)
+                    base_path=self.output_base_dir,
+                    backend_kwargs=self.backend_kwargs)
         print(TASKNAME, 'Inference completed')
 
     def remove_existing_files(self):
