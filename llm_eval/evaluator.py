@@ -23,6 +23,8 @@ from llm_eval.utils.prompt_template import (DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
 from llm_eval.utils.util import (  # _load_function for dynamic imports
     EvaluationResult, _load_function)
 
+import weave
+
 # Logger for this Evaluator.py module
 logger = get_logger(name=__name__, level=logging.INFO)
 
@@ -203,6 +205,7 @@ class Evaluator:
         if use_multi:
             logger.info("Configuring MultiModel due to specified judge_model or reward_model.")
             multi_config = {
+                "model_name": current_model_params['model_name'],
                 "generate_model": {"name": model_backend_name, "params": current_model_params.copy()} if model_backend_name else None,
                 "judge_model": {"name": judge_backend_name, "params": judge_params or {}} if judge_backend_name else None,
                 "reward_model": {"name": reward_backend_name, "params": reward_params or {}} if reward_backend_name else None,
@@ -251,6 +254,171 @@ class Evaluator:
                 }
             )
 
+
+def run_multiple_from_configs(
+    base_config_path: str,
+    model_config_path: str,
+    selected_datasets: Optional[List[str]] = None,
+    *,
+    language_penalize: Optional[bool] = None,
+    target_lang: Optional[str] = None,
+) -> Dict[str, EvaluationResult]:
+    """
+    Load two YAML configs (base + model) and run multiple benchmarks sequentially
+    for a single model. Dataset schemas and evaluation functions stay unchanged.
+
+    - base_config.yaml: contains global settings like wandb/testmode and per-dataset
+      entries (split, subset, params, evaluation.method, evaluation.params ...)
+    - model_config.yaml: contains the model backend and its params
+
+    Args:
+        base_config_path: Path to base config YAML with multiple dataset blocks.
+        model_config_path: Path to model config YAML describing a single model.
+        selected_datasets: Optional list of dataset keys to run; if None, run all
+                           dataset blocks found in base config (excluding reserved keys).
+        language_penalize: Optional override for language penalizer.
+        target_lang: Optional override for target language code.
+
+    Returns:
+        Dict[str, EvaluationResult]: Mapping from dataset key to its EvaluationResult.
+    """
+    logger.info(f"Loading base config from {base_config_path} and model config from {model_config_path}")
+
+    with open(base_config_path, "r", encoding="utf-8") as f:
+        base_cfg = yaml.safe_load(f) or {}
+    with open(model_config_path, "r", encoding="utf-8") as f:
+        model_cfg = yaml.safe_load(f) or {}
+
+    # Extract global configs
+    wandb_params: Dict[str, Any] = ((base_cfg.get("wandb") or {}).get("params") or {})
+    testmode: bool = bool(base_cfg.get("testmode", False))
+
+    # Model configuration
+    model_block: Dict[str, Any] = model_cfg.get("model") or {}
+    model_name: Optional[str] = model_block.get("name")
+    model_params: Dict[str, Any] = model_block.get("params") or {}
+
+    if not model_name:
+        raise ValueError("model_config.yaml must contain 'model.name'")
+
+    # Determine which dataset keys to iterate
+    reserved_keys = {"wandb", "testmode"}
+    all_dataset_keys = [k for k in base_cfg.keys() if k not in reserved_keys]
+    if selected_datasets is not None:
+        dataset_keys = [k for k in all_dataset_keys if k in set(selected_datasets)]
+    else:
+        dataset_keys = all_dataset_keys
+
+    if not dataset_keys:
+        logger.warning("No dataset blocks found to run. Check base_config.yaml contents or selected_datasets filter.")
+
+    # Defaults from optional overrides
+    lang_penalize_final = True if language_penalize is None else bool(language_penalize)
+    target_lang_final = target_lang if target_lang is not None else "ko"
+
+    results: Dict[str, EvaluationResult] = {}
+
+    evaluator = Evaluator(
+        default_model_backend=model_name,
+        default_evaluation_method="string_match",  # per-dataset override will apply
+        default_split="test",
+    )
+
+    for ds_key in dataset_keys:
+        ds_cfg = base_cfg.get(ds_key) or {}
+
+        subset = ds_cfg.get("subset")
+        split = ds_cfg.get("split", "test")
+        limit = ds_cfg.get("limit", None)
+
+        # dataset-specific params
+        dataset_params = ds_cfg.get("params") or {}
+        # Respect global testmode flag if dataset supports 'dev' param
+        dataset_params = dict(dataset_params)
+        if "dev" not in dataset_params:
+            # most datasets in this repo accept 'dev' kwarg (popped in __init__)
+            dataset_params["dev"] = bool(testmode)
+        if "limit" not in dataset_params:
+            dataset_params["limit"] = limit
+
+        # evaluation configuration
+        eval_cfg = ds_cfg.get("evaluation") or {}
+        eval_method = None
+        eval_params: Dict[str, Any] = {}
+        if isinstance(eval_cfg, dict):
+            eval_method = eval_cfg.get("method")
+            eval_params = eval_cfg.get("params") or {}
+        # Handle malformed cases where 'method' may have been at wrong indentation level
+        if eval_method is None and isinstance(ds_cfg.get("method"), str):
+            eval_method = ds_cfg.get("method")
+
+        # Fallback default
+        if not eval_method:
+            eval_method = "string_match"
+
+        logger.info(f"Running dataset '{ds_key}' with split='{split}', subset='{subset}', eval='{eval_method}'")
+
+        # Branch out HalluLens to external evaluator module
+        if str(ds_key).lower() == "hallulens":
+            from llm_eval.external.providers.hallulens.evaluator import run_hallulens_from_configs
+            result_map = run_hallulens_from_configs(
+                base_config_path=base_config_path,
+                model_config_path=model_config_path,
+            )
+            results.update(result_map)
+            continue
+
+        # Branch out SWE-bench Verified to external evaluator module
+        if str(ds_key).lower() == "swe_bench_verified":
+            from llm_eval.external.providers.swe_bench_verified.evaluator import (
+                run_swebench_verified_from_configs,
+            )
+            result_map = run_swebench_verified_from_configs(
+                base_config_path=base_config_path,
+                model_config_path=model_config_path,
+            )
+            results.update(result_map)
+            continue
+
+        # Branch out BFCL to external evaluator module
+        if str(ds_key).lower() == "bfcl":
+            from llm_eval.external.providers.bfcl.evaluator import run_bfcl_from_configs
+            result_map = run_bfcl_from_configs(
+                base_config_path=base_config_path,
+                model_config_path=model_config_path,
+            )
+            results.update(result_map)
+            continue
+
+        # If mt_bench_judge (or llm_judge) embeds judge config in evaluation.params, honor it
+        judge_name = None
+        judge_params = None
+        if 'judge' in str(eval_method).lower():
+            judge_name = eval_params.get("judge_backend_name")
+            judge_params = {k: v for k, v in eval_params.items() if k != "judge_backend_name"}
+
+        # Merge dataset-specific model params override if provided
+        ds_model_params_override = ds_cfg.get("model_params") or {}
+        merged_model_params = {**model_params, **ds_model_params_override}
+
+        result = evaluator.run(
+            model=model_name,
+            judge_model=judge_name,
+            dataset=ds_key,
+            subset=subset,
+            split=split,
+            evaluation_method=eval_method,
+            dataset_params=dataset_params,
+            model_params=merged_model_params,
+            judge_params=judge_params,
+            evaluator_params=eval_params,
+            wandb_params=wandb_params,
+            language_penalize=lang_penalize_final,
+            target_lang=target_lang_final,
+        )
+        results[ds_key] = result
+
+    return results
 
 def run_from_config(config_path: str) -> EvaluationResult:
     """Run the evaluation pipeline using a YAML/JSON configuration file.

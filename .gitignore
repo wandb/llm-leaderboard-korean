@@ -15,6 +15,12 @@ __pycache__/
 # BFCL dataset folder
 llm_eval/datasets/bfcl/
 
+# HalluLens output folder
+output/
+
 # WandB
 wandb/
 artifacts/
+
+# SWE-bench Verified
+logs/

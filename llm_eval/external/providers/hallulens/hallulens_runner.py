@@ -10,6 +10,9 @@ import pandas as pd
 import os
 import json
 from pathlib import Path
+import wandb
+import weave
+import time
 
 from llm_eval.external.providers.hallulens.tasks.longwiki.longwiki_main import run_eval
 
@@ -19,6 +22,8 @@ from llm_eval.external.providers.hallulens.tasks.refusal_test.nonsense_mixed_ent
     NonsenseMixedInference
 from llm_eval.external.providers.hallulens.tasks.refusal_test.round_robin_nonsense_name import NonsenseNameEval, \
     NonsenseNameInference
+from typing import Any, Dict, List
+from llm_eval.wandb_controller import WeaveEvalsController
 
 
 HALLULENS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +35,11 @@ def precise_wikiqa_runner(
         max_inference_tokens: int = 256,
         inf_batch_size: int = 64,
         N: int = 5000,
+        limit: int = None,
+        evaluator_abstention_model: str | None = None,
+        evaluator_halu_model: str | None = None,
+        backend_kwargs: dict | None = None,
+        output_base_dir: str = f"./output/{time.strftime('%Y%m%d%H%M%S')}",
 ):
     """
     Args:
@@ -46,8 +56,15 @@ def precise_wikiqa_runner(
 
     QAs_df = None
 
-    QAs = [line for line in jsonlines.open(qa_dataset_path, 'r')][:N]
+    import os
+    seed = int(os.environ.get('RANDOM_SEED', '42'))
+    # load all then apply limit if provided; otherwise keep legacy N behavior
+    QAs = [line for line in jsonlines.open(qa_dataset_path, 'r')]
     QAs_df = pd.DataFrame(QAs)
+    if limit is not None and len(QAs_df) > limit:
+        QAs_df = QAs_df.sample(n=limit, random_state=seed)
+    elif N is not None and len(QAs_df) > N:
+        QAs_df = QAs_df.head(N)
 
     print(f"Starting Inference for [{model}], Testset_N: {QAs_df.shape}")
     exp.run_exp(
@@ -55,15 +72,68 @@ def precise_wikiqa_runner(
         model_path=model,
         all_prompts=QAs_df,
         inference_method=inference_method, \
+        backend_kwargs=backend_kwargs,
         max_tokens=max_inference_tokens,
         max_workers=inf_batch_size)
     print('Inference completed')
 
     print(f"Starting Evaluation for {model}")
-    eval_result = PreciseQAEval(model_path=model, TASKNAME=TASKNAME).run_eval()
+    # evaluator 모델을 동적으로 지정: PreciseQAEval 내부 속성 재설정
+    pq = PreciseQAEval(model_path=model, TASKNAME=TASKNAME)
+    if evaluator_abstention_model:
+        pq.abtention_evaluator = evaluator_abstention_model
+    if evaluator_halu_model:
+        pq.halu_evaluator = evaluator_halu_model
+    eval_result, task_path = pq.run_eval()
     print(f'{TASKNAME} Evaluation completed')
 
     _log_to_wandb(pd.DataFrame([eval_result]), TASKNAME)
+
+    # Weave Evals logging
+    try:
+        model_name = model.split("/")[-1]
+        gen_path = f"./output/{TASKNAME}/{model_name}/generation.jsonl"
+        os.makedirs(os.path.dirname(gen_path), exist_ok=True)
+        gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
+        # zip evaluation flags per index
+        abstentions: List[bool] = eval_result.get("abstantion", []) or []
+        halus: List[bool] = eval_result.get("halu_test_res", []) or []
+        samples: List[Dict[str, Any]] = []
+        for i, g in enumerate(gens):
+            ev: Dict[str, Any] = {}
+            if i < len(abstentions):
+                ev["refusal"] = bool(abstentions[i])
+            if i < len(halus):
+                ev["is_hallucinated"] = bool(halus[i])
+            sample = {
+                "input": g.get("prompt", ""),
+                "prediction": g.get("generation", ""),
+                "reference": g.get("answer", None),
+                "evaluation": ev,
+            }
+            samples.append(sample)
+
+        metrics = {
+            k: v for k, v in eval_result.items() if isinstance(v, (int, float))
+        }
+        WeaveEvalsController.log(
+            dataset_name=TASKNAME,
+            subset=None,
+            split="test",
+            model_backend_name=inference_method,
+            model_name=model,
+            scaling_method_name=None,
+            evaluation_method_name="HalluLens-PreciseQAEval",
+            language_penalize=False,
+            target_lang="ko",
+            samples=samples,
+            metrics=metrics,
+            wandb_params={},
+        )
+    except Exception as e:
+        print(f"[Weave] precise_wikiqa logging skipped: {e}")
+    
+    return pd.DataFrame([eval_result])
 
 
 
@@ -80,7 +150,9 @@ def longwiki_runner(
         N: int = 250,
         k: int = 32,
         max_tokens: int = 1024,
-        max_workers: int = 64
+        max_workers: int = 64,
+        limit: int = None,
+        backend_kwargs: dict | None = None,
 ):
     TASKNAME = "longwiki"
 
@@ -92,9 +164,13 @@ def longwiki_runner(
     model_name = model.split("/")[-1]
 
     # RUN INFERENCE
+    seed = int(os.environ.get('RANDOM_SEED', '42'))
     all_prompts = pd.read_json(benchmark_dataset_path, lines=True)
-
-    assert len(all_prompts) == N
+    # apply limit if provided, else keep legacy N semantics
+    if limit is not None and len(all_prompts) > limit:
+        all_prompts = all_prompts.sample(n=limit, random_state=seed)
+    elif N is not None and len(all_prompts) > N:
+        all_prompts = all_prompts.head(N)
 
     print(f"Start Inference for {model} ", "dynamic", N)
 
@@ -102,6 +178,7 @@ def longwiki_runner(
                 model_path=model,
                 all_prompts=all_prompts,
                 inference_method=inference_method,
+                backend_kwargs=backend_kwargs,
                 max_tokens=max_tokens,
                 max_workers=max_workers,
                 )
@@ -131,17 +208,57 @@ def longwiki_runner(
     _log_to_wandb(pd.DataFrame([eval_result]), TASKNAME)
     _log_to_wandb(overall_result_df, TASKNAME + "_detailed" + model_name)
 
+    # Weave Evals logging
+    try:
+        # Build per-sample entries from overall_result_df
+        samples: List[Dict[str, Any]] = []
+        for _, row in (overall_result_df or pd.DataFrame()).iterrows():
+            eval_fields: Dict[str, Any] = {}
+            for key in ["is_supported", "precision", "recall", "f1", "k", "n_claims"]:
+                if key in row and pd.notna(row[key]):
+                    eval_fields[key] = row[key]
+            sample = {
+                "input": row.get("prompt", ""),
+                "prediction": str(row.get("sentence", "")),
+                "reference": row.get("claim", None),
+                "evaluation": eval_fields,
+            }
+            samples.append(sample)
+
+        metrics = {k: v for k, v in (eval_result or {}).items() if isinstance(v, (int, float))}
+        WeaveEvalsController.log(
+            dataset_name=TASKNAME,
+            subset="dynamic",
+            split="test",
+            model_backend_name=inference_method,
+            model_name=model,
+            scaling_method_name=None,
+            evaluation_method_name="HalluLens-LongWiki-FactHalu",
+            language_penalize=False,
+            target_lang="ko",
+            samples=samples,
+            metrics=metrics,
+            wandb_params={},
+        )
+    except Exception as e:
+        print(f"[Weave] longwiki logging skipped: {e}")
+
+    return pd.DataFrame([eval_result])
+
 
 def non_mixed_entity_runner(
         exp='nonsense_all',
         infer_overwrite=False,
         eval_overwrite=False,
-        output_base_dir="output",
+        output_base_dir=f"./output/{time.strftime('%Y%m%d%H%M%S')}",
         prompt_path=None,
-        tested_model='meta-llama/Llama-3.1-405B-Instruct-FP8',
+        tested_model='meta-llama/Llama-3.1-70B-Instruct-FP8',
         N=2000,
         seed=1,
-        inference_method='together'
+        inference_method='together',
+        limit: int = None,
+        backend_kwargs: dict | None = None,
+        evaluator_model: str = "gpt-4o",
 ):
     # set variables
     EXP = exp  # nonsense_medicine
@@ -152,7 +269,7 @@ def non_mixed_entity_runner(
 
     # run inference
     inference = NonsenseMixedInference(TASKNAME, output_base_dir, tested_model, prompt_path, seed,
-                                       inference_method)
+                                       inference_method, limit=limit, backend_kwargs=backend_kwargs)
     if infer_overwrite:
         inference.remove_existing_files()
     inference.run_inference()
@@ -161,45 +278,111 @@ def non_mixed_entity_runner(
     if 'gemma' in tested_model:
         med_safety_filtered_model = True
         eval = NonsenseMixedEval(TASKNAME, output_base_dir, tested_model, prompt_path,
-                                 med_safety_filtered_model)
+                                 med_safety_filtered_model, evaluator=evaluator_model)
     else:
-        eval = NonsenseMixedEval(TASKNAME, output_base_dir, tested_model, prompt_path)
+        eval = NonsenseMixedEval(TASKNAME, output_base_dir, tested_model, prompt_path, evaluator=evaluator_model)
     res, task_path = eval.run_eval(eval_overwrite)
-    print(res)
 
     # Log to evaluation result to wandb
-    _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
+    result_df = _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
 
-    return res
+    # Weave Evals logging
+    try:
+        gen_path = f"{task_path}/generation.jsonl"
+        gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
+        refusals: List[bool] = res.get("refusal_eval_raw", []) or []
+        samples: List[Dict[str, Any]] = []
+        for i, g in enumerate(gens):
+            ev: Dict[str, Any] = {"refusal": bool(refusals[i])} if i < len(refusals) else {}
+            samples.append({
+                "input": g.get("prompt", ""),
+                "prediction": g.get("generation", ""),
+                "reference": None,
+                "evaluation": ev,
+            })
+        metrics = {k: v for k, v in (res or {}).items() if isinstance(v, (int, float))}
+        WeaveEvalsController.log(
+            dataset_name=inference.TASKNAME,
+            subset=None,
+            split="test",
+            model_backend_name=inference_method,
+            model_name=tested_model,
+            scaling_method_name=None,
+            evaluation_method_name="HalluLens-NonMixedEntity",
+            language_penalize=False,
+            target_lang="ko",
+            samples=samples,
+            metrics=metrics,
+            wandb_params={},
+        )
+    except Exception as e:
+        print(f"[Weave] non_mixed_entity logging skipped: {e}")
+
+    return result_df
 
 
 def non_generated_entity_runner(
         infer_overwrite=False,
         eval_overwrite=False,
-        output_base_dir="output",
+        output_base_dir=f"./output/{time.strftime('%Y%m%d%H%M%S')}",
         prompt_path=None,
         generate_model='meta-llama/Llama-3.1-8B-Instruct',
         inference_method='together',
-        seed=0
+        seed=0,
+        limit: int = None,
+        backend_kwargs: dict | None = None,
+        evaluator_model: str = "gpt-4o",
 ):
     if prompt_path == None:
         raise Exception("No prompt path provided")
 
-    inference = NonsenseNameInference(output_base_dir, generate_model, prompt_path, seed, inference_method)
+    inference = NonsenseNameInference(output_base_dir, generate_model, prompt_path, seed, inference_method, limit=limit, backend_kwargs=backend_kwargs)
     if infer_overwrite:
         inference.remove_existing_files()
     inference.run_inference()
 
-    eval = NonsenseNameEval(output_base_dir, generate_model, prompt_path)
+    eval = NonsenseNameEval(output_base_dir, generate_model, prompt_path, evaluator=evaluator_model)
     res, task_path = eval.run_eval(eval_overwrite)
     N = len(res['refusal_eval_raw'])
     refusal_rate = sum(res['refusal_eval_raw']) / N * 100
     print(f"[{res['model']}] || Refusal rate: {refusal_rate} || N = {N}")
 
     # Log to evaluation result to wandb
-    _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
+    result_df = _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
 
-    return res
+    # Weave Evals logging
+    try:
+        gen_path = f"{task_path}/generation.jsonl"
+        gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
+        refusals: List[bool] = res.get("refusal_eval_raw", []) or []
+        samples: List[Dict[str, Any]] = []
+        for i, g in enumerate(gens):
+            ev: Dict[str, Any] = {"refusal": bool(refusals[i])} if i < len(refusals) else {}
+            samples.append({
+                "input": g.get("prompt", ""),
+                "prediction": g.get("generation", ""),
+                "reference": None,
+                "evaluation": ev,
+            })
+        metrics = {k: v for k, v in (res or {}).items() if isinstance(v, (int, float))}
+        WeaveEvalsController.log(
+            dataset_name=inference.TASKNAME,
+            subset=None,
+            split="test",
+            model_backend_name=inference_method,
+            model_name=generate_model,
+            scaling_method_name=None,
+            evaluation_method_name="HalluLens-NonGeneratedEntity",
+            language_penalize=False,
+            target_lang="ko",
+            samples=samples,
+            metrics=metrics,
+            wandb_params={},
+        )
+    except Exception as e:
+        print(f"[Weave] non_generated_entity logging skipped: {e}")
+
+    return result_df
 
 
 def _log_non_refusal_result_to_wandb(task_path: str, task_name: str):
@@ -224,13 +407,13 @@ def _log_non_refusal_result_to_wandb(task_path: str, task_name: str):
     # TODO: This evaluation detail log is too large to upload to wandb. If it needs, consider a way to upload it.
     # _log_to_wandb(eval_result_with_prompt_info, f"{score['model']}_{task_name}_detailed")
 
+    return score
+
 
 def _log_to_wandb(result_df: pd.DataFrame, model_task_name: str) -> None:
-    import wandb
     """Log evaluation summary to Weights & Biases if configured."""
+    from llm_eval.wandb_singleton import WandbConfigSingleton
     leaderboard_table = wandb.Table(dataframe=result_df)
-    with wandb.init(
-            project="horangi4-dev-hallulens",
-            name=model_task_name
-    ) as run:
-        run.log({model_task_name: leaderboard_table})
+    WandbConfigSingleton.collect_leaderboard_table(model_task_name, result_df)
+    run = WandbConfigSingleton.get_instance().run
+    run.log({model_task_name+'_leaderboard_table': leaderboard_table})
