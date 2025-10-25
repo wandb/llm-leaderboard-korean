@@ -53,12 +53,18 @@ class PreciseQAEval:
             with open(abs_path, "r") as f:
                 abstains_eval_raw = [json.loads(line)["eval_res"] for line in f]
         else:
+            # Route by evaluator name: llama* -> together, gpt-5* -> openai
+            eval_name = str(evaluator).lower()
+            if "gpt" in eval_name:
+                gen_fn = lambda p: lm.openai_generate(p, evaluator)
+            else:
+                gen_fn = lambda p: lm.generate(p, evaluator)
             abstains_eval_raw = thread_map(
-                lambda p: lm.generate(p, evaluator),
+                gen_fn,
                 abstain_prompts,
                 max_workers=32,
-                desc=f"using {evaluator}")
-
+                desc=f"using {evaluator}"
+            )
             eval_utils.save_eval_raw(abstains_eval_raw, abs_path)
 
         ABSTAIN_JSON_KEY = 'is_abstaining'
@@ -85,30 +91,53 @@ class PreciseQAEval:
             ) for _, g in self.test_df.iterrows()
         ]
 
-        if evaluator == "meta-llama/Llama-3.1-70B-Instruct":
-            halu_eval_raw = thread_map(
-                lambda p: lm.generate(p, evaluator),
-                halu_prompts,
-                max_workers=8,
-                desc=f"using {evaluator}"
-            )
+        eval_name = str(evaluator).lower()
+        if "gpt" in eval_name:
+            gen_fn = lambda p: lm.openai_generate(p, evaluator)
         else:
-            raise ValueError(f"Invalid evaluator: {evaluator}")
+            gen_fn = lambda p: lm.generate(p, evaluator)
+        halu_eval_raw = thread_map(
+            gen_fn,
+            halu_prompts,
+            max_workers=8,
+            desc=f"using {evaluator}"
+        )
 
         return halu_eval_raw
 
     def process_res(self, abstantion_res_raw, halu_eval_raw):
-        abstantion_res = [json.loads(x)['is_abstaining'] for x in abstantion_res_raw]
+        abstantion_res = []
+        passed_idx = []
+        for i, x in enumerate(abstantion_res_raw):
+            try:
+                passed_idx.append(i)
+                abstantion_res.append(json.loads(x)['is_abstaining'])
+            except:
+                pass
         halu_test_res = []
-        for txt in halu_eval_raw:
+        for i in passed_idx:
+            txt = halu_eval_raw[i]
             if txt.lower() not in ['correct', 'incorrect', 'unverifiable']: print(txt)
             hallucinated_judge = False if txt.lower() == 'correct' or txt.lower() == 'yes' else True
             halu_test_res.append(hallucinated_judge)
+        # for txt in halu_eval_raw:
+        #     if txt.lower() not in ['correct', 'incorrect', 'unverifiable']: print(txt)
+        #     hallucinated_judge = False if txt.lower() == 'correct' or txt.lower() == 'yes' else True
+        #     halu_test_res.append(hallucinated_judge)
         return abstantion_res, halu_test_res
 
     def run_eval(self):
         abstantion_res, abstantion_raw_gen = self.eval_abstention(self.abtention_evaluator)
         halu_test_raw_gen = self.judge_hallucination(self.halu_evaluator)
+        # # save abstantion_raw_gen as jsonl
+        # with open(f'{self.output_path}/abstantion_raw_gen.jsonl', 'w') as f:
+        #     for abstantion in abstantion_raw_gen:
+        #         f.write(json.dumps({"abstantion_raw_gen": abstantion}) + '\n')
+        
+        # # save halu_eval_raw as jsonl
+        # with open(f'{self.output_path}/halu_eval_raw.jsonl', 'w') as f:
+        #     for halu_eval in halu_test_raw_gen:
+        #         f.write(json.dumps({"halu_eval_raw": halu_eval}) + '\n')
         abstantion_res, halu_test_res = self.process_res(abstantion_raw_gen, halu_test_raw_gen)
 
         not_abstained = sum([1 for x in abstantion_res if x == False])
@@ -136,7 +165,7 @@ class PreciseQAEval:
         }
 
         # save the results
-        res_path = f'output/{self.task_name}/{self.model_name}/eval_results.json'
+        res_path = f'{self.output_path}/eval_results.json'
         with open(res_path, 'w') as f:
             json.dump(res, f, indent=4)
 
@@ -154,4 +183,4 @@ class PreciseQAEval:
         print(f"  False Refusal Rate: {refusal_rate:.3f} %")
         print(f"  Correct Rate: {correct_rate:.3f} %")
         print("-" * 80)
-        return res
+        return res, self.output_path

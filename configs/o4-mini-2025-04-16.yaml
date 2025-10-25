@@ -1,0 +1,11 @@
+model:
+  name: litellm
+  params:
+    model_name: o4-mini-2025-04-16
+    provider: openai
+    batch_size: 32
+    temperature: 1
+    max_completion_tokens: 2048
+  release_date: "2025-04-16"
+  model_size: None
+  size_category: mini

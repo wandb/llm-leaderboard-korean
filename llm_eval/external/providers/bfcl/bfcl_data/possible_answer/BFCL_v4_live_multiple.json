@@ -1,0 +1,30 @@
+{"id": "live_multiple_5-3-0", "ground_truth": [{"get_current_weather": {"location": ["Shanghai, China"], "unit": ["", "metric"]}}]}
+{"id": "live_multiple_17-4-9", "ground_truth": [{"cookbook.search_recipe": {"keyword": ["sikhae"], "cuisine": ["", "Italian"], "max_results": ["", 10]}}]}
+{"id": "live_multiple_34-11-0", "ground_truth": [{"get_news_report": {"location": ["Letterkenny, Ireland"]}}]}
+{"id": "live_multiple_113-44-0", "ground_truth": [{"list_servers": {"server_type": ["mtna"]}}]}
+{"id": "live_multiple_149-58-3", "ground_truth": [{"get_sensor_alerts": {"perPage": [10], "startingAfter": ["", null], "endingBefore": ["", null], "t0": ["", null], "t1": ["", null], "networkId": [["L_579838452023959405"]], "timespan": ["", 31536000], "sensorSerial": ["", null], "triggerMetric": ["", null]}}]}
+{"id": "live_multiple_202-90-4", "ground_truth": [{"adriel_list_projects": {"user_id": ["1234"], "include_completed": ["", false], "sort_order": ["", "asc"]}}]}
+{"id": "live_multiple_311-132-1", "ground_truth": [{"Movies_3_FindMovies": {"directed_by": ["Wes Anderson"], "genre": ["Comedy"], "cast": ["Bill Murray"]}}]}
+{"id": "live_multiple_327-132-17", "ground_truth": [{"Movies_3_FindMovies": {"directed_by": ["Steven Spielberg"], "genre": ["Sci-fi"], "cast": ["James Keane"]}}]}
+{"id": "live_multiple_425-141-14", "ground_truth": [{"Movies_1_BuyMovieTickets": {"movie_name": ["Ad Astra"], "number_of_tickets": [1], "show_date": [""], "location": ["Berkeley, CA"], "show_time": ["21:00"], "show_type": ["", "regular"]}}]}
+{"id": "live_multiple_491-148-1", "ground_truth": [{"Events_3_FindEvents": {"event_type": ["Music"], "city": ["Berkeley, CA"], "date": ["2023-05-12"]}}]}
+{"id": "live_multiple_502-148-12", "ground_truth": [{"Events_3_FindEvents": {"event_type": ["Theater"], "city": ["New York, NY"], "date": ["2023-03-12"]}}]}
+{"id": "live_multiple_504-149-1", "ground_truth": [{"Flights_4_SearchOnewayFlight": {"origin_airport": ["New York"], "destination_airport": ["Los Angeles"], "departure_date": ["2023-04-15"], "seating_class": ["", "Economy"], "number_of_tickets": [1], "airlines": ["Delta Airlines"]}}]}
+{"id": "live_multiple_510-149-7", "ground_truth": [{"Flights_4_SearchOnewayFlight": {"origin_airport": ["JFK"], "destination_airport": ["Portland", "PDX"], "departure_date": ["2023-04-20"], "seating_class": ["", "Economy"], "number_of_tickets": [1], "airlines": ["", "dontcare"]}}]}
+{"id": "live_multiple_528-151-4", "ground_truth": [{"Events_3_FindEvents": {"event_type": ["Theater"], "city": ["New York, NY"], "date": ["", "dontcare"]}}]}
+{"id": "live_multiple_616-159-9", "ground_truth": [{"Events_3_FindEvents": {"event_type": ["Theater"], "city": ["Los Angeles, CA"], "date": ["2023-03-11"]}}]}
+{"id": "live_multiple_657-161-25", "ground_truth": [{"Music_3_PlayMedia": {"track": ["Shape of You"], "artist": ["Ed Sheeran"], "device": ["", "Living room"], "album": ["", "any"]}}]}
+{"id": "live_multiple_672-162-14", "ground_truth": [{"Events_3_FindEvents": {"event_type": ["Music"], "city": ["Los Angeles, CA"], "date": ["2023-10-01"]}}]}
+{"id": "live_multiple_688-164-4", "ground_truth": [{"Movies_3_FindMovies": {"directed_by": ["", "dontcare"], "genre": ["Family"], "cast": ["Carol Sutton"]}}]}
+{"id": "live_multiple_725-166-0", "ground_truth": [{"Services_1_FindProvider": {"city": ["Lafayette, LA"], "is_unisex": ["", false]}}]}
+{"id": "live_multiple_755-169-10", "ground_truth": [{"Media_3_FindMovies": {"genre": ["Fantasy", "Any"], "starring": ["Peter Jackson"]}}]}
+{"id": "live_multiple_815-176-6", "ground_truth": [{"Alarm_1_AddAlarm": {"new_alarm_time": ["07:30"], "new_alarm_name": ["Morning workout"]}}]}
+{"id": "live_multiple_837-178-12", "ground_truth": [{"Music_3_PlayMedia": {"track": ["popular song"], "artist": ["Phan Dinh Tung"], "device": ["Kitchen"], "album": ["Hat Nhan"]}}]}
+{"id": "live_multiple_839-178-14", "ground_truth": [{"Music_3_LookupMusic": {"artist": ["", "dontcare"], "album": ["", "dontcare"], "genre": ["Country"], "year": ["", "dontcare"]}}]}
+{"id": "live_multiple_885-184-2", "ground_truth": [{"Buses_3_FindBus": {"from_city": ["New York, NY"], "to_city": ["Boston, MA"], "departure_date": ["2023-05-15"], "num_passengers": ["", 1], "category": ["", "direct"]}}]}
+{"id": "live_multiple_917-191-5", "ground_truth": [{"view_service_provider_profile": {"professional_id": [7434]}}]}
+{"id": "live_multiple_937-193-0", "ground_truth": [{"acl_api.AclApi.retrieve_projects": {"uuid": ["123e4567-e89b-12d3-a456-426614174000"], "excludeInactive": ["", false], "onlyRoot": ["", false]}}]}
+{"id": "live_multiple_938-194-0", "ground_truth": [{"play_spotify_song": {"query": ["track:Shape of You artist:Ed Sheeran"], "autoplay": [true], "volume": [70]}}]}
+{"id": "live_multiple_963-206-0", "ground_truth": [{"GET_PARCEL_STATE": {"parcelTrackingId": ["TX1234567890"], "includeHistory": ["", false]}}]}
+{"id": "live_multiple_1038-265-0", "ground_truth": [{"detail_project": {"project_name": ["invoice-website"], "include_status": [true], "start_date": [null]}}]}
+{"id": "live_multiple_1045-272-0", "ground_truth": [{"Services_4_FindProvider": {"city": ["Lafayette"], "type": ["Family Counselor"], "insurance_accepted": [true]}}]}

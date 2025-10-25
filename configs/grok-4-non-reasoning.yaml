@@ -1,0 +1,11 @@
+model:
+  name: litellm
+  params:
+    model_name: grok-4-non-reasoning
+    provider: xai
+    max_tokens: 1024
+    temperature: 0.0
+    batch_size: 32
+  release_date: "2025-07-09"
+  model_size: None
+  size_category: middle

@@ -1,0 +1,11 @@
+model:
+  name: vllm
+  params:
+    model_name_or_path: "LGAI-EXAONE/EXAONE-4.0-1.2B"
+    batch_size: 1
+    max_tokens: 1024
+    temperature: 0.0
+    max_model_len: 4096
+  release_date: "2025-07-15"
+  model_size: "1200000000"
+  size_category: nano

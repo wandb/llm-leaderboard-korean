@@ -1,0 +1,30 @@
+{"id": "simple_python_13", "ground_truth": [{"calculate_area_under_curve": {"function": ["x**2", "lambda x: x**2", "y=x**2"], "interval": [[1.0, 3.0]], "method": ["", "trapezoidal"]}}]}
+{"id": "simple_python_17", "ground_truth": [{"get_prime_factors": {"number": [450], "formatted": [true, ""]}}]}
+{"id": "simple_python_20", "ground_truth": [{"math.hcf": {"number1": [36], "number2": [24]}}]}
+{"id": "simple_python_52", "ground_truth": [{"calc_heat_capacity": {"temp": [298], "volume": [10], "gas": ["air", ""]}}]}
+{"id": "simple_python_53", "ground_truth": [{"fetch_DNA_sequence": {"DNA_id": ["DNA123"], "format": ["", "fasta"], "upstream": ["", 0]}}]}
+{"id": "simple_python_54", "ground_truth": [{"get_protein_sequence": {"gene": ["BRCA1"], "species": ["Homo sapiens", ""]}}]}
+{"id": "simple_python_55", "ground_truth": [{"biology.get_cell_info": {"cell_type": ["human"], "detailed": [true]}}]}
+{"id": "simple_python_103", "ground_truth": [{"mathematics.calculate_area_under_curve": {"polynomial": [[3.0, 2.0, -4.0]], "limits": [[-1.0, 2.0]]}}]}
+{"id": "simple_python_105", "ground_truth": [{"math.power": {"base": [3], "exponent": [4], "mod": ["", 1]}}]}
+{"id": "simple_python_114", "ground_truth": [{"prob_dist.binomial": {"trials": [10], "successes": [5], "p": [0.5, ""]}}]}
+{"id": "simple_python_132", "ground_truth": [{"calculate_return_on_equity": {"net_income": [2000000], "shareholder_equity": [10000000], "dividends_paid": [200000]}}]}
+{"id": "simple_python_151", "ground_truth": [{"highest_grossing_banks": {"country": ["U.S", "United States", "USA", "U.S."], "year": [2020], "top_n": [1]}}]}
+{"id": "simple_python_189", "ground_truth": [{"weather_forecast_detailed": {"location": ["New York", "New York, USA"], "days": [3], "details": [true]}}]}
+{"id": "simple_python_202", "ground_truth": [{"calculate_emission_savings": {"energy_type": ["renewable"], "usage_duration": [3], "region": ["California", "CA"]}}]}
+{"id": "simple_python_214", "ground_truth": [{"event_finder.find_upcoming": {"location": ["New York", "New York, NY", "NYC"], "genre": ["Rock", "rock"], "days_ahead": [30]}}]}
+{"id": "simple_python_264", "ground_truth": [{"sculpture.get_details": {"artist": ["Michelangelo"], "title": ["David"], "detail": ["size"]}}]}
+{"id": "simple_python_274", "ground_truth": [{"museum_info": {"museum_name": ["Metropolitan Museum of Art", "The Metropolitan Museum of Art", "Met Museum"], "info_type": ["opening_hours", ""]}}]}
+{"id": "simple_python_312", "ground_truth": [{"player_statistic": {"player_name": ["Ronaldo", "Cristiano Ronaldo"], "year": [2021], "team_name": [""]}}]}
+{"id": "simple_python_316", "ground_truth": [{"get_sport_ranking": {"sport": ["Tennis"], "player_name": ["Serena Williams"], "gender": ["", "all", "female"]}}]}
+{"id": "simple_python_318", "ground_truth": [{"get_team_ranking": {"team_name": ["Germany"], "year": [2021], "gender": ["men", ""]}}]}
+{"id": "simple_python_324", "ground_truth": [{"team_score.get_latest": {"team": ["Los Angeles Lakers", "Lakers"], "include_opponent": [true]}}]}
+{"id": "simple_python_326", "ground_truth": [{"get_team_score": {"team_name": ["Los Angeles Lakers", "Lakers"], "league": ["NBA"], "include_player_stats": ["", true, false]}}]}
+{"id": "simple_python_335", "ground_truth": [{"find_card_in_deck": {"rank": ["Queen"], "suit": ["Hearts"], "deck": [""]}}]}
+{"id": "simple_python_342", "ground_truth": [{"game_list.get_games": {"release_year": [2019], "multiplayer": [true], "ESRB_rating": ["Everyone"]}}]}
+{"id": "simple_python_344", "ground_truth": [{"get_game_item_stats": {"game": ["Legend of Zelda: Breath of the Wild"], "item": ["Guardian Sword+"], "stat": ["Power", "power", "power rating"]}}]}
+{"id": "simple_python_349", "ground_truth": [{"game_score.highest": {"game": ["Overwatch"], "platform": ["PC"], "region": ["Global", ""]}}]}
+{"id": "simple_python_351", "ground_truth": [{"multiplayer_game_finder": {"platform": ["Windows 10"], "rating": [4.5], "genre": ["", "Action"]}}]}
+{"id": "simple_python_353", "ground_truth": [{"find_recipes": {"diet": ["gluten-free"], "meal_type": ["dinner"], "ingredients": [""]}}]}
+{"id": "simple_python_362", "ground_truth": [{"get_best_sushi_places": {"city": ["Tokyo"], "top": [5], "review_rate": [4.0]}}]}
+{"id": "simple_python_399", "ground_truth": [{"restaurant_search": {"location": ["New York City", "New York City, NY", "NYC"], "cuisine": ["Italian"], "rating": [4], "accepts_credit_cards": [true]}}]}

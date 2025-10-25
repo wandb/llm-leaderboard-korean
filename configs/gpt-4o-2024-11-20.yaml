@@ -1,0 +1,11 @@
+model:
+  name: litellm
+  params:
+    model_name: gpt-4o-2024-11-20
+    provider: openai
+    batch_size: 32
+    max_tokens: 1024
+    temperature: 0.0
+  release_date: "2024-11-20"
+  model_size: None
+  size_category: large

@@ -1,0 +1,30 @@
+{"id": "live_simple_0-0-0", "ground_truth": [{"get_user_info": {"user_id": [7890], "special": ["black"]}}]}
+{"id": "live_simple_2-2-0", "ground_truth": [{"uber.ride": {"loc": ["2020 Addison Street, Berkeley, CA, USA"], "type": ["comfort"], "time": [600]}}]}
+{"id": "live_simple_15-3-11", "ground_truth": [{"get_current_weather": {"location": ["Chennai, Tamil Nadu"], "unit": ["", "fahrenheit"]}}]}
+{"id": "live_simple_34-11-0", "ground_truth": [{"answer.string": {"answer": ["Logistic regression is not present in the text, therefore I cannot answer this question."]}}]}
+{"id": "live_simple_48-21-0", "ground_truth": [{"find_beer": {"brewery": ["Sierra Nevada"], "taste": ["bitter"], "aroma": ["hoppy"], "color": ["pale"], "style": ["lager"], "abv_min": ["", 0.0], "abv_max": ["", 12.5], "ibu_min": ["", 0], "ibu_max": ["", 120], "pairings": ["", []]}}]}
+{"id": "live_simple_49-21-1", "ground_truth": [{"find_beer": {"brewery": ["Creek", "Creek brewery", "Creek Brewery", "Brewery Creek", "brewery creek"], "taste": ["slightly bitter"], "aroma": ["chocolatey"], "color": ["dark"], "style": ["porter"], "abv_min": ["", 0.0], "abv_max": ["", 12.5], "ibu_min": ["", 0], "ibu_max": ["", 120], "pairings": ["", []]}}]}
+{"id": "live_simple_50-22-0", "ground_truth": [{"get_latest_carbon_intensity": {"zone": ["Great Britain", "GB"]}}]}
+{"id": "live_simple_61-29-1", "ground_truth": [{"todo": {"type": ["add"], "content": ["go to gym tomorrow."]}}]}
+{"id": "live_simple_70-34-0", "ground_truth": [{"get_sensor_alerts": {"perPage": [10], "startingAfter": ["", null], "endingBefore": ["", null], "t0": ["", null], "t1": [""], "networkId": ["", []], "timespan": [""], "sensorSerial": ["Q3CC-CRT3-SZ2G"], "triggerMetric": ["", null]}}]}
+{"id": "live_simple_71-35-0", "ground_truth": [{"extract_parameters_v1": {"demographics": [["millennials"]], "targets": [["brand:Apple"]], "metrics": [["view"]], "country": ["", null], "min_date": ["2022-07-01"], "max_date": ["", null], "interval": ["", null]}}]}
+{"id": "live_simple_73-36-1", "ground_truth": [{"detect_beats_and_filter": {"capture_percentage": [90], "confidence_window_size": [0.25]}}]}
+{"id": "live_simple_76-37-0", "ground_truth": [{"language_translator.translate": {"source_language": ["en"], "target_language": ["fr"], "text": ["What is your name?"]}}]}
+{"id": "live_simple_84-45-0", "ground_truth": [{"get_coordinates_from_city": {"city_name": ["Seattle"]}}]}
+{"id": "live_simple_105-62-0", "ground_truth": [{"classify": {"clean_hello": [["hello"]], "faq_link_accounts_start": [["link my account", "connect my accounts"]]}}]}
+{"id": "live_simple_121-77-0", "ground_truth": [{"generate_chart": {"data_labels": [["Software Engineer", "Graphic Designer", "Data Analyst", "Sales Manager", "Nurse"]], "data_values": [[90000, 50000, 70000, 60000, 80000]]}}]}
+{"id": "live_simple_125-81-0", "ground_truth": [{"concat_strings": {"strings": [["John", "Doe"]], "separator": [" "]}}]}
+{"id": "live_simple_133-86-0", "ground_truth": [{"requests.get": {"url": ["https://api.example.com/recommendations"], "params": [{"advisoryId": ["dac"]}]}}]}
+{"id": "live_simple_165-98-0", "ground_truth": [{"extractor.extract_information": {"data": [[{"name": ["李雷"], "age": [18]}, {"name": ["李丽"], "age": [21]}]], "schema": ["", "personal_info"]}}]}
+{"id": "live_simple_183-108-0", "ground_truth": [{"getDataForProfessional": {"avg_rating": [2.0], "province_id": [1], "districts_name": ["", "All districts", "Bangkok"], "service_id": [1]}}]}
+{"id": "live_simple_185-110-0", "ground_truth": [{"get_service_providers": {"service_id": [2], "province_id": [3], "district_name": ["", null], "sub_district_name": ["", null], "rating": [4.5], "start_available_date": ["2023-09-30"]}}]}
+{"id": "live_simple_196-116-4", "ground_truth": [{"Weather_1_GetWeather": {"city": ["Alameda"], "date": ["2023-04-27"]}}]}
+{"id": "live_simple_205-116-13", "ground_truth": [{"Weather_1_GetWeather": {"city": ["Berkeley"], "date": ["2023-04-27"]}}]}
+{"id": "live_simple_206-116-14", "ground_truth": [{"Weather_1_GetWeather": {"city": ["London"], "date": ["2023-03-05"]}}]}
+{"id": "live_simple_218-117-10", "ground_truth": [{"Movies_3_FindMovies": {"directed_by": ["Paul Downs Colaizzo"], "genre": ["", "dontcare"], "cast": ["Michaela Watkins"]}}]}
+{"id": "live_simple_223-117-15", "ground_truth": [{"Movies_3_FindMovies": {"directed_by": ["", "dontcare"], "genre": ["Fantasy"], "cast": ["", "dontcare"]}}]}
+{"id": "live_simple_232-122-1", "ground_truth": [{"reschedule_event": {"event_identifier": ["med123"], "new_datetime": ["2021-04-15T13:45:00Z"]}}]}
+{"id": "live_simple_238-125-1", "ground_truth": [{"play_spotify_song": {"query": ["track:Dil Nu artist:Maninder Buttar"], "device_id": ["", "null"], "play": ["", true]}}]}
+{"id": "live_simple_245-127-0", "ground_truth": [{"book_flight": {"departure_location": ["JFK"], "departure_date": ["16/03/2024"], "departure_time": ["14:00"]}}]}
+{"id": "live_simple_251-133-0", "ground_truth": [{"flight.status.check": {"flight_id": ["6E123"], "passenger_name": ["Karan"], "ticket_number": ["IND4567"]}}]}
+{"id": "live_simple_253-135-0", "ground_truth": [{"uber.eat.order": {"restaurants": ["McDonald's", "McDonalds"], "items": [["burgers", "chicken wings"], ["burger", "chicken wing"]], "quantities": [[5, 6]]}}]}
