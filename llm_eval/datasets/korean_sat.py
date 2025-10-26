@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import wandb
 import logging
+from typing import List
 from llm_eval.datasets.base import BaseDataset
 from llm_eval.datasets import register_dataset
 from llm_eval.utils.logging import get_logger
@@ -12,6 +13,7 @@ load_dotenv()
 WANDB_PROJECT_NAME = os.getenv("WANDB_KOREAN_SAT_PROJECT")
 logger = get_logger(name="korean_sat", level=logging.INFO)
 
+#TODO: singleton 적용, Grading info로 Calculation 하기
 
 @register_dataset("korean_sat")
 class KoreanSATDataset(BaseDataset):
@@ -22,7 +24,7 @@ class KoreanSATDataset(BaseDataset):
         if not WANDB_PROJECT_NAME:
             raise ValueError("WANDB_KOREAN_SAT_PROJECT environment variable is not set.")
         run = wandb.init()
-        artifact = run.use_artifact(WANDB_PROJECT_NAME, type='dataset')
+        artifact = run.use_artifact(f"{WANDB_PROJECT_NAME}/korean_sat:v0", type='dataset')
         artifact_dir = artifact.download()
 
         df = pd.read_parquet(os.path.join(artifact_dir, "2015_2025_KoSAT.parquet"))
@@ -81,7 +83,7 @@ class KoreanSATDataset(BaseDataset):
 
     def get_raw_samples(self):
         run = wandb.init()
-        artifact = run.use_artifact(WANDB_PROJECT_NAME, type='dataset')
+        artifact = run.use_artifact(f"{WANDB_PROJECT_NAME}/korean_sat:v0", type='dataset')
         artifact_dir = artifact.download()
         df = pd.read_parquet(os.path.join(artifact_dir, "2015_2025_KoSAT.parquet"))
         return df.to_dict('records')
@@ -110,3 +112,37 @@ class KoreanSATDataset(BaseDataset):
 
             정답 :
         """
+
+@register_dataset("korean_sat_grading_info")
+class KoreanSATGradingInfoDataset(BaseDataset):
+    def __init__(self, subset:List[str]=None, split="test", **kwargs):
+        super().__init__(dataset_name='korean_sat_grading_info', subset=subset, split=split, **kwargs)
+
+    def load(self):
+        if not WANDB_PROJECT_NAME:
+            raise ValueError("WANDB_KOREAN_SAT_PROJECT environment variable is not set.")
+        run = wandb.init()
+        artifact = run.use_artifact(f"{WANDB_PROJECT_NAME}/korean_sat_grading_info:v0", type='dataset')
+        artifact_dir = artifact.download()
+
+        import pandas as pd
+        from pathlib import Path
+        folder_path = Path(artifact_dir)
+        grade_info = {
+            file.stem: pd.read_csv(file, encoding='utf-8-sig')  # 한글 인코딩 처리
+            for file in folder_path.glob("*.csv")
+        }
+
+        if self.subset:
+            grade_info = {year: grade_info[year] for year in self.subset if year in grade_info}
+        return grade_info
+
+    def info(self):
+        return {
+            "description": (
+                "Korean SAT dataset grade information from 2015-2025 for comparing between human and llm."
+                "This dataset includes raw score(원점수), scaled score(표준점수), percentile(백분위), and grade(등급) during 2014-2025."
+            ),
+            "evaluation_only": None,
+            "citation": "Korean SAT grading info dataset",
+        }

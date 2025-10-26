@@ -1,9 +1,9 @@
-# TODO: Implement Grading table. I will add this feature in the future
-
 import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 from pathlib import Path
+import logging
+from llm_eval.utils.logging import get_logger
 
 import pandas as pd
 
@@ -36,12 +36,13 @@ class ModelStatistics:
     avg_grade: float
     results_by_year: Dict[int, TestResult]
 
+logger = get_logger(name="Korean SAT", level=logging.INFO)
 
 class ScoreCalculator:
     """Handles score calculations for different year ranges"""
 
     def __init__(self, data_dir: str = "data/scoring_grading_tables"):
-        self.data_dir = Path(data_dir)
+
         self.coefficients = self._load_coefficients()
 
     def _load_coefficients(self) -> Dict[int, ScoringCoefficients]:
