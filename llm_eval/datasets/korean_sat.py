@@ -146,4 +146,3 @@ class KoreanSATGradingInfoDataset(BaseDataset):
             "evaluation_only": None,
             "citation": "Korean SAT grading info dataset",
         }
-
