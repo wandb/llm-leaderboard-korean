@@ -1,3 +1,4 @@
+import weave
 import os
 import asyncio
 from dataclasses import dataclass, field
@@ -299,6 +300,7 @@ class OpenAIClient:
         
         self.param_mapping = {}
 
+    @weave.op()
     def invoke(self, messages, max_tokens=None, **kwargs):
         """同期版のinvoke（後方互換性のため）"""
         all_kwargs = {**self.kwargs, **kwargs}
@@ -560,6 +562,13 @@ class OpenAIResponsesClient(BaseLLMClient):
         # generator.extra_body.reasoning をトップレベルreasoningに昇格
         try:
             extra_body = all_kwargs.get('extra_body')
+            # OmegaConfのDictConfigで来る場合があるので辞書へ変換
+            try:
+                import omegaconf
+                if isinstance(extra_body, omegaconf.DictConfig):
+                    extra_body = omegaconf.OmegaConf.to_container(extra_body)
+            except Exception:
+                pass
             if extra_body and isinstance(extra_body, dict) and 'reasoning' in extra_body:
                 all_kwargs['reasoning'] = extra_body['reasoning']
         except Exception:
@@ -576,6 +585,16 @@ class OpenAIResponsesClient(BaseLLMClient):
         if max_tokens:
             params["max_output_tokens"] = max(max_tokens, 16)
         
+        # DEBUG: Print reasoning config to verify it's being passed through
+        try:
+            print(
+                f"[SWE-Bench Debug] OpenAIResponsesClient params: "
+                f"reasoning={params.get('reasoning')}, "
+                f"max_output_tokens={params.get('max_output_tokens')}"
+            )
+        except Exception:
+            pass
+
         if 'text_format' in filtered_params:
             response: OpenAIParsedResponse = await self.async_client.responses.parse(**params)
             parsed_output = response.output_parsed

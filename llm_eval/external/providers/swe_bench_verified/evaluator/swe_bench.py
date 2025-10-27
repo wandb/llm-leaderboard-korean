@@ -823,7 +823,7 @@ def evaluate():
     # Arrow形式データ読み込み
     from datasets import load_from_disk
     hf_dataset = load_from_disk(str(dataset_dir))
-    
+    print(hf_dataset['test'][0])
     # 'test' split取得
     if hasattr(hf_dataset, 'keys') and 'test' in hf_dataset:
         hf_dataset = hf_dataset['test']
@@ -850,9 +850,10 @@ def evaluate():
     
     try:
         # 生成パラメータ
+        max_tokens = cfg.swebench.get("max_tokens", 32768)
         model_name = cfg.model.pretrained_model_name_or_path
-        # パラメータ는 클라이언트 생성 시 cfg.generator로 전달되므로 여기서는 비움
-        generator_config = {}
+        
+        generator_config = {"max_tokens": max_tokens}
         
         # パッチ生成
         generate_predictions(samples, llm, generator_config, predictions_file, model_name)
