@@ -20,7 +20,6 @@ class ScoringCoefficients:
 @dataclass
 class TestResult:
     """Individual test result data"""
-    model_name: str
     year: int
     raw_score: int
     std_score: int
@@ -36,14 +35,25 @@ class ModelStatistics:
     avg_grade: float
     results_by_year: Dict[int, TestResult]
 
-logger = get_logger(name="Korean SAT", level=logging.INFO)
+
+logger = get_logger(name="Korean SAT grade", level=logging.INFO)
+
 
 class ScoreCalculator:
     """Handles score calculations for different year ranges"""
 
-    def __init__(self, data_dir: str = "data/scoring_grading_tables"):
-
+    def __init__(self, scoring_information: dict):
+        self.scoring_information = scoring_information
         self.coefficients = self._load_coefficients()
+
+    def calculate_result(self, year, score_result) -> TestResult:
+        """Calculate test result based on year"""
+        year = int(row['query_id'][:4])  # Extract year from 'query_id'
+
+        if year > 2021:
+            return self._calculate_modern_score(row, year)
+        else:
+            return self._calculate_legacy_score(row, year)
 
     def _load_coefficients(self) -> Dict[int, ScoringCoefficients]:
         """Load scoring coefficients for years 2022-2024"""
@@ -53,18 +63,9 @@ class ScoreCalculator:
             2024: ScoringCoefficients(2024, 1.124, 0.923, 38.7)
         }
 
-    def calculate_result(self, row: pd.Series, model_name: str) -> TestResult:
-        """Calculate test result based on year"""
-        year = int(row['qid_for_merge'])
-
-        if year > 2021:
-            return self._calculate_modern_score(row, model_name, year)
-        else:
-            return self._calculate_legacy_score(row, model_name, year)
-
-    def _calculate_modern_score(self, row: pd.Series, model_name: str, year: int) -> TestResult:
+    def _calculate_modern_score(self, row: pd.Series, year: int) -> TestResult:
         """Calculate score for years 2022-2024 using coefficients"""
-        grading_df = self._load_grading_table(year)
+        grading_df = self.scoring_information[year]
         coeffs = self.coefficients[year]
 
         common_score = row['common_problem_score']
@@ -81,17 +82,16 @@ class ScoreCalculator:
         percentile = int(grading_row['백분위'].iloc[0])
         grade = int(grading_row['등급'].iloc[0])
 
-        return TestResult(model_name, year, raw_score, std_score, percentile, grade)
+        return TestResult(year, raw_score, std_score, percentile, grade)
 
-    def _calculate_legacy_score(self, row: pd.Series, model_name: str, year: int) -> TestResult:
+    def _calculate_legacy_score(self, row: pd.Series, year: int) -> TestResult:
         """Calculate score for years 2021 and earlier using lookup table"""
-        grading_df = self._load_grading_table(year)
+        grading_df = self.scoring_information[year]
         overall_sum = row['overall_sum']
 
         score_row = grading_df[grading_df['원점수'] == overall_sum]
 
         return TestResult(
-            model_name=model_name,
             year=year,
             raw_score=int(score_row['원점수'].iloc[0]),
             std_score=int(score_row['표준점수'].iloc[0]),
@@ -99,12 +99,19 @@ class ScoreCalculator:
             grade=int(score_row['등급'].iloc[0])
         )
 
-    def _load_grading_table(self, year: int) -> pd.DataFrame:
-        """Load grading table for a specific year"""
-        file_path = self.data_dir / f"{year}.csv"
-        if not file_path.exists():
-            raise FileNotFoundError(f"Grading table for year {year} not found at {file_path}")
-        return pd.read_csv(file_path)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class LeaderboardGenerator:
@@ -135,13 +142,12 @@ class LeaderboardGenerator:
 
         return model_stats
 
-    def _process_model(self, file_path: Path, model_name: str) -> ModelStatistics:
+    def _process_model(self, scoring_result: dict, model_name: str) -> ModelStatistics:
         """Process a single model's scoring results"""
-        scoring_df = pd.read_csv(file_path)
         results = []
 
-        for _, row in scoring_df.iterrows():
-            result = self.calculator.calculate_result(row, model_name)
+        for year, score in scoring_result.items():
+            result = self.calculator.calculate_result(score, year)
             results.append(result)
 
         # Calculate aggregated statistics

@@ -13,7 +13,7 @@ load_dotenv()
 WANDB_PROJECT_NAME = os.getenv("WANDB_KOREAN_SAT_PROJECT")
 logger = get_logger(name="korean_sat", level=logging.INFO)
 
-#TODO: singleton 적용, Grading info로 Calculation 하기
+#TODO: singleton 적용
 
 @register_dataset("korean_sat")
 class KoreanSATDataset(BaseDataset):
