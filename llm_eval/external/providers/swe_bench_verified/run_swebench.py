@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from dotenv import load_dotenv, find_dotenv
 import os
 import sys
 import json
@@ -19,6 +20,16 @@ from llm_inference_adapter import get_llm_inference_engine
 
 
 def main():
+    # .env 자동 로드 (프로젝트 루트/현재 디렉토리 탐색)
+    try:
+        env_path = find_dotenv(usecwd=True)
+        if env_path:
+            load_dotenv(env_path, override=False)
+        else:
+            # 상위 디렉토리도 탐색
+            load_dotenv(override=False)
+    except Exception:
+        pass
     parser = argparse.ArgumentParser(description="Run SWE-bench evaluation (vendor, standalone)")
     parser.add_argument("--project", type=str, default=os.environ.get("WANDB_PROJECT", "llm-leaderboard"))
     parser.add_argument("--entity", type=str, default=os.environ.get("WANDB_ENTITY"))
