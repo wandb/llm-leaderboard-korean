@@ -208,6 +208,7 @@ swebench:
     tag: latest
   api_server:
     enabled: true
+    # endpoint: https://api.nejumi-swebench.org/
     endpoint: http://localhost:8000
     timeout_sec: 1800
     concurrency: 2
