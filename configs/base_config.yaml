@@ -214,20 +214,20 @@ swebench:
     concurrency: 2
   # artifacts_path: llm-leaderboard/nejumi-leaderboard4/swebench_verified_official_80:v0
   # dataset_dir: swebench_verified_official/
-  artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v2
+  artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v4
   dataset_dir: .
 
 # Global LLM settings for SWE-bench run
 api: openai_responses
 model:
-  pretrained_model_name_or_path: gpt-5-2025-08-07
+  pretrained_model_name_or_path: gpt-4o #gpt-5-2025-08-07
 generator:
   # Responses API는 max_output_tokens를 사용
   max_output_tokens: 90000
-  extra_body:
-    reasoning:
-      effort: "high"
-      summary: "auto"
+  # extra_body:
+  #   reasoning:
+  #     effort: "high"
+  #     summary: "auto"
 
 network:
   http_timeout:

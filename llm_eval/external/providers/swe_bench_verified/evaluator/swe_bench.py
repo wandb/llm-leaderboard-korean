@@ -814,7 +814,7 @@ def evaluate():
 
     dataset_name = "swebench"
     
-    # データセットダウンロー
+    # データセットダウンロード
     artifact = run.use_artifact(cfg[dataset_name].artifacts_path, type="dataset")
     artifact_dir = artifact.download()
     dataset_dir = Path(artifact_dir) / cfg[dataset_name].dataset_dir
@@ -822,7 +822,7 @@ def evaluate():
     # Arrow形式データ読み込み
     from datasets import load_from_disk
     hf_dataset = load_from_disk(str(dataset_dir))
-    print(hf_dataset['test'][0])
+    
     # 'test' split取得
     if hasattr(hf_dataset, 'keys') and 'test' in hf_dataset:
         hf_dataset = hf_dataset['test']
