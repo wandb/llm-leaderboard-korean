@@ -1,4 +1,5 @@
 import weave
+from dotenv import load_dotenv, find_dotenv
 import os
 import asyncio
 from dataclasses import dataclass, field
@@ -27,6 +28,16 @@ from pydantic import BaseModel
 
 
 logger = logging.getLogger(__name__)
+
+# .env 자동 로드 (어댑터 단독 실행/직접 임포트 시에도 안전하게)
+try:
+    env_path = find_dotenv(usecwd=True)
+    if env_path:
+        load_dotenv(env_path, override=False)
+    else:
+        load_dotenv(override=False)
+except Exception:
+    pass
 
 
 @dataclass
