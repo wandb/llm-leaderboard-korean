@@ -814,8 +814,7 @@ def evaluate():
 
     dataset_name = "swebench"
     
-    # データセットダウンロード
-    print(cfg[dataset_name])
+    # データセットダウンロー
     artifact = run.use_artifact(cfg[dataset_name].artifacts_path, type="dataset")
     artifact_dir = artifact.download()
     dataset_dir = Path(artifact_dir) / cfg[dataset_name].dataset_dir
