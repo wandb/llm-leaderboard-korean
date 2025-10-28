@@ -17,6 +17,7 @@ import weave
 from tqdm import tqdm
 import subprocess
 import os
+import ssl
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
@@ -472,6 +473,11 @@ def _api_http_json(method: str, url: str, body_obj=None, headers=None, timeout: 
     # POSTリクエストは副作用があるため、リトライしない
     max_attempts = 1 if method == "POST" else 3
     
+    # SSL 인증서 검증 우회 (개발 환경용)
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    
     while attempt < max_attempts:
         attempt += 1
         try:
@@ -480,7 +486,7 @@ def _api_http_json(method: str, url: str, body_obj=None, headers=None, timeout: 
             if headers:
                 for k, v in (headers or {}).items():
                     req.add_header(k, v)
-            with urlopen(req, timeout=timeout) as resp:
+            with urlopen(req, timeout=timeout, context=ssl_context) as resp:
                 charset = resp.headers.get_content_charset() or "utf-8"
                 text = resp.read().decode(charset)
                 return json.loads(text) if text else {}

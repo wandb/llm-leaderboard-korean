@@ -7,6 +7,14 @@ import json
 import wandb
 from pathlib import Path
 
+# SSL 인증서 경로 설정 (certifi 사용)
+try:
+    import certifi
+    os.environ['SSL_CERT_FILE'] = certifi.where()
+    os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
+except ImportError:
+    pass
+
 # Ensure local imports resolve when run directly
 CUR_DIR = Path(__file__).resolve().parent
 if str(CUR_DIR) not in sys.path:
