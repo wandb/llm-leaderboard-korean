@@ -1,0 +1,19 @@
+model:
+  name: litellm
+  params:
+    model_name: hosted_vllm/Qwen/Qwen3-4B
+    provider: hosted_vllm
+    api_base: http://localhost:18195/v1
+    max_tokens: 1024
+    temperature: 0.1
+    batch_size: 1
+  vllm_params:
+    batch_size: 1
+    dtype: "auto"
+    download_dir: "/home/data_storage/huggingface"
+    max_model_len: 4096
+    num_gpus: 1
+    port: 8000
+    pretrained_model_name_or_path: "Qwen/Qwen3-4B"
+    tensor_parallel_size: 1
+    trust_remote_code: true
