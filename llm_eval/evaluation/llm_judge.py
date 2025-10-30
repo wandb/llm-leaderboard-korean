@@ -30,6 +30,7 @@ class JudgeInput:
 
 class ResponseParser:
     """Base class for parsing the LLM's returned response."""
+
     def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
         raise NotImplementedError
 
@@ -65,6 +66,7 @@ class K2EvalResponseParser(ResponseParser):
     Extracts a numeric score from a response in K2-Eval format.
     Expected format: a line like "Score: 3.5" somewhere in the text.
     """
+
     def parse(self, response: str, model_name: str = None) -> Dict[str, Any]:
         pattern = r"Score:\s*(\d+(?:\.\d+)?)"
         match = re.search(pattern, response)
@@ -110,10 +112,10 @@ class LLMJudgeEvaluator(BaseEvaluator):
     has_custom_judge = True
 
     def __init__(
-        self,
-        model: MultiModel,
-        default_judge_type: Union[str, JudgeType] = "rubric_and_response",
-        **kwargs
+            self,
+            model: MultiModel,
+            default_judge_type: Union[str, JudgeType] = "rubric_and_response",
+            **kwargs
     ):
         super().__init__()
         self.default_judge_type = (
@@ -146,7 +148,8 @@ class LLMJudgeEvaluator(BaseEvaluator):
         total_correct = 0
         total_items = len(samples)
 
-        ksat_scores = {}
+        # TODO: dataclass로 변경 고려
+        ksat_result = defaultdict(lambda: defaultdict(dict))  # 문제ID별 정답여부 저장
         batch_inputs = []
         batch_indices = []
 
@@ -190,13 +193,13 @@ class LLMJudgeEvaluator(BaseEvaluator):
                 for response_idx, sample_idx in enumerate(batch_indices):
                     sample = samples[sample_idx]
                     judge_response = judge_responses[response_idx]["prediction"]
-                    
+
                     # Instead of overwriting the original generation result,
                     # we store the judge output separately.
                     sample["judge_evaluation"] = judge_response
-                    
+
                     j_type = JudgeType(sample.get("judge_type", self.default_judge_type.value))
-                    
+
                     # For K2_EVAL judge type, use K2EvalResponseParser to extract score.
                     if j_type == JudgeType.K2_EVAL:
                         parser = self.parsers.get(JudgeType.K2_EVAL)
@@ -216,25 +219,26 @@ class LLMJudgeEvaluator(BaseEvaluator):
                                 score_count += 1
                     elif j_type == JudgeType.KOREAN_SAT:
                         query_id = sample['metadata']['query_id']
+                        year = query_id[:4]
                         question_num = sample['metadata']['question_num']
-                        score_value = float(sample["metadata"]['score'])  # Ensure score is numeric
+                        score_value = float(sample["metadata"]['score'])
 
-                        # init ksat_score_each year
-                        if query_id not in ksat_scores:
-                            ksat_scores[query_id] = {'common_score': 0, 'choice_score': 0}
+                        # Initialize nested structure if not exists
+                        if query_id not in ksat_result[year]:
+                            ksat_result[year][query_id] = {
+                                'question_num': question_num,
+                                'score_value': score_value,
+                                'is_correct': False
+                            }
+
+                        # Update correctness
                         if sample['judge_evaluation'] == sample['reference']:
                             total_score += score_value
-                            score_count += 1
+                            ksat_result[year][query_id]['is_correct'] = True
+                            print(f"정답!")
+                        else:
+                            ksat_result[year][query_id]['is_correct'] = False
 
-                            year = int(query_id[:4])
-                            # 2022년 이후 공통과목 선택과목 분리로 점수 배분이 다름
-                            if year > 2021:
-                                if question_num < 34:
-                                    ksat_scores[query_id]['common_score'] += score_value
-                                else:
-                                    ksat_scores[query_id]['choice_score'] += score_value
-                            else:
-                                ksat_scores[query_id]['common_score'] += score_value
                     elif j_type == JudgeType.RESPONSE_COMPARISON:
                         # Use a pairwise comparison parser.
                         parser = self.parsers.get(JudgeType.RESPONSE_COMPARISON)
@@ -270,12 +274,31 @@ class LLMJudgeEvaluator(BaseEvaluator):
         metrics: Dict[str, float] = {}
         if score_count > 0:
             metrics["average_judge_score"] = total_score / score_count
-        if (score_count > 0) and (total_items > 0) and (self.default_judge_type == JudgeType.KOREAN_SAT):
-            metrics["average_score_per_item"] = total_score / total_items
-            metrics['korean_sat_result'] = ksat_scores
+        # TODO: grade table 만들기
+        if (total_items > 0) and len(ksat_result) > 0:
+            metrics["average_score_overall_years"] = total_score / total_items
+            for year, year_data in ksat_result.items():
+                # Initialize metrics for this year
+                metrics[f"{year}_total_score"] = 0.0
+                metrics[f"{year}_common_score"] = 0.0
+                metrics[f"{year}_choice_score"] = 0.0
+                for qid, scoring_data in year_data.items():
+                    if scoring_data["is_correct"]:
+                        score_val = scoring_data['score_value']
+                        metrics[f"{year}_total_score"] += score_val
+                        # 2022년 이후 공통과목/선택과목 분리
+                        question_num = int(scoring_data['question_num'])
+                        if int(year) > 2021:
+                            if question_num < 34:
+                                metrics[f"{year}_common_score"] += score_val
+                            else:
+                                metrics[f"{year}_choice_score"] += score_val
+                        else:
+                            metrics[f"{year}_common_score"] += score_val
+
         if total_items > 0 and any(
-            sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value 
-            for sample in samples
+                sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value
+                for sample in samples
         ):
             metrics["judge_accuracy"] = total_correct / total_items
 
@@ -302,7 +325,6 @@ class LLMJudgeEvaluator(BaseEvaluator):
             if sample.get("judge_correct") is True:
                 subset_stats[sname]["correct"] += 1
 
-
         if isinstance(subsets, (list, tuple, str)):
             if isinstance(subsets, str):
                 subsets = [subsets]
@@ -322,8 +344,8 @@ class LLMJudgeEvaluator(BaseEvaluator):
         if score_count > 0:
             metrics["AVG"] = total_score / score_count
         elif total_items > 0 and any(
-            sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value 
-            for sample in samples
+                sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value
+                for sample in samples
         ):
             metrics["AVG"] = total_correct / total_items
         else:
