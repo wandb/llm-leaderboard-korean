@@ -149,7 +149,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
         total_items = len(samples)
 
         # TODO: dataclass로 변경 고려
-        ksat_result = defaultdict(lambda: defaultdict(dict))  # 문제ID별 정답여부 저장
+        ksat_result = defaultdict(lambda: defaultdict(dict))
         batch_inputs = []
         batch_indices = []
 
@@ -274,9 +274,16 @@ class LLMJudgeEvaluator(BaseEvaluator):
         metrics: Dict[str, float] = {}
         if score_count > 0:
             metrics["average_judge_score"] = total_score / score_count
-        # TODO: grade table 만들기
+        # Korean SAT specific metrics
         if (total_items > 0) and len(ksat_result) > 0:
+            from llm_eval.datasets import load_datasets
+            from llm_eval.utils.korean_sat_tools import ScoreCalculator
+
+            loader = load_datasets(name="korean_sat_grading_info", split="test")
+            grading_info = loader.load()
+            ksat_calculator = ScoreCalculator(grading_info)
             metrics["average_score_overall_years"] = total_score / total_items
+
             for year, year_data in ksat_result.items():
                 # Initialize metrics for this year
                 metrics[f"{year}_total_score"] = 0.0
@@ -295,6 +302,11 @@ class LLMJudgeEvaluator(BaseEvaluator):
                                 metrics[f"{year}_choice_score"] += score_val
                         else:
                             metrics[f"{year}_common_score"] += score_val
+                grade_info = ksat_calculator.calculate_result(year=year, score_result=metrics)
+                metrics[f"{year}_raw_score"] = grade_info.raw_score
+                metrics[f"{year}_std_score"] = grade_info.std_score
+                metrics[f"{year}_percentile"] = grade_info.percentile
+                metrics[f"{year}_grade"] = grade_info.grade
 
         if total_items > 0 and any(
                 sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value
