@@ -1,0 +1,52 @@
+# SWE-bench Evaluation Configuration Example
+#
+# This configuration file demonstrates how to set up SWE-bench evaluation
+# using the HRET framework.
+
+# Dataset Configuration
+dataset:
+  name: swebench
+  split: test
+  params:
+    # W&B artifact path containing the SWE-bench dataset
+    artifacts_path: "horangi/horangi4-dataset/swebench_verified_official_80:v4"
+    # Directory within the artifact (usually ".")
+    dataset_dir: "."
+    # Maximum number of samples to evaluate (useful for testing)
+    max_samples: 10
+
+# Model Configuration
+model:
+  name: litellm  # Can be: litellm, openai, huggingface, etc.
+  params:
+    model_name_or_path: "gpt-4o-2024-11-20"
+    temperature: 0.0
+    max_tokens: 16000
+
+# Evaluation Method Configuration
+evaluation:
+  method: swebench
+  params:
+    # API server endpoint for running tests
+    api_endpoint: "https://api.nejumi-swebench.org/"
+    # Optional API key (can also use SWE_API_KEY env var)
+    # api_key: "your-api-key-here"
+    # Docker image namespace
+    namespace: "swebench"
+    # Docker image tag
+    tag: "latest"
+    # Timeout for each test execution (seconds)
+    timeout_sec: 1800
+    # Number of parallel jobs to submit to the API server
+    concurrency: 2
+
+# W&B Configuration (optional)
+wandb:
+  params:
+    entity: "your-entity"
+    project: "swebench-eval"
+  run_name: "swebench-gpt4o-test"
+
+# General Settings
+testmode: false
+inference_interval: 0.0
