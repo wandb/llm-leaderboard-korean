@@ -272,12 +272,9 @@ class LLMJudgeEvaluator(BaseEvaluator):
             metrics["average_judge_score"] = total_score / score_count
         # Korean SAT specific metrics
         if (total_items > 0) and len(ksat_result) > 0:
-            from llm_eval.datasets import load_datasets
             from llm_eval.utils.korean_sat_tools import ScoreCalculator
 
-            loader = load_datasets(name="korean_sat_grading_info", split="test")
-            grading_info = loader.load()
-            ksat_calculator = ScoreCalculator(grading_info)
+            ksat_calculator = ScoreCalculator()
             metrics["average_score_overall_years"] = total_score / total_items
 
             for year, year_data in ksat_result.items():
@@ -305,8 +302,8 @@ class LLMJudgeEvaluator(BaseEvaluator):
                 metrics[f"{year}_grade"] = grade_info.grade
 
         if total_items > 0 and any(
-                sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value
-                for sample in samples
+            sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value
+            for sample in samples
         ):
             metrics["judge_accuracy"] = total_correct / total_items
 
@@ -352,8 +349,8 @@ class LLMJudgeEvaluator(BaseEvaluator):
         if score_count > 0:
             metrics["AVG"] = total_score / score_count
         elif total_items > 0 and any(
-                sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value
-                for sample in samples
+            sample.get("judge_type", self.default_judge_type.value) == JudgeType.RESPONSE_COMPARISON.value
+            for sample in samples
         ):
             metrics["AVG"] = total_correct / total_items
         else:

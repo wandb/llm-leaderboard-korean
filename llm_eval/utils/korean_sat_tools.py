@@ -1,9 +1,8 @@
-import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional
-from pathlib import Path
+from typing import Dict
 import logging
 from llm_eval.utils.logging import get_logger
+from llm_eval.datasets import load_datasets
 
 import pandas as pd
 
@@ -42,8 +41,9 @@ logger = get_logger(name="Korean SAT grade", level=logging.INFO)
 class ScoreCalculator:
     """Handles score calculations for different year ranges"""
 
-    def __init__(self, scoring_information: Dict[str, pd.DataFrame]):
-        self.scoring_information = scoring_information
+    def __init__(self):
+        loader = load_datasets(name="korean_sat_grading_info", split="test")
+        self.scoring_information = loader.load()
         self.coefficients = self._load_coefficients()
 
     def calculate_result(self, year, score_result: Dict) -> TestResult:
