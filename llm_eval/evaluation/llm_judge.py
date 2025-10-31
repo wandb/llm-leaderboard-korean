@@ -222,7 +222,6 @@ class LLMJudgeEvaluator(BaseEvaluator):
                         year = query_id[:4]
                         question_num = sample['metadata']['question_num']
                         score_value = float(sample["metadata"]['score'])
-
                         # Initialize nested structure if not exists
                         if query_id not in ksat_result[year]:
                             ksat_result[year][query_id] = {
@@ -230,15 +229,12 @@ class LLMJudgeEvaluator(BaseEvaluator):
                                 'score_value': score_value,
                                 'is_correct': False
                             }
-
                         # Update correctness
                         if sample['judge_evaluation'] == sample['reference']:
                             total_score += score_value
                             ksat_result[year][query_id]['is_correct'] = True
-                            print(f"정답!")
                         else:
                             ksat_result[year][query_id]['is_correct'] = False
-
                     elif j_type == JudgeType.RESPONSE_COMPARISON:
                         # Use a pairwise comparison parser.
                         parser = self.parsers.get(JudgeType.RESPONSE_COMPARISON)
