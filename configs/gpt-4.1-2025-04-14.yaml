@@ -4,8 +4,22 @@ model:
     model_name: gpt-4.1-2025-04-14
     provider: openai
     batch_size: 32
-    max_tokens: 1024
+    max_tokens: 32768
     temperature: 0.0
   release_date: "2024-11-20"
   model_size: None
   size_category: large
+
+# SWE-bench test configuration to verify Weave automatic tracking
+swebench:
+  limit: 5  # Test with 5 samples to verify Weave auto-tracking at scale
+  params:
+    artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v4
+    dataset_dir: .
+  model_params:
+    max_tokens: 16384  # Model limit for GPT-4o
+    timeout: 300.0  # Longer timeout for SWE-bench
+  evaluation:
+    params:
+      concurrency: 1
+      timeout_sec: 1800
