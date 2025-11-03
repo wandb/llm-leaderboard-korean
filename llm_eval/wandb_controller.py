@@ -136,12 +136,23 @@ class WeaveInferenceController:
                 # This way litellm acompletion calls will be nested under the prediction
                 with self.evaluation_logger.log_prediction(
                     inputs=inputs_payload,
-                    output=""  # Will be populated automatically
-                ):
+                    output=""
+                ) as pred_logger:
                     # Run model inference INSIDE the prediction context
                     # Weave will automatically track token usage and latency
                     result_list = inference_fn([sample])
                     result = result_list[0] if result_list else sample
+
+                    # Update output within the context
+                    prediction_text = result.get("prediction", "")
+                    if pred_logger is not None:
+                        # Try to set the output attribute (public API)
+                        try:
+                            pred_logger.output = prediction_text
+                        except (AttributeError, TypeError):
+                            # If that doesn't work, try private attribute
+                            if hasattr(pred_logger, '_output'):
+                                pred_logger._output = prediction_text
 
                 # Store index for sorting results
                 result["_sample_idx"] = idx
