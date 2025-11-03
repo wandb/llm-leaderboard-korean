@@ -274,6 +274,7 @@ class OpenAIResponsesModel(BaseModel):
         cot: bool = False,
         batch_size: Optional[Union[int, str]] = "auto",
         until: Optional[Union[str, List[str]]] = None,
+        show_progress: bool = True,
     ) -> List[Dict[str, Any]]:
         """
         Generate responses for a batch of inputs.
@@ -284,6 +285,7 @@ class OpenAIResponsesModel(BaseModel):
             cot: Not needed (reasoning is built-in)
             batch_size: Batch size for concurrent requests
             until: Stop sequences (not typically used with Responses API)
+            show_progress: Whether to show progress bar (default: True)
 
         Returns:
             List of input dicts with "prediction", "chain_of_thought", and "usage" added
@@ -320,6 +322,7 @@ class OpenAIResponsesModel(BaseModel):
             for i in tqdm(
                 range(0, len(tasks), batch_size),
                 desc="Generating with OpenAI Responses API",
+                disable=not show_progress,
             ):
                 batch_tasks = [task for _, task in tasks[i : i + batch_size]]
                 batch_samples = [sample for sample, _ in tasks[i : i + batch_size]]
