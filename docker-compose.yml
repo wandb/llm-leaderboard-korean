@@ -7,44 +7,21 @@ services:
       dockerfile: Dockerfile
     image: haerae-evaluation-toolkit:latest
     container_name: hret-container
-    ports:
-      - "8000:8000"
     environment:
       - PYTHONPATH=/app
       - HRET_HOME=/app
       - WANDB_API_KEY=${WANDB_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - COHERE_API_KEY=${COHERE_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./configs:/app/configs
-    networks:
-      - hret-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Optional: Redis for caching (if needed)
-  redis:
-    image: redis:7-alpine
-    container_name: hret-redis
-    ports:
-      - "6379:6379"
-    networks:
-      - hret-network
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    volumes:
-      - redis-data:/data
-
-networks:
-  hret-network:
-    driver: bridge
-
-volumes:
-  redis-data:
+      - ./results:/app/results
+    working_dir: /app
+    # Keep container running for interactive use
+    tty: true
+    stdin_open: true

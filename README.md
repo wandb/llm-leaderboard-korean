@@ -85,7 +85,9 @@ cd haerae-evaluation-toolkit
 docker run -it --rm \
   -e OPENAI_API_KEY=your_key_here \
   -v $(pwd)/data:/app/data \
-  haerae-evaluation-toolkit:latest
+  -v $(pwd)/configs:/app/configs \
+  haerae-evaluation-toolkit:latest \
+  python run_eval.py --help
 ```
 
 For detailed Docker usage, see [DOCKER.md](DOCKER.md).
