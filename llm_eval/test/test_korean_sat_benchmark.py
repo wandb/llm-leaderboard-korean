@@ -5,7 +5,6 @@ import pytest
 
 def test_evaluation():
     from llm_eval.evaluator import Evaluator
-
     # 1) Initialize an Evaluator.
     evaluator = Evaluator()
     import os
