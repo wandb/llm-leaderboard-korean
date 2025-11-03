@@ -42,7 +42,7 @@ def run_all_from_configs(
         target_lang=target_lang,
     )
 
-    WandbConfigSingleton.log_overall_leaderboard_table(model_name, release_date, size_category, model_size, selected_datasets)
+    # WandbConfigSingleton.log_overall_leaderboard_table(model_name, release_date, size_category, model_size, selected_datasets)
 
     run.finish()
     return result
