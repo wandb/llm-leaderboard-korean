@@ -65,9 +65,16 @@ class LLMEvalBFCLHandler(BaseHandler):
 
         self._backend = load_model(llm_backend_name, **llm_backend_params)
 
+        # Optional EvaluationLogger for token/latency tracking
+        self._evaluation_logger: Optional[Any] = None
+
     # ──────────────────────────────────────────────────────────────────────────
     # Prompting flow
     # ──────────────────────────────────────────────────────────────────────────
+    def set_evaluation_logger(self, evaluation_logger: Any) -> None:
+        """Set EvaluationLogger for automatic token/latency tracking."""
+        self._evaluation_logger = evaluation_logger
+
     def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
         functions: list = test_entry["function"]
         test_entry_id: str = test_entry["id"]
@@ -88,11 +95,36 @@ class LLMEvalBFCLHandler(BaseHandler):
         inputs = [{"input": messages}]
 
         start = time.time()
-        results = self._backend.generate_batch(
-            inputs=inputs,
-            return_logits=False,
-            show_progress=False,
-        )
+
+        # Wrap inference in Weave op for automatic token/latency tracking
+        import weave
+
+        @weave.op()
+        def bfcl_inference(backend, inputs_data):
+            return backend.generate_batch(
+                inputs=inputs_data,
+                return_logits=False,
+                show_progress=False,
+            )
+
+        # If EvaluationLogger is available, wrap inference in log_prediction context
+        # to capture token/latency automatically
+        if self._evaluation_logger is not None:
+            # Extract test ID for tracking
+            test_id = inference_data.get("id", "unknown")
+            inputs_payload = {
+                "input": repr(messages),
+                "test_id": test_id,
+            }
+
+            with self._evaluation_logger.log_prediction(
+                inputs=inputs_payload,
+                output=""  # Will be populated automatically
+            ):
+                results = bfcl_inference(self._backend, inputs)
+        else:
+            results = bfcl_inference(self._backend, inputs)
+
         latency = time.time() - start
 
         # Store input for optional debug logging

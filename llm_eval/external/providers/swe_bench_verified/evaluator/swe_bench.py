@@ -17,6 +17,7 @@ import weave
 from tqdm import tqdm
 import subprocess
 import os
+import ssl
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
@@ -472,6 +473,11 @@ def _api_http_json(method: str, url: str, body_obj=None, headers=None, timeout: 
     # POSTリクエストは副作用があるため、リトライしない
     max_attempts = 1 if method == "POST" else 3
     
+    # SSL 인증서 검증 우회 (개발 환경용)
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    
     while attempt < max_attempts:
         attempt += 1
         try:
@@ -480,7 +486,7 @@ def _api_http_json(method: str, url: str, body_obj=None, headers=None, timeout: 
             if headers:
                 for k, v in (headers or {}).items():
                     req.add_header(k, v)
-            with urlopen(req, timeout=timeout) as resp:
+            with urlopen(req, timeout=timeout, context=ssl_context) as resp:
                 charset = resp.headers.get_content_charset() or "utf-8"
                 text = resp.read().decode(charset)
                 return json.loads(text) if text else {}
@@ -815,7 +821,6 @@ def evaluate():
     dataset_name = "swebench"
     
     # データセットダウンロード
-    print(cfg[dataset_name])
     artifact = run.use_artifact(cfg[dataset_name].artifacts_path, type="dataset")
     artifact_dir = artifact.download()
     dataset_dir = Path(artifact_dir) / cfg[dataset_name].dataset_dir
@@ -823,7 +828,7 @@ def evaluate():
     # Arrow形式データ読み込み
     from datasets import load_from_disk
     hf_dataset = load_from_disk(str(dataset_dir))
-    print(hf_dataset['test'][0])
+    
     # 'test' split取得
     if hasattr(hf_dataset, 'keys') and 'test' in hf_dataset:
         hf_dataset = hf_dataset['test']
@@ -838,7 +843,7 @@ def evaluate():
     # サンプル数制限
     max_samples = cfg.swebench.get("max_samples", 500)
     if cfg.testmode:
-        max_samples = 2 # テストモード時はサンプル数を減らす
+        max_samples = 5 # テストモード時はサンプル数を減らす
     
     samples = task_data[:max_samples]
     print(f"Processing {len(samples)} samples")

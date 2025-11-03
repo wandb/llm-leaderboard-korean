@@ -39,6 +39,7 @@ def load_model(name: str, **kwargs) -> BaseModel:
 
 # 5) Import actual backends -> they are registered via decorators
 from .openai_backend import OpenAIModel
+from .openai_responses_backend import OpenAIResponsesModel
 from .openai_judge import OpenAIJudge
 from .multi import MultiModel
 from .huggingface_backend import HuggingFaceModel

@@ -214,15 +214,30 @@ class WandbConfigSingleton:
             table = pd.merge(table, new_table, left_index=True, right_index=True)
         table.columns = table.columns.str.replace(r'(_[xy]$)|(\.\d+$)', '', regex=True)
         table_mean = table.T.groupby(table.columns).mean().T
-        table_mean['범용언어성능(GLP)_AVG'] = weighted_average(table_mean, GLP_COLUMN_WEIGHT)
-        table_mean['가치정렬성능(ALT)_AVG'] = weighted_average(table_mean, ALT_COLUMN_WEIGHT)
-        table_mean['TOTAL_AVG'] = (table_mean['범용언어성능(GLP)_AVG'] + table_mean['가치정렬성능(ALT)_AVG']) / 2
+
+        # Only compute GLP/ALT averages if the required columns exist
+        # This handles cases where only external benchmarks are run
+        glp_cols_exist = all(col in table_mean.columns for col in GLP_COLUMN_WEIGHT.keys())
+        alt_cols_exist = all(col in table_mean.columns for col in ALT_COLUMN_WEIGHT.keys())
+
+        if glp_cols_exist:
+            table_mean['범용언어성능(GLP)_AVG'] = weighted_average(table_mean, GLP_COLUMN_WEIGHT)
+        if alt_cols_exist:
+            table_mean['가치정렬성능(ALT)_AVG'] = weighted_average(table_mean, ALT_COLUMN_WEIGHT)
+
+        # Only compute TOTAL_AVG if both GLP and ALT exist
+        if glp_cols_exist and alt_cols_exist:
+            table_mean['TOTAL_AVG'] = (table_mean['범용언어성능(GLP)_AVG'] + table_mean['가치정렬성능(ALT)_AVG']) / 2
         table_mean['release_date'] = release_date
         table_mean['size_category'] = 'None' if size_category is None else size_category
         table_mean['model_size'] = 'None' if model_size is None else model_size
         table_mean = table_mean.reset_index()
-        table_mean = table_mean[['model_name', 'size_category', 'TOTAL_AVG', '범용언어성능(GLP)_AVG', '가치정렬성능(ALT)_AVG']+list(GLP_COLUMN_WEIGHT.keys())+list(ALT_COLUMN_WEIGHT.keys())]
-        
+        # Build desired column list, but only include columns that actually exist
+        # This handles cases where external benchmarks don't have GLP/ALT columns
+        desired_columns = ['model_name', 'size_category', 'TOTAL_AVG', '범용언어성능(GLP)_AVG', '가치정렬성능(ALT)_AVG'] + list(GLP_COLUMN_WEIGHT.keys()) + list(ALT_COLUMN_WEIGHT.keys())
+        existing_columns = [col for col in desired_columns if col in table_mean.columns]
+        table_mean = table_mean[existing_columns]
+
         leaderboard_table = wandb.Table(dataframe=table_mean)
         cls._instance.run.log({"leaderboard_table": leaderboard_table})
         # return leaderboard_table

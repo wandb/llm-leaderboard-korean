@@ -1,32 +1,31 @@
 model:
   name: openai_responses  # Using OpenAI Responses API for reasoning models
   params:
-    model_name: gpt-5-mini-2025-08-07
+    model_name: gpt-5-2025-08-07
     api_base: https://api.openai.com/v1
-    batch_size: 16  # Lower for reasoning models
-    max_tokens: 32768  # Model limit for GPT-5-mini (will be automatically capped)
+    batch_size: 8  # Lower for full reasoning model
+    max_tokens: 65536  # Model limit for GPT-5 (will be automatically capped)
     temperature: 1.0  # Required for reasoning models
-    timeout: 600.0  # 10 minutes for reasoning chains
+    timeout: 900.0  # 15 minutes for reasoning chains
     reasoning:
       effort: "high"  # "low", "medium", or "high"
       summary: "auto"  # "auto", "full", or "none"
   release_date: "2025-08-07"
   model_size: None
-  size_category: mini
+  size_category: large
 
 # Override dataset settings from base_config.yaml for this model
-# Testing with 5 samples
 swebench:
-  limit: 1  # Test with 1 sample to verify token tracking
+  limit: 80  # Full dataset evaluation
   params:
     artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v4
     dataset_dir: .
   model_params:
-    max_tokens: 32768  # Model limit for GPT-5-mini
+    max_tokens: 65536  # Model limit for GPT-5
     timeout: 900.0  # 15 minutes for complex reasoning
     reasoning:
       effort: "high"  # Max reasoning effort for best results
   evaluation:
     params:
-      concurrency: 1  # Sequential processing for reasoning models
+      concurrency: 4  # Parallel processing (4 concurrent jobs)
       timeout_sec: 2400  # 40 minutes per test for complex patches
