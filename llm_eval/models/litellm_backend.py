@@ -4,7 +4,6 @@ import os
 from typing import List, Dict, Any, Optional, Union, Callable, Tuple
 
 import litellm
-from tqdm import tqdm
 
 from . import register_model
 from .base import BaseModel
@@ -244,7 +243,7 @@ class LiteLLMBackend(BaseModel):
 
         tasks = [_worker(item) for item in inputs]
         results: List[Dict[str, Any]] = []
-        for fut in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="LiteLLM Batch Generation", disable=not show_progress):
+        for fut in asyncio.as_completed(tasks):
             try:
                 results.append(await fut)
             except Exception as e:

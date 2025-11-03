@@ -111,6 +111,20 @@ def run_bfcl_from_configs(
         # Pass llm-eval model config path to adapter via env var
         os.environ["LLM_EVAL_MODEL_CONFIG"] = model_config_path
         # Enable llm-eval adapter for BFCL
+        os.environ["BFCL_USE_LLMEVAL_ADAPTER"] = "1"
+
+        # Create EvaluationLogger for automatic token/latency tracking BEFORE inference
+        from weave import EvaluationLogger
+        model_label = bfcl_model.replace("-", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
+        evaluation_logger = EvaluationLogger(
+            dataset="bfcl",
+            model=model_label,
+            eval_attributes={
+                "dataset_name": "bfcl",
+                "model_name": bfcl_model,
+                "evaluation_method_name": "BFCL-Inference",
+            },
+        )
 
         args = SimpleNamespace(
             model=[bfcl_model],
@@ -128,8 +142,18 @@ def run_bfcl_from_configs(
             allow_overwrite=True,
             run_ids=True,  # Currently always True, so the test_case_ids_to_generate.json file is used to run the test cases
             limit_per_test_category=dataset_params.get("limit_per_test_category", None),
+            evaluation_logger=evaluation_logger,  # Pass logger for inference tracking
         )
         generation_main(args)
+
+        # Finalize EvaluationLogger after inference completes
+        # This converts the predictions (with token/latency data) into an evaluation
+        try:
+            evaluation_logger.finish()
+            logger.info("[BFCL] Finalized EvaluationLogger with token/latency data")
+        except Exception as e:
+            logger.warning(f"Failed to finalize EvaluationLogger: {e}")
+
         logger.info(f"[BFCL] Successfully completed model inference")
 
     except Exception as e:

@@ -24,6 +24,7 @@ def run_exp(
     max_tokens=512,
     return_gen = False,
     backend_kwargs: Optional[Dict[str, Any]] = None,
+    evaluation_logger: Optional[Any] = None,
 ):  
     if not generations_file_path:
         base_path = Path(base_path)
@@ -81,6 +82,20 @@ def run_exp(
     # Build inputs for batch generation
     inputs: List[Dict[str, Any]] = [{"input": p} for p in prompts]
 
+    import weave
+    from tqdm import tqdm as tqdm_progress
+
+    # Wrap inference in Weave op for automatic token/latency tracking
+    @weave.op()
+    def hallulens_inference_single(model_obj, input_data):
+        """Process a single input with token/latency tracking."""
+        return model_obj.generate_batch([input_data], show_progress=False)[0]
+
+    @weave.op()
+    def hallulens_inference_batch(model_obj, inputs_data):
+        """Process batch of inputs (fallback when no evaluation_logger)."""
+        return model_obj.generate_batch(inputs_data, show_progress=True)
+
     if inference_method == "openai":
         # Registry name is "openai"
         api_base = backend_kwargs.get(
@@ -92,9 +107,22 @@ def run_exp(
             use_chat_api=True,
             **backend_kwargs,
         )
-        results = model.generate_batch(inputs, show_progress=True)
-        generations = [(r.get("prediction") or "") for r in results]
-        all_prompts["generation"] = generations
+        # If evaluation_logger is provided, process each input individually with log_prediction
+        if evaluation_logger is not None:
+            generations = []
+            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+                prompt_text = inp.get("input", "")
+                with evaluation_logger.log_prediction(
+                    inputs={"input": str(prompt_text), "index": idx},
+                    output=""
+                ):
+                    result = hallulens_inference_single(model, inp)
+                    generations.append(result.get("prediction") or "")
+            all_prompts["generation"] = generations
+        else:
+            results = hallulens_inference_batch(model, inputs)
+            generations = [(r.get("prediction") or "") for r in results]
+            all_prompts["generation"] = generations
     elif inference_method == "litellm":
         # Registry name is "litellm"
         # provider = backend_kwargs.get("provider", "openai")
@@ -108,9 +136,22 @@ def run_exp(
         #     batch_size=batch_size,
         #     max_new_tokens=max_tokens,
         # )
-        results = model.generate_batch(inputs, show_progress=True)
-        generations = [(r.get("prediction") or "") for r in results]
-        all_prompts["generation"] = generations
+        # If evaluation_logger is provided, process each input individually with log_prediction
+        if evaluation_logger is not None:
+            generations = []
+            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+                prompt_text = inp.get("input", "")
+                with evaluation_logger.log_prediction(
+                    inputs={"input": str(prompt_text), "index": idx},
+                    output=""
+                ):
+                    result = hallulens_inference_single(model, inp)
+                    generations.append(result.get("prediction") or "")
+            all_prompts["generation"] = generations
+        else:
+            results = hallulens_inference_batch(model, inputs)
+            generations = [(r.get("prediction") or "") for r in results]
+            all_prompts["generation"] = generations
     elif inference_method == "huggingface":
         # Registry name is "huggingface"
         batch_size = int(backend_kwargs.get("batch_size", 1))
@@ -124,9 +165,22 @@ def run_exp(
             device=device,
             dtype=dtype,
         )
-        results = model.generate_batch(inputs, return_logits=False, show_progress=True)
-        generations = [(r.get("prediction") or "") for r in results]
-        all_prompts["generation"] = generations
+        # If evaluation_logger is provided, process each input individually with log_prediction
+        if evaluation_logger is not None:
+            generations = []
+            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+                prompt_text = inp.get("input", "")
+                with evaluation_logger.log_prediction(
+                    inputs={"input": str(prompt_text), "index": idx},
+                    output=""
+                ):
+                    result = hallulens_inference_single(model, inp)
+                    generations.append(result.get("prediction") or "")
+            all_prompts["generation"] = generations
+        else:
+            results = hallulens_inference_batch(model, inputs)
+            generations = [(r.get("prediction") or "") for r in results]
+            all_prompts["generation"] = generations
     elif inference_method == "vllm":
         # Registry name is "vllm" (requires vllm installed and GPU)
         temperature = backend_kwargs.get("temperature", 0.0)
@@ -146,9 +200,41 @@ def run_exp(
             tensor_parallel_size=tensor_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
         )
-        results = model.generate_batch(inputs, show_progress=True)
-        generations = [(r.get("prediction") or "") for r in results]
-        all_prompts["generation"] = generations
+        # If evaluation_logger is provided, process each input individually with log_prediction
+        if evaluation_logger is not None:
+            generations = []
+            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+                prompt_text = inp.get("input", "")
+                with evaluation_logger.log_prediction(
+                    inputs={"input": str(prompt_text), "index": idx},
+                    output=""
+                ):
+                    result = hallulens_inference_single(model, inp)
+                    generations.append(result.get("prediction") or "")
+            all_prompts["generation"] = generations
+        else:
+            results = hallulens_inference_batch(model, inputs)
+            generations = [(r.get("prediction") or "") for r in results]
+            all_prompts["generation"] = generations
+    elif inference_method == "openai_responses":
+        # Registry name is "openai_responses" (OpenAI Responses API for reasoning models)
+        model = load_model(name="openai_responses", **backend_kwargs)
+        # If evaluation_logger is provided, process each input individually with log_prediction
+        if evaluation_logger is not None:
+            generations = []
+            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+                prompt_text = inp.get("input", "")
+                with evaluation_logger.log_prediction(
+                    inputs={"input": str(prompt_text), "index": idx},
+                    output=""
+                ):
+                    result = hallulens_inference_single(model, inp)
+                    generations.append(result.get("prediction") or "")
+            all_prompts["generation"] = generations
+        else:
+            results = hallulens_inference_batch(model, inputs)
+            generations = [(r.get("prediction") or "") for r in results]
+            all_prompts["generation"] = generations
     else:
         raise NotImplementedError(f"Unsupported backend method: {inference_method}")
     # else:

@@ -1,8 +1,14 @@
 import wandb
 import pandas as pd
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Callable
 from llm_eval.utils.util import EvaluationResult
 import weave
+from weave import EvaluationLogger
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
+
+logger = logging.getLogger(__name__)
 
 class WandbController:
     def __init__(self, wandb_params: dict, dataset_name: str, model_name: str):
@@ -28,42 +34,177 @@ class WandbController:
             run.log({table_name: leaderboard_table})
 
 
-class WeaveSampleLogger:
-    """Minimal helper to keep Weave Inputs and Outputs clean for per-sample traces.
+class WeaveInferenceController:
+    """
+    Handles Weave logging with automatic token/latency tracking during inference.
 
-    - Inputs: dataset_name, subset_name, input_text
-    - Outputs: every field except 'input' (e.g., prediction, reference, evaluation columns)
+    This controller wraps LLM inference calls in Weave's log_prediction context manager
+    to automatically capture token usage and latency metadata.
     """
 
-    _cache: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+    def __init__(
+        self,
+        dataset_name: str,
+        subset: Any,
+        split: str,
+        model_backend_name: str,
+        model_name: str = None,
+        scaling_method_name: str = None,
+        evaluation_method_name: str = None,
+        language_penalize: bool = False,
+        target_lang: str = "ko",
+        batch_size: int = 32,
+    ):
+        self.dataset_name = dataset_name
+        self.subset = subset
+        self.split = split
+        self.model_backend_name = model_backend_name
+        self.model_name = model_name
+        self.scaling_method_name = scaling_method_name
+        self.evaluation_method_name = evaluation_method_name
+        self.language_penalize = language_penalize
+        self.target_lang = target_lang
+        self.batch_size = batch_size
+        self.evaluation_logger = None
 
-    @staticmethod
-    def cache_sample(dataset_name: Any, item: Dict[str, Any]) -> None:
-        input_text = str(item.get("input", ""))
-        key = (str(dataset_name), input_text)
-        WeaveSampleLogger._cache[key] = {
-            'normalized_pred': item['evaluation']['normalized_pred'],
-            'normalized_ref': item['evaluation']['normalized_ref'],
-            'is_correct': item['evaluation']['is_correct'],
+    def initialize(self) -> EvaluationLogger:
+        """Initialize Weave EvaluationLogger before inference."""
+        # Build subset representation
+        if isinstance(self.subset, list):
+            subset_repr = "+".join(map(str, self.subset)) if self.subset else "all"
+        else:
+            subset_repr = str(self.subset) if self.subset is not None else "all"
+
+        # Get model name for labeling
+        model_name = self.model_name or self.model_backend_name
+        model_label = str(model_name).replace("-", "_").replace(" ", "_").replace(".", "_")
+
+        # Build metadata
+        metadata: Dict[str, Any] = {
+            "dataset_name": self.dataset_name,
+            "subset": self.subset,
+            "split": self.split,
+            "model_name": model_name,
+            "scaling_method_name": self.scaling_method_name,
+            "evaluation_method_name": self.evaluation_method_name,
+            "language_penalize": self.language_penalize,
+            "target_lang": self.target_lang,
+        }
+
+        # Initialize EvaluationLogger
+        self.evaluation_logger = EvaluationLogger(
+            dataset=str(self.dataset_name),
+            model=model_label,
+            eval_attributes=metadata,
+        )
+
+        logger.info("Initialized Weave EvaluationLogger for automatic token/latency tracking")
+        return self.evaluation_logger
+
+    def run_inference_with_logging(
+        self,
+        samples: List[Dict[str, Any]],
+        inference_fn: Callable[[List[Dict[str, Any]]], List[Dict[str, Any]]],
+    ) -> List[Dict[str, Any]]:
+        """
+        Run inference with each LLM call wrapped in Weave log_prediction context.
+
+        Args:
+            samples: Input samples for inference
+            inference_fn: Function that takes a single-element list and returns inference results
+                         (e.g., model.generate_batch)
+
+        Returns:
+            List of samples with predictions
+        """
+        if self.evaluation_logger is None:
+            raise RuntimeError("Must call initialize() before run_inference_with_logging()")
+
+        def process_single_sample(sample_with_idx: Tuple[int, Dict[str, Any]]) -> Dict[str, Any]:
+            """Process a single sample with its own Weave context."""
+            idx, sample = sample_with_idx
+            try:
+                # Prepare inputs for logging
+                input_text = sample.get("input", "")
+                reference_text = sample.get("reference", None)
+
+                inputs_payload = {"input": input_text}
+                if reference_text is not None:
+                    inputs_payload["reference"] = reference_text
+
+                # Use log_prediction as context manager to ensure LLM calls are tracked
+                # This way litellm acompletion calls will be nested under the prediction
+                with self.evaluation_logger.log_prediction(
+                    inputs=inputs_payload,
+                    output=""
+                ) as pred_logger:
+                    # Run model inference INSIDE the prediction context
+                    # Weave will automatically track token usage and latency
+                    result_list = inference_fn([sample])
+                    result = result_list[0] if result_list else sample
+
+                    # Update output within the context
+                    prediction_text = result.get("prediction", "")
+                    if pred_logger is not None:
+                        # Try to set the output attribute (public API)
+                        try:
+                            pred_logger.output = prediction_text
+                        except (AttributeError, TypeError):
+                            # If that doesn't work, try private attribute
+                            if hasattr(pred_logger, '_output'):
+                                pred_logger._output = prediction_text
+
+                # Store index for sorting results
+                result["_sample_idx"] = idx
+
+                return result
+
+            except Exception as e:
+                logger.error(f"Error processing sample {idx}: {e}", exc_info=True)
+                sample["prediction"] = ""
+                sample["_sample_idx"] = idx
+                return sample
+
+        logger.info(f"Running inference with Weave logging for {len(samples)} samples (batch_size={self.batch_size})")
+
+        # Use ThreadPoolExecutor for concurrent processing
+        processed_samples = []
+        with ThreadPoolExecutor(max_workers=self.batch_size) as executor:
+            # Submit all samples for processing
+            future_to_sample = {
+                executor.submit(process_single_sample, (idx, sample)): idx
+                for idx, sample in enumerate(samples)
             }
 
-    @staticmethod
-    def make_op(op_name: str):
-        @weave.op(name=op_name)
-        def _op(dataset_name: str, subset_name: Any, input_text: str) -> Dict[str, Any]:
-            key = (str(dataset_name), str(input_text))
-            item = WeaveSampleLogger._cache.get(key, {})
-            return {k: v for k, v in item.items() if k != "input"}
+            # Collect results with progress bar
+            with tqdm(total=len(samples), desc="Inference + Weave logging") as pbar:
+                for future in as_completed(future_to_sample):
+                    result = future.result()
+                    processed_samples.append(result)
+                    pbar.update(1)
 
-        return _op
+        # Sort by original index to maintain order
+        processed_samples.sort(key=lambda x: x.get("_sample_idx", 0))
 
-    @staticmethod
-    def log_samples(op_name: str, dataset_name: Any, samples: List[Dict[str, Any]]) -> None:
-        op = WeaveSampleLogger.make_op(op_name=str(op_name))
-        for s in samples or []:
-            subset_name = s.get("_subset_name", None)
-            WeaveSampleLogger.cache_sample(dataset_name, s)
-            op(dataset_name, subset_name, str(s.get("input", "")))
+        # Remove the temporary index field
+        for sample in processed_samples:
+            sample.pop("_sample_idx", None)
+
+        logger.info(f"Completed inference with Weave logging for {len(processed_samples)} samples")
+        return processed_samples
+
+    def finalize(self, metrics: Dict[str, Any]) -> None:
+        """Finalize Weave logging with summary metrics."""
+        if self.evaluation_logger is None:
+            logger.warning("EvaluationLogger not initialized, skipping finalization")
+            return
+
+        try:
+            self.evaluation_logger.log_summary(summary=metrics or {})
+            self.evaluation_logger.finish()
+            logger.info("Finalized Weave logging with summary metrics")
+        except Exception as e:
+            logger.warning(f"Failed to finalize Weave logging: {e}")
 
 
 class WeaveEvalsController:

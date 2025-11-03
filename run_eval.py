@@ -33,6 +33,9 @@ def run_all_from_configs(
     weave.init(f"{wandb_params.get('entity')}/{wandb_params.get('project')}")
     run = wandb.init(entity=wandb_params.get("entity"), project=wandb_params.get("project"), name=model_name)
     WandbConfigSingleton.initialize(run, model_name, wandb_params)
+    if model_cfg.get("model").get("params").get("provider") == "hosted_vllm":
+        from llm_eval.models.vllm_server_manager import start_vllm_server
+        start_vllm_server(model_cfg.get("model").get("vllm_params"))
 
     result = run_multiple_from_configs(
         base_config_path=base_config_path,
@@ -42,8 +45,10 @@ def run_all_from_configs(
         target_lang=target_lang,
     )
 
-    WandbConfigSingleton.log_overall_leaderboard_table(model_name, release_date, size_category, model_size, selected_datasets)
-
+    # WandbConfigSingleton.log_overall_leaderboard_table(model_name, release_date, size_category, model_size, selected_datasets)
+    if model_cfg.get("model").get("params").get("provider") == "hosted_vllm":
+        from llm_eval.models.vllm_server_manager import shutdown_vllm_server
+        shutdown_vllm_server()
     run.finish()
     return result
 

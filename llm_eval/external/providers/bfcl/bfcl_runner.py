@@ -849,6 +849,7 @@ def runner(model_names, test_categories, result_dir, score_dir):
                 continue
 
             handler = get_handler(model_name_escaped)
+
             # We don't evaluate the following categories in the current iteration of the benchmark
             if (is_chatable(test_category) or is_sql(test_category) or is_executable(test_category) or is_memory_prereq(test_category)):
                 continue
@@ -957,21 +958,23 @@ def runner(model_names, test_categories, result_dir, score_dir):
                 "correct_count": total_correct,
             }
             model_name_display = model_name.replace("_", "/")
-            # Log overall metrics for this model with all subset samples aggregated
-            WeaveEvalsController.log(
-                dataset_name="bfcl",
-                subset="overall",  # single eval containing all subsets
-                split="test",
-                model_backend_name="bfcl",
-                model_name=model_name_display,
-                scaling_method_name=None,
-                evaluation_method_name="BFCL-Evaluation",
-                language_penalize=False,
-                target_lang="en",
-                samples=model_to_samples.get(model_name, []),
-                metrics=summary_metrics,
-                wandb_params={},
-            )
+            # NOTE: WeaveEvalsController.log() is disabled to avoid duplicate evaluations
+            # The evaluation is created by evaluator.py via evaluation_logger.finish()
+            # which captures token/latency data from log_prediction() during inference
+            # WeaveEvalsController.log(
+            #     dataset_name="bfcl",
+            #     subset="overall",  # single eval containing all subsets
+            #     split="test",
+            #     model_backend_name="bfcl",
+            #     model_name=model_name_display,
+            #     scaling_method_name=None,
+            #     evaluation_method_name="BFCL-Evaluation",
+            #     language_penalize=False,
+            #     target_lang="en",
+            #     samples=model_to_samples.get(model_name, []),
+            #     metrics=summary_metrics,
+            #     wandb_params={},
+            # )
     except Exception as e:
         print(f"[Weave] BFCL all logging skipped: {e}")
 
