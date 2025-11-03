@@ -3,12 +3,12 @@ model:
   params:
     model_name: hosted_vllm/Qwen/Qwen3-4B
     provider: hosted_vllm
-    api_base: http://localhost:18195/v1
-    max_tokens: 1024
+    api_base: http://localhost:8000/v1
+    max_tokens: 3072
     temperature: 0.1
-    batch_size: 1
+    batch_size: 8  # 클라이언트가 동시에 보낼 요청 수
   vllm_params:
-    batch_size: 1
+    batch_size: 16  # vLLM 서버가 동시에 처리할 수 있는 요청 수 (클라이언트보다 크게 설정)
     dtype: "auto"
     download_dir: "/home/data_storage/huggingface"
     max_model_len: 4096
