@@ -66,6 +66,19 @@ def precise_wikiqa_runner(
     elif N is not None and len(QAs_df) > N:
         QAs_df = QAs_df.head(N)
 
+    # Create EvaluationLogger for automatic token/latency tracking
+    from weave import EvaluationLogger
+    model_label = model_name.replace("-", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
+    evaluation_logger = EvaluationLogger(
+        dataset=TASKNAME,
+        model=model_label,
+        eval_attributes={
+            "dataset_name": TASKNAME,
+            "model_name": model,
+            "evaluation_method_name": "HalluLens",
+        },
+    )
+
     print(f"Starting Inference for [{model}], Testset_N: {QAs_df.shape}")
     exp.run_exp(
         task=f"{TASKNAME}",
@@ -74,8 +87,15 @@ def precise_wikiqa_runner(
         inference_method=inference_method, \
         backend_kwargs=backend_kwargs,
         max_tokens=max_inference_tokens,
-        max_workers=inf_batch_size)
+        max_workers=inf_batch_size,
+        evaluation_logger=evaluation_logger)
     print('Inference completed')
+
+    # Finalize EvaluationLogger after inference
+    try:
+        evaluation_logger.finish()
+    except Exception as e:
+        print(f"Warning: Failed to finalize EvaluationLogger: {e}")
 
     print(f"Starting Evaluation for {model}")
     # evaluator 모델을 동적으로 지정: PreciseQAEval 내부 속성 재설정
@@ -116,20 +136,23 @@ def precise_wikiqa_runner(
         metrics = {
             k: v for k, v in eval_result.items() if isinstance(v, (int, float))
         }
-        WeaveEvalsController.log(
-            dataset_name=TASKNAME,
-            subset=None,
-            split="test",
-            model_backend_name=inference_method,
-            model_name=model,
-            scaling_method_name=None,
-            evaluation_method_name="HalluLens-PreciseQAEval",
-            language_penalize=False,
-            target_lang="ko",
-            samples=samples,
-            metrics=metrics,
-            wandb_params={},
-        )
+        # NOTE: WeaveEvalsController.log() is disabled to avoid duplicate evaluations
+        # The evaluation is created via evaluation_logger.finish() (line 96)
+        # which captures token/latency data from log_prediction() during inference
+        # WeaveEvalsController.log(
+        #     dataset_name=TASKNAME,
+        #     subset=None,
+        #     split="test",
+        #     model_backend_name=inference_method,
+        #     model_name=model,
+        #     scaling_method_name=None,
+        #     evaluation_method_name="HalluLens-PreciseQAEval",
+        #     language_penalize=False,
+        #     target_lang="ko",
+        #     samples=samples,
+        #     metrics=metrics,
+        #     wandb_params={},
+        # )
     except Exception as e:
         print(f"[Weave] precise_wikiqa logging skipped: {e}")
     
@@ -172,6 +195,19 @@ def longwiki_runner(
     elif N is not None and len(all_prompts) > N:
         all_prompts = all_prompts.head(N)
 
+    # Create EvaluationLogger for automatic token/latency tracking
+    from weave import EvaluationLogger
+    model_label = model_name.replace("-", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
+    evaluation_logger = EvaluationLogger(
+        dataset=f"{TASKNAME}-dynamic",
+        model=model_label,
+        eval_attributes={
+            "dataset_name": f"{TASKNAME}-dynamic",
+            "model_name": model,
+            "evaluation_method_name": "HalluLens",
+        },
+    )
+
     print(f"Start Inference for {model} ", "dynamic", N)
 
     exp.run_exp(task=f"{TASKNAME}-dynamic",
@@ -181,9 +217,16 @@ def longwiki_runner(
                 backend_kwargs=backend_kwargs,
                 max_tokens=max_tokens,
                 max_workers=max_workers,
+                evaluation_logger=evaluation_logger,
                 )
 
     print('\n***Inference completed')
+
+    # Finalize EvaluationLogger after inference
+    try:
+        evaluation_logger.finish()
+    except Exception as e:
+        print(f"Warning: Failed to finalize EvaluationLogger: {e}")
 
     # RUN EVALUATION:
     print("============= [[ {} ]] =================".format("dynamic"))
@@ -226,20 +269,23 @@ def longwiki_runner(
             samples.append(sample)
 
         metrics = {k: v for k, v in (eval_result or {}).items() if isinstance(v, (int, float))}
-        WeaveEvalsController.log(
-            dataset_name=TASKNAME,
-            subset="dynamic",
-            split="test",
-            model_backend_name=inference_method,
-            model_name=model,
-            scaling_method_name=None,
-            evaluation_method_name="HalluLens-LongWiki-FactHalu",
-            language_penalize=False,
-            target_lang="ko",
-            samples=samples,
-            metrics=metrics,
-            wandb_params={},
-        )
+        # NOTE: WeaveEvalsController.log() is disabled to avoid duplicate evaluations
+        # The evaluation is created via evaluation_logger.finish() (line 224)
+        # which captures token/latency data from log_prediction() during inference
+        # WeaveEvalsController.log(
+        #     dataset_name=TASKNAME,
+        #     subset="dynamic",
+        #     split="test",
+        #     model_backend_name=inference_method,
+        #     model_name=model,
+        #     scaling_method_name=None,
+        #     evaluation_method_name="HalluLens-LongWiki-FactHalu",
+        #     language_penalize=False,
+        #     target_lang="ko",
+        #     samples=samples,
+        #     metrics=metrics,
+        #     wandb_params={},
+        # )
     except Exception as e:
         print(f"[Weave] longwiki logging skipped: {e}")
 
@@ -301,20 +347,23 @@ def non_mixed_entity_runner(
                 "evaluation": ev,
             })
         metrics = {k: v for k, v in (res or {}).items() if isinstance(v, (int, float))}
-        WeaveEvalsController.log(
-            dataset_name=inference.TASKNAME,
-            subset=None,
-            split="test",
-            model_backend_name=inference_method,
-            model_name=tested_model,
-            scaling_method_name=None,
-            evaluation_method_name="HalluLens-NonMixedEntity",
-            language_penalize=False,
-            target_lang="ko",
-            samples=samples,
-            metrics=metrics,
-            wandb_params={},
-        )
+        # NOTE: WeaveEvalsController.log() is disabled to avoid duplicate evaluations
+        # Evaluations are created via evaluation_logger.finish() in the inference functions
+        # which capture token/latency data from log_prediction() during inference
+        # WeaveEvalsController.log(
+        #     dataset_name=inference.TASKNAME,
+        #     subset=None,
+        #     split="test",
+        #     model_backend_name=inference_method,
+        #     model_name=tested_model,
+        #     scaling_method_name=None,
+        #     evaluation_method_name="HalluLens-NonMixedEntity",
+        #     language_penalize=False,
+        #     target_lang="ko",
+        #     samples=samples,
+        #     metrics=metrics,
+        #     wandb_params={},
+        # )
     except Exception as e:
         print(f"[Weave] non_mixed_entity logging skipped: {e}")
 
@@ -365,20 +414,23 @@ def non_generated_entity_runner(
                 "evaluation": ev,
             })
         metrics = {k: v for k, v in (res or {}).items() if isinstance(v, (int, float))}
-        WeaveEvalsController.log(
-            dataset_name=inference.TASKNAME,
-            subset=None,
-            split="test",
-            model_backend_name=inference_method,
-            model_name=generate_model,
-            scaling_method_name=None,
-            evaluation_method_name="HalluLens-NonGeneratedEntity",
-            language_penalize=False,
-            target_lang="ko",
-            samples=samples,
-            metrics=metrics,
-            wandb_params={},
-        )
+        # NOTE: WeaveEvalsController.log() is disabled to avoid duplicate evaluations
+        # Evaluations are created via evaluation_logger.finish() in the inference functions
+        # which capture token/latency data from log_prediction() during inference
+        # WeaveEvalsController.log(
+        #     dataset_name=inference.TASKNAME,
+        #     subset=None,
+        #     split="test",
+        #     model_backend_name=inference_method,
+        #     model_name=generate_model,
+        #     scaling_method_name=None,
+        #     evaluation_method_name="HalluLens-NonGeneratedEntity",
+        #     language_penalize=False,
+        #     target_lang="ko",
+        #     samples=samples,
+        #     metrics=metrics,
+        #     wandb_params={},
+        # )
     except Exception as e:
         print(f"[Weave] non_generated_entity logging skipped: {e}")
 
