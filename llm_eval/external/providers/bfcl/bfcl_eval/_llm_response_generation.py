@@ -187,6 +187,10 @@ def multi_threaded_inference(handler, test_case, include_input_log, exclude_stat
 def generate_results(args, model_name, test_cases_total):
     handler = build_handler(model_name, args.temperature)
 
+    # If EvaluationLogger is available in args, set it on the handler for token/latency tracking
+    if hasattr(args, 'evaluation_logger') and hasattr(handler, 'set_evaluation_logger'):
+        handler.set_evaluation_logger(args.evaluation_logger)
+
     if isinstance(handler, OSSHandler):
         handler: OSSHandler
         is_oss_model = True
