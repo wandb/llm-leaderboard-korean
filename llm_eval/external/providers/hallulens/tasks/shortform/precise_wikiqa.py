@@ -99,7 +99,7 @@ class PreciseQAEval:
         halu_eval_raw = thread_map(
             gen_fn,
             halu_prompts,
-            max_workers=8,
+            max_workers=32,
             desc=f"using {evaluator}"
         )
 

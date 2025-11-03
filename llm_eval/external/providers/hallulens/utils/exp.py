@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import os
 from tqdm.contrib.concurrent import thread_map
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from llm_eval.external.providers.hallulens.utils import lm
 from llm_eval.models import load_model
@@ -109,8 +110,8 @@ def run_exp(
         )
         # If evaluation_logger is provided, process each input individually with log_prediction
         if evaluation_logger is not None:
-            generations = []
-            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+            def process_input(idx_inp):
+                idx, inp = idx_inp
                 prompt_text = inp.get("input", "")
                 with evaluation_logger.log_prediction(
                     inputs={"input": str(prompt_text), "index": idx},
@@ -118,7 +119,6 @@ def run_exp(
                 ) as pred_logger:
                     result = hallulens_inference_single(model, inp)
                     prediction_text = result.get("prediction") or ""
-                    generations.append(prediction_text)
                     # Update output within the context
                     if pred_logger is not None:
                         try:
@@ -126,6 +126,14 @@ def run_exp(
                         except (AttributeError, TypeError):
                             if hasattr(pred_logger, '_output'):
                                 pred_logger._output = prediction_text
+                    return idx, prediction_text
+
+            generations = [None] * len(inputs)
+            with ThreadPoolExecutor(max_workers=batch_size) as executor:
+                futures = [executor.submit(process_input, (idx, inp)) for idx, inp in enumerate(inputs)]
+                for future in tqdm_progress(as_completed(futures), total=len(inputs), desc="HalluLens inference with tracking"):
+                    idx, prediction_text = future.result()
+                    generations[idx] = prediction_text
             all_prompts["generation"] = generations
         else:
             results = hallulens_inference_batch(model, inputs)
@@ -146,8 +154,8 @@ def run_exp(
         # )
         # If evaluation_logger is provided, process each input individually with log_prediction
         if evaluation_logger is not None:
-            generations = []
-            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+            def process_input(idx_inp):
+                idx, inp = idx_inp
                 prompt_text = inp.get("input", "")
                 with evaluation_logger.log_prediction(
                     inputs={"input": str(prompt_text), "index": idx},
@@ -155,7 +163,6 @@ def run_exp(
                 ) as pred_logger:
                     result = hallulens_inference_single(model, inp)
                     prediction_text = result.get("prediction") or ""
-                    generations.append(prediction_text)
                     # Update output within the context
                     if pred_logger is not None:
                         try:
@@ -163,6 +170,14 @@ def run_exp(
                         except (AttributeError, TypeError):
                             if hasattr(pred_logger, '_output'):
                                 pred_logger._output = prediction_text
+                    return idx, prediction_text
+
+            generations = [None] * len(inputs)
+            with ThreadPoolExecutor(max_workers=batch_size) as executor:
+                futures = [executor.submit(process_input, (idx, inp)) for idx, inp in enumerate(inputs)]
+                for future in tqdm_progress(as_completed(futures), total=len(inputs), desc="HalluLens inference with tracking"):
+                    idx, prediction_text = future.result()
+                    generations[idx] = prediction_text
             all_prompts["generation"] = generations
         else:
             results = hallulens_inference_batch(model, inputs)
@@ -183,8 +198,8 @@ def run_exp(
         )
         # If evaluation_logger is provided, process each input individually with log_prediction
         if evaluation_logger is not None:
-            generations = []
-            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+            def process_input(idx_inp):
+                idx, inp = idx_inp
                 prompt_text = inp.get("input", "")
                 with evaluation_logger.log_prediction(
                     inputs={"input": str(prompt_text), "index": idx},
@@ -192,7 +207,6 @@ def run_exp(
                 ) as pred_logger:
                     result = hallulens_inference_single(model, inp)
                     prediction_text = result.get("prediction") or ""
-                    generations.append(prediction_text)
                     # Update output within the context
                     if pred_logger is not None:
                         try:
@@ -200,6 +214,14 @@ def run_exp(
                         except (AttributeError, TypeError):
                             if hasattr(pred_logger, '_output'):
                                 pred_logger._output = prediction_text
+                    return idx, prediction_text
+
+            generations = [None] * len(inputs)
+            with ThreadPoolExecutor(max_workers=batch_size) as executor:
+                futures = [executor.submit(process_input, (idx, inp)) for idx, inp in enumerate(inputs)]
+                for future in tqdm_progress(as_completed(futures), total=len(inputs), desc="HalluLens inference with tracking"):
+                    idx, prediction_text = future.result()
+                    generations[idx] = prediction_text
             all_prompts["generation"] = generations
         else:
             results = hallulens_inference_batch(model, inputs)
@@ -226,8 +248,8 @@ def run_exp(
         )
         # If evaluation_logger is provided, process each input individually with log_prediction
         if evaluation_logger is not None:
-            generations = []
-            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+            def process_input(idx_inp):
+                idx, inp = idx_inp
                 prompt_text = inp.get("input", "")
                 with evaluation_logger.log_prediction(
                     inputs={"input": str(prompt_text), "index": idx},
@@ -235,7 +257,6 @@ def run_exp(
                 ) as pred_logger:
                     result = hallulens_inference_single(model, inp)
                     prediction_text = result.get("prediction") or ""
-                    generations.append(prediction_text)
                     # Update output within the context
                     if pred_logger is not None:
                         try:
@@ -243,6 +264,14 @@ def run_exp(
                         except (AttributeError, TypeError):
                             if hasattr(pred_logger, '_output'):
                                 pred_logger._output = prediction_text
+                    return idx, prediction_text
+
+            generations = [None] * len(inputs)
+            with ThreadPoolExecutor(max_workers=batch_size) as executor:
+                futures = [executor.submit(process_input, (idx, inp)) for idx, inp in enumerate(inputs)]
+                for future in tqdm_progress(as_completed(futures), total=len(inputs), desc="HalluLens inference with tracking"):
+                    idx, prediction_text = future.result()
+                    generations[idx] = prediction_text
             all_prompts["generation"] = generations
         else:
             results = hallulens_inference_batch(model, inputs)
@@ -253,8 +282,8 @@ def run_exp(
         model = load_model(name="openai_responses", **backend_kwargs)
         # If evaluation_logger is provided, process each input individually with log_prediction
         if evaluation_logger is not None:
-            generations = []
-            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+            def process_input(idx_inp):
+                idx, inp = idx_inp
                 prompt_text = inp.get("input", "")
                 with evaluation_logger.log_prediction(
                     inputs={"input": str(prompt_text), "index": idx},
@@ -262,7 +291,6 @@ def run_exp(
                 ) as pred_logger:
                     result = hallulens_inference_single(model, inp)
                     prediction_text = result.get("prediction") or ""
-                    generations.append(prediction_text)
                     # Update output within the context
                     if pred_logger is not None:
                         try:
@@ -270,6 +298,14 @@ def run_exp(
                         except (AttributeError, TypeError):
                             if hasattr(pred_logger, '_output'):
                                 pred_logger._output = prediction_text
+                    return idx, prediction_text
+
+            generations = [None] * len(inputs)
+            with ThreadPoolExecutor(max_workers=batch_size) as executor:
+                futures = [executor.submit(process_input, (idx, inp)) for idx, inp in enumerate(inputs)]
+                for future in tqdm_progress(as_completed(futures), total=len(inputs), desc="HalluLens inference with tracking"):
+                    idx, prediction_text = future.result()
+                    generations[idx] = prediction_text
             all_prompts["generation"] = generations
         else:
             results = hallulens_inference_batch(model, inputs)

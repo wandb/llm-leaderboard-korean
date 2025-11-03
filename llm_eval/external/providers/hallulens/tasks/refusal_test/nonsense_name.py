@@ -48,13 +48,35 @@ class NonsenseNameInference:
             f"{all_prompts} should contain Korean prompts."
         )
 
-        exp.run_exp(task=TASKNAME, 
-                    model_path=generate_model, 
-                    all_prompts=all_prompts, 
-                    inference_method=self.inference_method, 
-                    max_tokens=256, 
+        # Create EvaluationLogger for automatic token/latency tracking
+        from weave import EvaluationLogger
+        model_name = generate_model.split("/")[-1]
+        model_label = model_name.replace("-", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
+        evaluation_logger = EvaluationLogger(
+            dataset=TASKNAME,
+            model=model_label,
+            eval_attributes={
+                "dataset_name": TASKNAME,
+                "model_name": generate_model,
+                "evaluation_method_name": "HalluLens",
+            },
+        )
+
+        exp.run_exp(task=TASKNAME,
+                    model_path=generate_model,
+                    all_prompts=all_prompts,
+                    inference_method=self.inference_method,
+                    max_tokens=256,
                     base_path=self.output_base_dir,
-                    backend_kwargs=self.backend_kwargs)
+                    backend_kwargs=self.backend_kwargs,
+                    evaluation_logger=evaluation_logger)
+
+        # Finalize EvaluationLogger after inference
+        try:
+            evaluation_logger.finish()
+        except Exception as e:
+            print(f"Warning: Failed to finalize EvaluationLogger: {e}")
+
         print(TASKNAME, 'Inference completed')
 
     def remove_existing_files(self):
