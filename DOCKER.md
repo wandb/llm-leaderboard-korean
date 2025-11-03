@@ -20,33 +20,44 @@ This guide explains how to build, run, and deploy the Haerae Evaluation Toolkit 
 ### 2. Run the Container
 
 ```bash
-# Basic run
+# Basic run (shows help)
 docker run -it --rm haerae-evaluation-toolkit:latest
 
-# Run with environment variables
+# Run with environment variables and volume mounts
 docker run -it --rm \
   -e OPENAI_API_KEY=your_key_here \
   -e WANDB_API_KEY=your_wandb_key \
-  haerae-evaluation-toolkit:latest
-
-# Run with volume mounts
-docker run -it --rm \
   -v $(pwd)/data:/app/data \
   -v $(pwd)/configs:/app/configs \
-  -p 8000:8000 \
+  -v $(pwd)/results:/app/results \
   haerae-evaluation-toolkit:latest
+
+# Run specific evaluation
+docker run -it --rm \
+  -e OPENAI_API_KEY=your_key_here \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/configs:/app/configs \
+  haerae-evaluation-toolkit:latest \
+  python run_eval.py --config configs/your_config.yaml
+
+# Interactive shell
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  haerae-evaluation-toolkit:latest \
+  bash
 ```
 
 ### 3. Using Docker Compose
 
 ```bash
-# Start all services
+# Start container (interactive mode)
+docker-compose up
+
+# Run in background and execute commands
 docker-compose up -d
+docker-compose exec hret python run_eval.py --help
 
-# View logs
-docker-compose logs -f
-
-# Stop services
+# Stop container
 docker-compose down
 ```
 
@@ -88,6 +99,9 @@ The container supports the following environment variables:
 |----------|-------------|---------|
 | `OPENAI_API_KEY` | OpenAI API key | - |
 | `ANTHROPIC_API_KEY` | Anthropic API key | - |
+| `COHERE_API_KEY` | Cohere API key | - |
+| `MISTRAL_API_KEY` | Mistral API key | - |
+| `GOOGLE_API_KEY` | Google API key | - |
 | `WANDB_API_KEY` | Weights & Biases API key | - |
 | `HRET_HOME` | Application home directory | `/app` |
 | `PYTHONPATH` | Python path | `/app` |
@@ -96,20 +110,18 @@ The container supports the following environment variables:
 
 Recommended volume mounts:
 
-- `/app/data` - For datasets and evaluation results
+- `/app/data` - For datasets and input data
 - `/app/logs` - For application logs
 - `/app/configs` - For configuration files
-
-## Ports
-
-- `8000` - FastAPI web server (if running web interface)
+- `/app/results` - For evaluation results and outputs
 
 ## Docker Compose Configuration
 
 The `docker-compose.yml` includes:
 
-- **hret**: Main application container
-- **redis**: Optional Redis cache (commented out by default)
+- **hret**: Main application container with interactive mode
+- **Volume Mounts**: For persistent data and configuration
+- **Environment Variables**: For API keys and configuration
 
 ### Environment File
 
