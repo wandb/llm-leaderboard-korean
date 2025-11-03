@@ -14,13 +14,10 @@ This runner can be used via CLI or integrated into an API.
 """
 
 import weave
-from weave import EvaluationLogger
 import logging
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union, Callable, Tuple
-from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from llm_eval.datasets import load_datasets, BaseDataset
 from llm_eval.models import load_model, BaseModel
@@ -35,7 +32,7 @@ from llm_eval.utils.prompt_template import (
     DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
 )
 from llm_eval.utils.metrics import language_penalizer
-from llm_eval.wandb_controller import WeaveSampleLogger, WeaveEvalsController
+from llm_eval.wandb_controller import WeaveInferenceController
 
 logger = get_logger(name="runner", level=logging.INFO)
 
@@ -532,10 +529,20 @@ class PipelineRunner:
             if not evaluation_samples:
                 return self._create_empty_result(few_shot_prefix, "No samples for evaluation after few-shot processing")
 
-            # Step 2: Initialize Weave EvaluationLogger BEFORE inference
-            # This is required for automatic token/latency tracking
-            evaluation_logger = self._initialize_evaluation_logger()
-            logger.info("Initialized Weave EvaluationLogger before inference for automatic token/timing tracking")
+            # Step 2: Initialize Weave inference controller
+            weave_controller = WeaveInferenceController(
+                dataset_name=self.config.dataset_name,
+                subset=self.config.subset,
+                split=self.config.split,
+                model_backend_name=self.config.model_backend_name,
+                model_name=(self.config.model_backend_params or {}).get("model_name"),
+                scaling_method_name=self.config.scaling_method_name,
+                evaluation_method_name=self.config.evaluation_method_name,
+                language_penalize=self.config.language_penalize,
+                target_lang=self.config.target_lang,
+                batch_size=self.config.model_backend_params.get("batch_size", 32),
+            )
+            weave_controller.initialize()
 
             # Step 2.5: Prepare samples for inference
             inference_samples = self.few_shot_handler.process_samples_for_inference(
@@ -546,8 +553,8 @@ class PipelineRunner:
             # Step 3: Run inference with Weave logging
             # This ensures LLM calls happen inside log_prediction contexts
             # for automatic token usage and latency tracking
-            predictions = self._run_inference_with_weave_logging(
-                inference_samples, evaluation_logger
+            predictions = weave_controller.run_inference_with_logging(
+                inference_samples, self.components.model.generate_batch
             )
 
             # Step 4: Evaluate predictions
@@ -557,12 +564,7 @@ class PipelineRunner:
             self.language_penalizer.apply_penalization(eval_dict)
 
             # Step 6: Finalize Weave logging with summary metrics
-            try:
-                evaluation_logger.log_summary(summary=eval_dict.get("metrics", {}) or {})
-                evaluation_logger.finish()
-                logger.info("Finalized Weave logging with summary metrics")
-            except Exception as e:
-                logger.warning(f"Failed to finalize Weave logging: {e}")
+            weave_controller.finalize(eval_dict.get("metrics", {}))
 
             # Step 7: Create final result
             return self._create_final_result(eval_dict, few_shot_prefix, start_time)
@@ -590,132 +592,6 @@ class PipelineRunner:
         except Exception as e:
             logger.error(f"Error during evaluation with '{self.config.evaluation_method_name}': {e}", exc_info=True)
             raise
-
-    def _initialize_evaluation_logger(self) -> EvaluationLogger:
-        """
-        Initialize Weave EvaluationLogger before inference.
-
-        This allows Weave to automatically track token usage and latency
-        when LLM calls are made inside log_prediction contexts.
-
-        Returns:
-            EvaluationLogger: Initialized logger ready to track inference
-        """
-        # Build subset representation
-        if isinstance(self.config.subset, list):
-            subset_repr = "+".join(map(str, self.config.subset)) if self.config.subset else "all"
-        else:
-            subset_repr = str(self.config.subset) if self.config.subset is not None else "all"
-
-        # Get model name for labeling
-        model_name = (self.config.model_backend_params or {}).get("model_name") or self.config.model_backend_name
-        model_label = str(model_name).replace("-", "_").replace(" ", "_").replace(".", "_")
-
-        # Build metadata
-        metadata: Dict[str, Any] = {
-            "dataset_name": self.config.dataset_name,
-            "subset": self.config.subset,
-            "split": self.config.split,
-            "model_name": model_name,
-            "scaling_method_name": self.config.scaling_method_name,
-            "evaluation_method_name": self.config.evaluation_method_name,
-            "language_penalize": self.config.language_penalize,
-            "target_lang": self.config.target_lang,
-        }
-
-        # Initialize EvaluationLogger
-        elog = EvaluationLogger(
-            dataset=str(self.config.dataset_name),
-            model=model_label,
-            eval_attributes=metadata,
-        )
-
-        return elog
-
-    def _run_inference_with_weave_logging(
-        self,
-        samples: List[Dict[str, Any]],
-        evaluation_logger: EvaluationLogger
-    ) -> List[Dict[str, Any]]:
-        """
-        Run inference with each LLM call wrapped in Weave log_prediction context.
-        Uses ThreadPoolExecutor for concurrent batch processing.
-
-        This ensures Weave automatically captures token usage and latency metadata
-        while maintaining batch processing efficiency.
-
-        Args:
-            samples: Input samples for inference
-            evaluation_logger: Pre-initialized EvaluationLogger
-
-        Returns:
-            List of samples with predictions, evaluations, and Weave pred_logger attached
-        """
-        def process_single_sample(sample_with_idx: Tuple[int, Dict[str, Any]]) -> Dict[str, Any]:
-            """Process a single sample with its own Weave context."""
-            idx, sample = sample_with_idx
-            try:
-                # Prepare inputs for logging
-                input_text = sample.get("input", "")
-                reference_text = sample.get("reference", None)
-
-                inputs_payload = {"input": input_text}
-                if reference_text is not None:
-                    inputs_payload["reference"] = reference_text
-
-                # Use log_prediction as context manager to ensure LLM calls are tracked
-                # This way litellm acompletion calls will be nested under the prediction
-                with evaluation_logger.log_prediction(
-                    inputs=inputs_payload,
-                    output=""  # Will be populated automatically
-                ):
-                    # Run model inference INSIDE the prediction context
-                    # This ensures Weave captures token usage and latency
-                    single_sample = [sample]
-                    result_list = self.components.model.generate_batch(single_sample)
-                    result = result_list[0] if result_list else sample
-
-                # Store index for sorting results
-                result["_sample_idx"] = idx
-
-                return result
-
-            except Exception as e:
-                logger.error(f"Error processing sample {idx}: {e}", exc_info=True)
-                sample["prediction"] = ""
-                sample["_sample_idx"] = idx
-                return sample
-
-        # Get batch_size from model config for concurrency control
-        batch_size = self.config.model_backend_params.get("batch_size", 32)
-
-        logger.info(f"Running inference with Weave logging for {len(samples)} samples (batch_size={batch_size})")
-
-        # Use ThreadPoolExecutor for concurrent processing
-        processed_samples = []
-        with ThreadPoolExecutor(max_workers=batch_size) as executor:
-            # Submit all samples for processing
-            future_to_sample = {
-                executor.submit(process_single_sample, (idx, sample)): idx
-                for idx, sample in enumerate(samples)
-            }
-
-            # Collect results with progress bar
-            with tqdm(total=len(samples), desc="Inference + Weave logging") as pbar:
-                for future in as_completed(future_to_sample):
-                    result = future.result()
-                    processed_samples.append(result)
-                    pbar.update(1)
-
-        # Sort by original index to maintain order
-        processed_samples.sort(key=lambda x: x.get("_sample_idx", 0))
-
-        # Remove the temporary index field
-        for sample in processed_samples:
-            sample.pop("_sample_idx", None)
-
-        logger.info(f"Completed inference with Weave logging for {len(processed_samples)} samples")
-        return processed_samples
 
 
     def _create_pipeline_info(self, few_shot_prefix: str, elapsed_time: float) -> Dict[str, Any]:
