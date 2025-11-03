@@ -1,0 +1,19 @@
+model:
+  name: openai
+  params:
+    provider: hosted_vllm
+    model_name: Qwen/Qwen3-4B
+    api_base: http://localhost:8000/v1
+    batch_size: 1
+    max_tokens: 1024
+    temperature: 0.1
+  vllm_params:
+    batch_size: 1
+    dtype: "auto"
+    download_dir: "/home/data_storage/huggingface"
+    max_model_len: 4096
+    num_gpus: 1
+    port: 8000
+    pretrained_model_name_or_path: "Qwen/Qwen3-4B"
+    tensor_parallel_size: 1
+    trust_remote_code: true

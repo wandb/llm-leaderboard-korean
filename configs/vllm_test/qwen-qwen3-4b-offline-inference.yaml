@@ -1,0 +1,8 @@
+model:
+  name: vllm
+  params:
+    model_name: Qwen/Qwen3-4B
+    model_name_or_path: Qwen/Qwen3-4B
+    max_tokens: 1024
+    temperature: 0.1
+    tensor_parallel_size: 1

@@ -216,6 +216,25 @@ def run_exp(
             results = hallulens_inference_batch(model, inputs)
             generations = [(r.get("prediction") or "") for r in results]
             all_prompts["generation"] = generations
+    elif inference_method == "openai_responses":
+        # Registry name is "openai_responses" (OpenAI Responses API for reasoning models)
+        model = load_model(name="openai_responses", **backend_kwargs)
+        # If evaluation_logger is provided, process each input individually with log_prediction
+        if evaluation_logger is not None:
+            generations = []
+            for idx, inp in enumerate(tqdm_progress(inputs, desc="HalluLens inference with tracking")):
+                prompt_text = inp.get("input", "")
+                with evaluation_logger.log_prediction(
+                    inputs={"input": str(prompt_text), "index": idx},
+                    output=""
+                ):
+                    result = hallulens_inference_single(model, inp)
+                    generations.append(result.get("prediction") or "")
+            all_prompts["generation"] = generations
+        else:
+            results = hallulens_inference_batch(model, inputs)
+            generations = [(r.get("prediction") or "") for r in results]
+            all_prompts["generation"] = generations
     else:
         raise NotImplementedError(f"Unsupported backend method: {inference_method}")
     # else:
