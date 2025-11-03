@@ -145,7 +145,7 @@ class StringMatchEvaluator(BaseEvaluator):
         if self.mcqa and "options" in samples[0] and isinstance(samples[0]["options"], list) and samples[0]["options"]:
             logger.info(f"Evaluating outputs using string match with mcqa={self.mcqa}")
 
-        for sample in tqdm(samples, desc="String-Match Evaluation"):
+        for sample in samples:
             subset_name = sample.get("_subset_name")
             # Normalize the prediction and reference texts.
             pred_norm = self.parse_prediction(sample["prediction"])

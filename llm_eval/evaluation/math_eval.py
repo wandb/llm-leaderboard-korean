@@ -125,7 +125,7 @@ class MathMatchEvaluator(BaseEvaluator):
 
         # 1차 시도: 현재 설정된 extraction_config로 파싱
         try:
-            primary = parse(text, extraction_config=self.extraction_config)
+            primary = parse(text, extraction_config=self.extraction_config, parsing_timeout=None)
         except Exception as e:
             logger.warning(f"Failed to parse mathematical expression: {text}")
             logger.warning(f"Error: {str(e)}")
@@ -154,7 +154,7 @@ class MathMatchEvaluator(BaseEvaluator):
             return False
 
         try:
-            return verify(ref, pred)
+            return verify(ref, pred, timeout_seconds=0)
         except Exception as e:
             logger.warning(f"Verification failed between: {pred} and {ref}")
             logger.warning(f"Error: {str(e)}")
@@ -189,7 +189,7 @@ class MathMatchEvaluator(BaseEvaluator):
             for s in subsets:
                 subset_stats[s] = {"total": 0, "correct": 0}
 
-        for sample in tqdm(samples, desc="Math-Match Evaluation"):
+        for sample in samples:
             subset_name = sample.get("_subset_name")
             if subset_name and subset_name not in subset_stats:
                 subset_stats[subset_name] = {"total": 0, "correct": 0}
@@ -302,11 +302,11 @@ class MathMatchEvaluator(BaseEvaluator):
 
     def _parse_with_fallback_extractors(self, text: str) -> Any:
         if self.latex_only:
-            return parse(text, extraction_config=[ExprExtractionConfig()])
+            return parse(text, extraction_config=[ExprExtractionConfig()], parsing_timeout=None)
         if self.expr_only:
-            return parse(text, extraction_config=[LatexExtractionConfig()])
+            return parse(text, extraction_config=[LatexExtractionConfig()], parsing_timeout=None)
         # 혼합 모드에서는 순서를 바꿔 재시도
-        return parse(text, extraction_config=[ExprExtractionConfig(), LatexExtractionConfig()])
+        return parse(text, extraction_config=[ExprExtractionConfig(), LatexExtractionConfig()], parsing_timeout=None)
 
     def _parse_numeric_value(self, text_value: Optional[str]) -> Optional[float]:
         if text_value is None:

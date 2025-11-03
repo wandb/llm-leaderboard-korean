@@ -84,7 +84,7 @@ class MTBenchJudgeEvaluator(BaseEvaluator):
 
         if batch_inputs:
             logger.info(f"MTBenchJudgeEvaluator: Calling judge_batch for {len(batch_inputs)} samples")
-            judge_responses = self._judge.judge_batch(batch_inputs)
+            judge_responses = self._judge.judge_batch(batch_inputs, show_progress=False)
             for response_idx, sample_idx in enumerate(batch_indices):
                 sample = samples[sample_idx]
                 judge_response = judge_responses[response_idx].get("prediction", "")

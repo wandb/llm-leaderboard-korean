@@ -1,4 +1,5 @@
 import os
+import weave
 import logging
 import time
 from typing import List, Dict, Any, Optional, Union
@@ -85,6 +86,7 @@ class OpenAIJudge(BaseJudge):
         # Otherwise default to the chat endpoint
         return f"{base}/chat/completions"
 
+    @weave.op(name="openai_judge_single_request")
     def _send_single_request(
         self,
         prompt: str,
