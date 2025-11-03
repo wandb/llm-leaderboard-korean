@@ -358,6 +358,11 @@ def run_multiple_from_configs(
         split = ds_cfg.get("split", "test")
         limit = ds_cfg.get("limit", None)
 
+        # Apply testmode limit override for swebench
+        if testmode and ds_key.lower() == "swebench":
+            limit = 5
+            logger.info(f"testmode enabled: overriding swebench limit to {limit}")
+
         # dataset-specific params
         dataset_params = ds_cfg.get("params") or {}
         # Respect global testmode flag if dataset supports 'dev' param
