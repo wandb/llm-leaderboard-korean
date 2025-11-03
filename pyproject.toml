@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "haerae-evaluation-toolkit"
-version = "0.1.0"
+version = "0.2.0"
 authors = [
   { name = "Hanwool Lee", email = "gksdnf424@gmail.com" }
 ]
@@ -12,7 +12,7 @@ description = "A comprehensive, standardized validation toolkit for Korean Large
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
-keywords = ["llm", "evaluation", "korean", "nlp", "benchmark", "hret"]
+keywords = ["llm", "evaluation", "korean", "nlp", "benchmark", "hret", "docker"]
 classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -25,31 +25,76 @@ classifiers = [
     "Development Status :: 4 - Beta",
 ]
 dependencies = [
-    "transformers>=4.20.0", 
-    "torch>=2.0.0",        
-    "openai>=1.0.0,<1.100.0",       
-    "datasets>=3.2.0",     
-    "litellm>=1.75.0",     
-    "math-verify>=0.1.0",        
-    "pandas>=1.5.0",              
-    "tqdm>=4.64.0",
+    # Core ML/AI Libraries
+    "torch>=2.8.0",
+    "transformers>=4.56.0",
+    "accelerate>=1.10.0",
+    "vllm>=0.10.0",
+    "datasets>=4.1.0",
+    "scikit-learn>=1.7.0",
+    "spacy>=3.8.0",
+    "sentence-transformers>=3.3.0",
+    
+    # API Clients for LLM providers
+    "openai>=1.99.0,<1.100.0",
+    "anthropic>=0.70.0",
+    "litellm>=1.75.0",
+    "cohere>=5.18.0",
+    "mistralai>=1.7.0",
+    "google-generativeai>=0.8.0",
+    
+    # Data Processing
+    "pandas>=2.3.0",
+    "numpy>=1.26.0",
+    "tqdm>=4.67.0",
+    
+    # Web Framework
+    "fastapi>=0.117.0",
+    "uvicorn>=0.37.0",
+    
+    # Experiment Tracking
+    "wandb>=0.22.0",
+    "weave>=0.52.0",
+    
+    # Math and Evaluation
+    "math-verify>=0.8.0",
+    "fuzzywuzzy>=0.18.0",
+    
+    # Language Processing
     "langdetect>=1.0.9",
-    "httpx>=0.24.0",
-    "vllm>=0.4.0",
-    "accelerate>=0.20.0",
-    "spacy>=3.4.0",
-    "scikit-learn>=1.1.0",
-    "wandb>=0.21.3",
+    
+    # HTTP Clients
+    "httpx>=0.28.0",
+    "requests>=2.32.0",
+    
+    # Configuration Management
+    "pydantic>=2.11.0",
+    "omegaconf>=2.3.0",
+    "PyYAML>=6.0.0",
+    
+    # Utilities
+    "python-dotenv>=1.1.0",
+    "click>=8.1.0",
+    "rich>=14.1.0",
+    
+    # Text Processing
+    "beautifulsoup4>=4.14.0",
+    "lxml>=6.0.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pre-commit==4.0.1",
-    "pytest>=7.3.0",
+    "pre-commit>=4.0.1",
+    "pytest>=8.4.0",
+    "black>=25.9.0",
+    "isort>=5.13.0",
 ]
 test = [
-    "pytest>=7.3.0",
+    "pytest>=8.4.0",
     "pytest-mock>=3.10.0",
+]
+docker = [
+    "gunicorn>=21.2.0",
 ]
 
 [project.urls]

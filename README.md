@@ -68,6 +68,32 @@ We are actively developing core features and interfaces. Current goals include:
 
 ## ⚙️ Installation
 
+### Option 1: Docker (Recommended)
+
+The easiest way to get started is using Docker:
+
+```bash
+# Pull from DockerHub (when available)
+docker pull your-username/haerae-evaluation-toolkit:latest
+
+# Or build locally
+git clone https://github.com/HAE-RAE/haerae-evaluation-toolkit.git
+cd haerae-evaluation-toolkit
+./scripts/build-docker.sh
+
+# Run the container
+docker run -it --rm \
+  -e OPENAI_API_KEY=your_key_here \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/configs:/app/configs \
+  haerae-evaluation-toolkit:latest \
+  python run_eval.py --help
+```
+
+For detailed Docker usage, see [DOCKER.md](DOCKER.md).
+
+### Option 2: Local Installation
+
 1.  **Clone the repository:**
     ```bash
     git clone https://github.com/HAE-RAE/haerae-evaluation-toolkit.git

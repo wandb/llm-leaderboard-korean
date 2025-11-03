@@ -2,6 +2,7 @@
 /venv
 __pycache__/
 .env
+.env.*
 
 # Build artifacts
 build/
@@ -11,6 +12,11 @@ __pycache__/
 *.pyc
 *.pyo
 .openhands/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+.docker/
 
 # BFCL dataset folder
 llm_eval/datasets/bfcl/
@@ -24,3 +30,38 @@ artifacts/
 
 # SWE-bench Verified
 logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Data files (large datasets)
+*.csv
+*.json
+*.jsonl
+*.parquet
+*.pkl
+*.pickle
+
+# Model files (large model files)
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# Temporary files
+tmp/
+temp/
+*.tmp

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  hret:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: haerae-evaluation-toolkit:latest
+    container_name: hret-container
+    environment:
+      - PYTHONPATH=/app
+      - HRET_HOME=/app
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - COHERE_API_KEY=${COHERE_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./configs:/app/configs
+      - ./results:/app/results
+    working_dir: /app
+    # Keep container running for interactive use
+    tty: true
+    stdin_open: true
