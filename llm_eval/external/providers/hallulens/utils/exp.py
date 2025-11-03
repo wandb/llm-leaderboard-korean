@@ -115,9 +115,17 @@ def run_exp(
                 with evaluation_logger.log_prediction(
                     inputs={"input": str(prompt_text), "index": idx},
                     output=""
-                ):
+                ) as pred_logger:
                     result = hallulens_inference_single(model, inp)
-                    generations.append(result.get("prediction") or "")
+                    prediction_text = result.get("prediction") or ""
+                    generations.append(prediction_text)
+                    # Update output within the context
+                    if pred_logger is not None:
+                        try:
+                            pred_logger.output = prediction_text
+                        except (AttributeError, TypeError):
+                            if hasattr(pred_logger, '_output'):
+                                pred_logger._output = prediction_text
             all_prompts["generation"] = generations
         else:
             results = hallulens_inference_batch(model, inputs)
@@ -144,9 +152,17 @@ def run_exp(
                 with evaluation_logger.log_prediction(
                     inputs={"input": str(prompt_text), "index": idx},
                     output=""
-                ):
+                ) as pred_logger:
                     result = hallulens_inference_single(model, inp)
-                    generations.append(result.get("prediction") or "")
+                    prediction_text = result.get("prediction") or ""
+                    generations.append(prediction_text)
+                    # Update output within the context
+                    if pred_logger is not None:
+                        try:
+                            pred_logger.output = prediction_text
+                        except (AttributeError, TypeError):
+                            if hasattr(pred_logger, '_output'):
+                                pred_logger._output = prediction_text
             all_prompts["generation"] = generations
         else:
             results = hallulens_inference_batch(model, inputs)
@@ -173,9 +189,17 @@ def run_exp(
                 with evaluation_logger.log_prediction(
                     inputs={"input": str(prompt_text), "index": idx},
                     output=""
-                ):
+                ) as pred_logger:
                     result = hallulens_inference_single(model, inp)
-                    generations.append(result.get("prediction") or "")
+                    prediction_text = result.get("prediction") or ""
+                    generations.append(prediction_text)
+                    # Update output within the context
+                    if pred_logger is not None:
+                        try:
+                            pred_logger.output = prediction_text
+                        except (AttributeError, TypeError):
+                            if hasattr(pred_logger, '_output'):
+                                pred_logger._output = prediction_text
             all_prompts["generation"] = generations
         else:
             results = hallulens_inference_batch(model, inputs)
@@ -208,9 +232,17 @@ def run_exp(
                 with evaluation_logger.log_prediction(
                     inputs={"input": str(prompt_text), "index": idx},
                     output=""
-                ):
+                ) as pred_logger:
                     result = hallulens_inference_single(model, inp)
-                    generations.append(result.get("prediction") or "")
+                    prediction_text = result.get("prediction") or ""
+                    generations.append(prediction_text)
+                    # Update output within the context
+                    if pred_logger is not None:
+                        try:
+                            pred_logger.output = prediction_text
+                        except (AttributeError, TypeError):
+                            if hasattr(pred_logger, '_output'):
+                                pred_logger._output = prediction_text
             all_prompts["generation"] = generations
         else:
             results = hallulens_inference_batch(model, inputs)
@@ -227,9 +259,17 @@ def run_exp(
                 with evaluation_logger.log_prediction(
                     inputs={"input": str(prompt_text), "index": idx},
                     output=""
-                ):
+                ) as pred_logger:
                     result = hallulens_inference_single(model, inp)
-                    generations.append(result.get("prediction") or "")
+                    prediction_text = result.get("prediction") or ""
+                    generations.append(prediction_text)
+                    # Update output within the context
+                    if pred_logger is not None:
+                        try:
+                            pred_logger.output = prediction_text
+                        except (AttributeError, TypeError):
+                            if hasattr(pred_logger, '_output'):
+                                pred_logger._output = prediction_text
             all_prompts["generation"] = generations
         else:
             results = hallulens_inference_batch(model, inputs)

@@ -119,9 +119,17 @@ class LLMEvalBFCLHandler(BaseHandler):
 
             with self._evaluation_logger.log_prediction(
                 inputs=inputs_payload,
-                output=""  # Will be populated automatically
-            ):
+                output=""
+            ) as pred_logger:
                 results = bfcl_inference(self._backend, inputs)
+                # Update output within the context
+                output_text = results[0].get("prediction", "") if results else ""
+                if pred_logger is not None:
+                    try:
+                        pred_logger.output = output_text
+                    except (AttributeError, TypeError):
+                        if hasattr(pred_logger, '_output'):
+                            pred_logger._output = output_text
         else:
             results = bfcl_inference(self._backend, inputs)
 
