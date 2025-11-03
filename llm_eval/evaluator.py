@@ -327,9 +327,41 @@ def run_multiple_from_configs(
     for ds_key in dataset_keys:
         ds_cfg = base_cfg.get(ds_key) or {}
 
+        # Merge dataset-specific overrides from model config
+        model_ds_cfg = model_cfg.get(ds_key) or {}
+        if model_ds_cfg:
+            # Merge model config dataset settings into base config dataset settings
+            # Model config takes precedence for top-level keys like limit, split, subset
+            for key in ["limit", "split", "subset"]:
+                if key in model_ds_cfg:
+                    ds_cfg[key] = model_ds_cfg[key]
+            # Deep merge for nested dicts like params, evaluation, model_params
+            for nested_key in ["params", "model_params"]:
+                if nested_key in model_ds_cfg:
+                    base_nested = ds_cfg.get(nested_key) or {}
+                    model_nested = model_ds_cfg[nested_key] or {}
+                    ds_cfg[nested_key] = {**base_nested, **model_nested}
+            # Special handling for evaluation dict with nested params
+            if "evaluation" in model_ds_cfg:
+                base_eval = ds_cfg.get("evaluation") or {}
+                model_eval = model_ds_cfg["evaluation"] or {}
+                # Merge top-level evaluation keys
+                merged_eval = {**base_eval, **model_eval}
+                # Deep merge evaluation.params
+                if "params" in base_eval or "params" in model_eval:
+                    base_eval_params = base_eval.get("params") or {}
+                    model_eval_params = model_eval.get("params") or {}
+                    merged_eval["params"] = {**base_eval_params, **model_eval_params}
+                ds_cfg["evaluation"] = merged_eval
+
         subset = ds_cfg.get("subset")
         split = ds_cfg.get("split", "test")
         limit = ds_cfg.get("limit", None)
+
+        # Apply testmode limit override for swebench
+        if testmode and ds_key.lower() == "swebench":
+            limit = 5
+            logger.info(f"testmode enabled: overriding swebench limit to {limit}")
 
         # dataset-specific params
         dataset_params = ds_cfg.get("params") or {}

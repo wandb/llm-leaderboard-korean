@@ -27,12 +27,12 @@ from llm_eval.utils.logging import get_logger
 from llm_eval.utils.util import EvaluationResult
 from llm_eval.internal.benchhub_info import DATASETS as BENCHHUB_INFO_ENTRIES
 from llm_eval.utils.prompt_template import (
-    format_few_shot_prompt_prefix, 
-    DEFAULT_FEW_SHOT_INSTRUCTION, 
+    format_few_shot_prompt_prefix,
+    DEFAULT_FEW_SHOT_INSTRUCTION,
     DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
 )
 from llm_eval.utils.metrics import language_penalizer
-from llm_eval.wandb_controller import WeaveSampleLogger, WeaveEvalsController
+from llm_eval.wandb_controller import WeaveInferenceController
 
 logger = get_logger(name="runner", level=logging.INFO)
 
@@ -529,33 +529,8 @@ class PipelineRunner:
             if not evaluation_samples:
                 return self._create_empty_result(few_shot_prefix, "No samples for evaluation after few-shot processing")
 
-            # Step 2: Prepare samples for inference
-            inference_samples = self.few_shot_handler.process_samples_for_inference(
-                evaluation_samples, few_shot_prefix
-            )
-            logger.info(f"Prepared {len(inference_samples)} samples for model inference.")
-
-            # Step 3: Run inference
-            predictions = self.inference_engine.run_inference(inference_samples)
-
-            # Step 4: Evaluate predictions
-            eval_dict = self._run_evaluation(predictions)
-
-            # Step 5: Apply language penalization if enabled
-            self.language_penalizer.apply_penalization(eval_dict)
-
-            # # Step 5.5: Log evaluated samples so evaluation columns appear in Weave per-sample traces
-            # try:
-            #     WeaveSampleLogger.log_samples(
-            #         op_name=(self.config.model_backend_params or {}).get("model_name") or self.config.model_backend_name,
-            #         dataset_name=self.config.dataset_name,
-            #         samples=eval_dict.get("samples", []) or [],
-            #     )
-            # except Exception:
-            #     pass
-
-            # Step 5.6: Log to Weave Evals using EvaluationLogger via controller
-            WeaveEvalsController.log(
+            # Step 2: Initialize Weave inference controller
+            weave_controller = WeaveInferenceController(
                 dataset_name=self.config.dataset_name,
                 subset=self.config.subset,
                 split=self.config.split,
@@ -565,12 +540,33 @@ class PipelineRunner:
                 evaluation_method_name=self.config.evaluation_method_name,
                 language_penalize=self.config.language_penalize,
                 target_lang=self.config.target_lang,
-                samples=eval_dict.get("samples", []) or [],
-                metrics=eval_dict.get("metrics", {}) or {},
-                wandb_params=self.config.wandb_params or {},
+                batch_size=self.config.model_backend_params.get("batch_size", 32),
             )
-            
-            # Step 6: Create final result
+            weave_controller.initialize()
+
+            # Step 2.5: Prepare samples for inference
+            inference_samples = self.few_shot_handler.process_samples_for_inference(
+                evaluation_samples, few_shot_prefix
+            )
+            logger.info(f"Prepared {len(inference_samples)} samples for model inference.")
+
+            # Step 3: Run inference with Weave logging
+            # This ensures LLM calls happen inside log_prediction contexts
+            # for automatic token usage and latency tracking
+            predictions = weave_controller.run_inference_with_logging(
+                inference_samples, self.components.model.generate_batch
+            )
+
+            # Step 4: Evaluate predictions
+            eval_dict = self._run_evaluation(predictions)
+
+            # Step 5: Apply language penalization if enabled
+            self.language_penalizer.apply_penalization(eval_dict)
+
+            # Step 6: Finalize Weave logging with summary metrics
+            weave_controller.finalize(eval_dict.get("metrics", {}))
+
+            # Step 7: Create final result
             return self._create_final_result(eval_dict, few_shot_prefix, start_time)
 
         except Exception as e:
@@ -596,6 +592,7 @@ class PipelineRunner:
         except Exception as e:
             logger.error(f"Error during evaluation with '{self.config.evaluation_method_name}': {e}", exc_info=True)
             raise
+
 
     def _create_pipeline_info(self, few_shot_prefix: str, elapsed_time: float) -> Dict[str, Any]:
         """Create pipeline information dictionary."""
