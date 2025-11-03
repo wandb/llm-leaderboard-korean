@@ -46,3 +46,4 @@ from .char_f1 import CharF1Evaluator
 from .kobbq import KoBBQEvaluator
 from .comet_score import COMETEvaluator
 from .mt_bench_judge import MTBenchJudgeEvaluator
+from .swebench_eval import SWEBenchEvaluator
