@@ -270,21 +270,36 @@ class WeaveEvalsController:
                 "id": item.get("id", None),
             }
 
-            # Build inputs payload (dict required by EvaluationLogger)
-            inputs_payload: Dict[str, Any] = {"input": input_text}
-            if reference_text is not None:
-                inputs_payload["reference"] = reference_text
-            # Carry helpful metadata in the inputs
-            inputs_payload.update({k: v for k, v in per_item_metadata.items() if v is not None})
-
+            # Allow structured payloads for richer chat-style inputs
+            raw_payload = item.get("_input_payload")
             subset_name = item.get("_subset_name", None)
             evaluation_fields = item.get("evaluation", {}) or {}
-            # Optionally include normalized texts into inputs for easier inspection
-            inputs_payload["dataset"] = str(dataset_name)
-            if subset_name:
-                inputs_payload["subset"] = str(subset_name)
 
-            pred_logger = elog.log_prediction(inputs=inputs_payload, output=prediction_text)
+            # Build inputs for Weave
+            if isinstance(raw_payload, dict) and "messages" in raw_payload:
+                # Chat display: put messages at top-level and keep info fields top-level (unified with single-turn)
+                messages = raw_payload.get("messages") or []
+                inputs_payload: Dict[str, Any] = {"messages": messages}
+                # Top-level informational fields
+                inputs_payload.update({k: v for k, v in per_item_metadata.items() if v is not None})
+                inputs_payload["dataset"] = str(dataset_name)
+                if subset_name:
+                    inputs_payload["subset"] = str(subset_name)
+                if reference_text is not None:
+                    inputs_payload["reference"] = reference_text
+                # Output도 메시지 기반으로 표시(최종 assistant 메시지를 별도로 보여주고 싶다면 문자열 유지 가능)
+                output_payload: Any = {"messages": messages}
+            else:
+                inputs_payload = {"input": input_text}
+                if reference_text is not None:
+                    inputs_payload["reference"] = reference_text
+                inputs_payload.update({k: v for k, v in per_item_metadata.items() if v is not None})
+                inputs_payload["dataset"] = str(dataset_name)
+                if subset_name:
+                    inputs_payload["subset"] = str(subset_name)
+                output_payload = prediction_text
+
+            pred_logger = elog.log_prediction(inputs=inputs_payload, output=output_payload)
 
             # 1) 평가 모듈이 만든 모든 메트릭은 이름 그대로 로깅
             for key, value in evaluation_fields.items():
@@ -294,6 +309,20 @@ class WeaveEvalsController:
             if "language_penalizer" in item:
                 pred_logger.log_score(scorer="language_penalizer", score=float(item["language_penalizer"]))
             
+
+        # Also create a dedicated prediction that logs eval-level metrics as scores for easy visibility
+        try:
+            if metrics:
+                with elog.log_prediction(inputs={"summary": True}, output="") as sum_pred:
+                    for k, v in (metrics or {}).items():
+                        # only log numeric metrics as scores
+                        try:
+                            score_val = float(v)
+                            sum_pred.log_score(scorer=str(k), score=score_val)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
 
         elog.log_summary(summary=metrics or {})
         elog.finish()
