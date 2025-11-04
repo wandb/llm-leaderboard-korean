@@ -85,7 +85,7 @@ class WeaveModelAdapter(Model):
         return {"prediction": "", "metadata": {}}
 
 
-def create_dataset_scorers(dataset_name: str, evaluation_method: str, eval_params: Dict[str, Any] = None) -> List[Callable]:
+def create_dataset_scorers(dataset_name: str, subset: List[str], evaluation_method: str, eval_params: Dict[str, Any] = None) -> List[Callable]:
     """
     Create scorers based on existing evaluation methods.
 
@@ -129,20 +129,21 @@ def create_dataset_scorers(dataset_name: str, evaluation_method: str, eval_param
                 # evaluate_predictions expects 'samples' parameter
                 # It modifies samples in-place and returns metrics
                 eval_result = evaluator.evaluate_predictions(
-                    subsets=None,
+                    subsets=subset,
                     samples=[sample]
                 )
+                return eval_result
 
-                # Check if evaluator added evaluation info to sample
-                if "evaluation" in sample and isinstance(sample["evaluation"], dict):
-                    # Return the evaluation details from the sample
-                    return sample["evaluation"]
-                elif eval_result:
-                    # Fallback to metrics if no sample evaluation
-                    return eval_result
-                else:
-                    # Final fallback to simple scoring
-                    return {evaluation_method: float(prediction.strip() == reference.strip())}
+                # # Check if evaluator added evaluation info to sample
+                # if "evaluation" in sample and isinstance(sample["evaluation"], dict):
+                #     # Return the evaluation details from the sample
+                #     return sample["evaluation"]
+                # elif eval_result:
+                #     # Fallback to metrics if no sample evaluation
+                #     return eval_result
+                # else:
+                #     # Final fallback to simple scoring
+                #     return {evaluation_method: float(prediction.strip() == reference.strip())}
 
             except Exception as e:
                 logger.warning(f"Evaluator {evaluation_method} failed: {e}")
@@ -205,25 +206,7 @@ def run_with_standard_weave(
     # Extract dataset parameters
     subset = dataset_config.get("subset")
     split = dataset_config.get("split", "test")
-    limit = dataset_config.get("limit")
     dataset_params = dataset_config.get("params", {})
-
-    # Apply testmode limit if dev is set
-    if dataset_params.get("dev", False):
-        # In testmode, limit samples more aggressively
-        if dataset_key == "aime2025" and isinstance(subset, list) and len(subset) > 1:
-            # For aime2025 with multiple subsets, divide limit by number of subsets
-            limit = min(limit or 10, 10) // len(subset)  # Divide among subsets
-            limit = max(limit, 2)  # At least 2 per subset
-        elif dataset_key == "aime2025":
-            limit = min(limit or 10, 10)  # Max 10 for aime2025 single subset
-        else:
-            limit = min(limit or 5, 5)  # Default to 5 for other datasets
-        logger.info(f"Testmode enabled, limiting to {limit} samples per subset")
-
-    if "limit" not in dataset_params:
-        dataset_params["limit"] = limit
-
     try:
         # Load dataset
         logger.info(f"Loading dataset: {dataset_key}, subset={subset}, split={split}")
@@ -267,7 +250,7 @@ def run_with_standard_weave(
         )
 
         # Create scorers
-        scorers = create_dataset_scorers(dataset_key, evaluation_method, evaluator_params)
+        scorers = create_dataset_scorers(dataset_key, subset, evaluation_method, evaluator_params)
         logger.info(f"Created {len(scorers)} scorers for evaluation")
 
         # Create Weave evaluation
@@ -284,75 +267,84 @@ def run_with_standard_weave(
         logger.info("Evaluation completed, processing results...")
 
         # Process results
-        metrics = {}
+        metrics = results
         samples_with_scores = []
 
-        # Get detailed results using get_eval_results if available
-        try:
-            from weave import get_eval_results
-            detailed_results = get_eval_results(results)
+        # # Calculate aggregate metrics
+        # if samples_with_scores:
+        #     score_totals = {}
+        #     score_counts = {}
 
-            for row in detailed_results:
-                sample_scores = {}
-                for scorer_name in [s.__name__ for s in scorers]:
-                    if hasattr(row, scorer_name):
-                        sample_scores[scorer_name] = getattr(row, scorer_name)
+        #     for sample in samples_with_scores:
+        #         if "evaluation" in sample:
+        #             for score_name, score_value in sample["evaluation"].items():
+        #                 if isinstance(score_value, (int, float)):
+        #                     if score_name not in score_totals:
+        #                         score_totals[score_name] = 0
+        #                         score_counts[score_name] = 0
+        #                     score_totals[score_name] += score_value
+        #                     score_counts[score_name] += 1
 
-                samples_with_scores.append({
-                    "input": row.input if hasattr(row, 'input') else "",
-                    "prediction": row.output.get("prediction", "") if hasattr(row, 'output') else "",
-                    "reference": row.reference if hasattr(row, 'reference') else "",
-                    "evaluation": sample_scores
-                })
-        except Exception as e:
-            logger.warning(f"Could not get detailed results: {e}")
-            # Fallback to basic results
-            if hasattr(results, 'summary'):
-                metrics = results.summary
-
-        # Calculate aggregate metrics
-        if samples_with_scores:
-            score_totals = {}
-            score_counts = {}
-
-            for sample in samples_with_scores:
-                if "evaluation" in sample:
-                    for score_name, score_value in sample["evaluation"].items():
-                        if isinstance(score_value, (int, float)):
-                            if score_name not in score_totals:
-                                score_totals[score_name] = 0
-                                score_counts[score_name] = 0
-                            score_totals[score_name] += score_value
-                            score_counts[score_name] += 1
-
-            # Calculate averages
-            for score_name in score_totals:
-                metrics[f"{score_name}_avg"] = score_totals[score_name] / score_counts[score_name]
-                metrics[f"{score_name}_total"] = score_totals[score_name]
-                metrics[f"{score_name}_count"] = score_counts[score_name]
+        #     # Calculate averages
+        #     for score_name in score_totals:
+        #         metrics[f"{score_name}_avg"] = score_totals[score_name] / score_counts[score_name]
+        #         metrics[f"{score_name}_total"] = score_totals[score_name]
+        #         metrics[f"{score_name}_count"] = score_counts[score_name]
 
         # Add overall metrics
         metrics["num_samples"] = len(samples_with_scores) if samples_with_scores else len(weave_dataset)
+        scores = {}
 
-        # Calculate AVG score for leaderboard
-        if "exact_match_avg" in metrics:
-            metrics["AVG"] = metrics["exact_match_avg"]
-        elif "choice_match_avg" in metrics:
-            metrics["AVG"] = metrics["choice_match_avg"]
-        else:
-            # Use first available average score
-            for key in metrics:
-                if key.endswith("_avg") and not key.startswith("response_length"):
-                    metrics["AVG"] = metrics[key]
-                    break
+        if "string_match_scorer" in metrics:
+            metric = metrics["string_match_scorer"]
+            scores['score'] = metric["AVG"]["mean"]
+            # for haerae_bench_v1/kobalt subsets
+            for key, value in metric.items():
+                if key != "AVG":
+                    scores[key] = value["mean"]
+        elif "ifeval_strict_scorer" in metrics:
+            metric = metrics["ifeval_strict_scorer"]
+            scores['score'] = metric["AVG"]["mean"]
+        elif "sequence_match_scorer" in metrics:
+            metric = metrics["sequence_match_scorer"]
+            scores['score'] = metric["AVG"]["mean"]
+        elif "mt_bench_judge_scorer" in metrics:
+            metric = metrics["mt_bench_judge_scorer"]
+            scores['score'] = metric["AVG"]["mean"]
+            scores["roleplay"] = metric["roleplay/average_judge_score"]["mean"]
+            scores["humanities"] = metric["humanities/average_judge_score"]["mean"]
+            scores["writing"] = metric["writing/average_judge_score"]["mean"]
+            scores["reasoning"] = metric["reasoning/average_judge_score"]["mean"]
+            scores["coding"] = metric["coding/average_judge_score"]["mean"]
+        elif "char_f1_scorer" in metrics:
+            metric = metrics["char_f1_scorer"]
+            scores['score'] = metric["AVG"]["mean"]
+        elif "math_match_scorer" in metrics:
+            metric = metrics["math_match_scorer"]
+            scores['score'] = metric["AVG"]["mean"]
+        elif "grid_match_scorer" in metrics:
+            metric = metrics["grid_match_scorer"]
+            scores['score'] = metric["AVG"]["mean"]
+        elif "hallulens_scorer" in metrics:
+            metric = metrics["hallulens_scorer"]
+            scores['score'] = metric["is_hallucinated"]["true_fraction"]
+        elif "bfcl_scorer" in metrics:
+            metric = metrics["bfcl_scorer"]
+            scores['score'] = metric["is_correct"]["true_fraction"]
+        elif "swebench_scorer" in metrics:
+            metric = metrics["swebench_scorer"]
+            scores['score'] = metric["resolved_rate"]["mean"]
+        elif "comet_score_scorer" in metrics:
+            metric = metrics["comet_score_scorer"]
+            scores['score'] = metric["AVG"]["mean"]
 
         # Log to W&B if configured
         if wandb_params:
-            table_name = f"{dataset_key}_weave_leaderboard"
+            table_name = f"{dataset_key}_leaderboard"
             data = {
                 "model_name": model_params.get("model_name", model_name),
-                "AVG": metrics.get("AVG", 0.0),
-                **{k: v for k, v in metrics.items() if k.endswith("_avg")}
+                "score": scores['score'],
+                **{k: v for k, v in scores.items()}
             }
             df = pd.DataFrame([data])
 
