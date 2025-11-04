@@ -8,11 +8,11 @@ model:
     temperature: 0.0
   release_date: "2024-11-20"
   model_size: None
-  size_category: large
+  size_category: unknown
 
 # SWE-bench test configuration to verify Weave automatic tracking
 swebench:
-  limit: 5  # Test with 5 samples to verify Weave auto-tracking at scale
+  limit: 2  # Test with 5 samples to verify Weave auto-tracking at scale
   params:
     artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v4
     dataset_dir: .
