@@ -50,9 +50,9 @@ def run_hallulens_from_configs(
     
     # testmode 체크 - testmode가 true면 각 서브셋당 10개로 제한 (기존 limit 무시)
     testmode = base_cfg.get("testmode", False)
-    if testmode:
-        limit = 10
-        logger.info(f"testmode enabled: overriding halluLens limit to {limit} per subset")
+    # if testmode:
+    #     limit = 10
+    #     logger.info(f"testmode enabled: overriding halluLens limit to {limit} per subset")
 
     # dataset-specific params
     dataset_params = dict(ds_cfg.get("params") or {})
@@ -152,11 +152,11 @@ def run_hallulens_from_configs(
     df2 = dfs[1][['model', 'refusal_rate']]
     df3 = dfs[2][['model', 'refusal_rate']]
     df = df1.merge(df2, on='model').merge(df3, on='model')
-    df['AVG'] = df[df.columns[1:]].mean(axis=1)
+    df['score'] = df[df.columns[1:]].mean(axis=1)
     df['model_name'] = df['model']
     run = WandbConfigSingleton.get_instance().run
-    run.log({"halluLens_leaderboard_table": wandb.Table(dataframe=df[['model_name', 'AVG']])})
-    WandbConfigSingleton.collect_leaderboard_table("halluLens", df[['model_name', 'AVG']])
+    run.log({"halluLens_leaderboard_table": wandb.Table(dataframe=df[['model_name', 'score']])})
+    WandbConfigSingleton.collect_leaderboard_table("halluLens", df[['model_name', 'score']])
 
     # 집계용 결과 반환 (실제 점수 로깅은 각 러너에서 수행)
     return {

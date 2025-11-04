@@ -52,7 +52,7 @@ def precise_wikiqa_runner(
     TASKNAME = f'precise_wikiqa'
 
     model_name = model.split("/")[-1]
-    print(f"Running {TASKNAME} with model {model_name}")
+    # print(f"Running {TASKNAME} with model {model_name}")
 
     QAs_df = None
 
@@ -219,12 +219,12 @@ def longwiki_runner(
     print('\n***Inference completed')
 
     # RUN EVALUATION:
-    print("============= [[ {} ]] =================".format("dynamic"))
-    print(f"Running evaluation for {model_name};")
-    print(f"** Refusal Evaluator: {abstain_evaluator}")
-    print(f"** Claim Extractor: {claim_extractor}")
-    print(f"** Verifier: {verifier}")
-    print("=========================================")
+    # print("============= [[ {} ]] =================".format("dynamic"))
+    # print(f"Running evaluation for {model_name};")
+    # print(f"** Refusal Evaluator: {abstain_evaluator}")
+    # print(f"** Claim Extractor: {claim_extractor}")
+    # print(f"** Verifier: {verifier}")
+    # print("=========================================")
     eval_result, overall_result_df = run_eval(
         do_extract_only=do_extract_only,
         model=model,
@@ -236,7 +236,7 @@ def longwiki_runner(
         k=k,
     )
 
-    print('\n***Evaluation completed')
+    # print('\n***Evaluation completed')
 
     _log_to_wandb(pd.DataFrame([eval_result]), TASKNAME)
     _log_to_wandb(overall_result_df, TASKNAME + "_detailed" + model_name)
@@ -438,7 +438,7 @@ def non_generated_entity_runner(
     res, task_path = eval.run_eval(eval_overwrite)
     N = len(res['refusal_eval_raw'])
     refusal_rate = sum(res['refusal_eval_raw']) / N * 100
-    print(f"[{res['model']}] || Refusal rate: {refusal_rate} || N = {N}")
+    # print(f"[{res['model']}] || Refusal rate: {refusal_rate} || N = {N}")
 
     # Log to evaluation result to wandb
     result_df = _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)

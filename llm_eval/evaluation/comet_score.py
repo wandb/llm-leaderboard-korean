@@ -12,39 +12,72 @@ logger = get_logger(name="comet_score")
 
 def comet_score(comet_data: List[Dict[str, str]], batch_size: int = 8) -> List[float]:
     """
-    COMET 점수를 계산해 각 문장 쌍의 품질을 반환합니다.
+    LLM(gpt-4o-2024-11-20)를 사용해 번역 품질 점수를 산출합니다.
+
+    각 항목에 대해 0.0~1.0 범위의 점수를 [[score: <float>]] 형식으로 출력하도록
+    프롬프트를 구성하고, 응답에서 숫자만 파싱해 반환합니다.
 
     Args:
         comet_data: {"src": str, "mt": str, "ref": str} 항목의 리스트
-        batch_size: 배치 크기 (기본 8)
+        batch_size: 병렬 채점 스레드 수
 
     Returns:
-        각 항목에 대한 COMET 점수 리스트 (float)
+        각 항목에 대한 점수 리스트 (float)
     """
-    try:
-        from comet import download_model, load_from_checkpoint
-    except Exception as e:
-        raise RuntimeError(
-            "unbabel-comet 패키지가 필요합니다. requirements.txt에 추가 후 설치하세요."
-        ) from e
+    import re
+    from llm_eval.models import load_model
 
-    # GPU 사용 가능 여부 자동 감지
-    try:
-        import torch
-
-        gpus = 1 if torch.cuda.is_available() else 0
-    except Exception:
-        gpus = 0
-
-    logger.info("Downloading/loading COMET model: Unbabel/wmt22-comet-da")
-    model_path = download_model("Unbabel/wmt22-comet-da")
-    model = load_from_checkpoint(model_path)
-
-    logger.info("Scoring with COMET ...")
-    predictions = model.predict(
-        comet_data, batch_size=batch_size, gpus=gpus, progress_bar=False, num_workers=1
+    # gpt-4o-2024-11-20를 사용하는 OpenAI Judge 백엔드 로드
+    judge = load_model(
+        "openai_judge",
+        model_name="gpt-4o-2024-11-20",
+        temperature=0.0,
+        max_tokens=256,
+        batch_size=batch_size,
     )
-    return predictions.scores
+
+    def build_prompt(item: Dict[str, str]) -> str:
+        src = item.get("src", "").strip()
+        mt = item.get("mt", "").strip()
+        ref = item.get("ref", "").strip()
+        return (
+            "You are a professional translation quality evaluator.\n"
+            "Assess the quality of the machine translation (MT) given the source and reference.\n"
+            "Return only a numeric score between 0.0 and 1.0 with up to 3 decimals in the exact format [[score: <float>]].\n\n"
+            f"Source:\n{src}\n\n"
+            f"Reference:\n{ref}\n\n"
+            f"MT:\n{mt}\n\n"
+            "Guidelines:\n"
+            "- 1.0 means perfectly equivalent to the reference and fluent.\n"
+            "- 0.0 means entirely incorrect or unrelated.\n"
+            "- Consider adequacy, fluency, and faithfulness to the source.\n"
+            "- Do not explain. Respond only with [[score: <float>]]."
+        )
+
+    inputs = [{"input": build_prompt(item)} for item in comet_data]
+    predictions = judge.judge_batch(inputs, show_progress=False)
+
+    scores: List[float] = []
+    pattern = re.compile(r"\[\[score:\s*([0-9]*\.?[0-9]+)\]\]", flags=re.IGNORECASE)
+    for res in predictions:
+        txt = str(res.get("prediction", ""))
+        m = pattern.search(txt)
+        if not m:
+            # 파싱 실패 시 0.0 부여
+            scores.append(0.0)
+            continue
+        try:
+            score_val = float(m.group(1))
+        except Exception:
+            score_val = 0.0
+        # 범위 보정
+        if score_val < 0.0:
+            score_val = 0.0
+        if score_val > 1.0:
+            score_val = 1.0
+        scores.append(score_val)
+
+    return scores
 
 
 @register_evaluator("comet_score")
