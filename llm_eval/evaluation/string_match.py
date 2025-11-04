@@ -142,8 +142,8 @@ class StringMatchEvaluator(BaseEvaluator):
                 stats[subset] = {"total": 0, "correct": 0}
 
         # Log information when evaluating MCQA tasks with provided options.
-        if self.mcqa and "options" in samples[0] and isinstance(samples[0]["options"], list) and samples[0]["options"]:
-            logger.info(f"Evaluating outputs using string match with mcqa={self.mcqa}")
+        # if self.mcqa and "options" in samples[0] and isinstance(samples[0]["options"], list) and samples[0]["options"]:
+        #     logger.info(f"Evaluating outputs using string match with mcqa={self.mcqa}")
 
         for sample in samples:
             subset_name = sample.get("_subset_name")

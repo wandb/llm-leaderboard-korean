@@ -1022,7 +1022,7 @@ def runner(model_names, test_categories, result_dir, score_dir):
             summary_rows.append(
                 {
                     "model_name": model_name,
-                    "AVG": overall_accuracy,
+                    "score": overall_accuracy,
                     "total_count": total_count,
                     "correct_count": total_correct,
                 }

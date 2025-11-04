@@ -843,7 +843,8 @@ def evaluate():
     # サンプル数制限
     max_samples = cfg.swebench.get("max_samples", 500)
     if cfg.testmode:
-        max_samples = 5 # テストモード時はサンプル数を減らす
+        print(cfg.swebench)
+        max_samples = cfg.swebench.get("limit", 2) # テストモード時はサンプル数を減らす
     
     samples = task_data[:max_samples]
     print(f"Processing {len(samples)} samples")
