@@ -724,17 +724,80 @@ def evaluate_task(
 
     print(f"✅ Test completed: {test_category}. 🎯 Accuracy: {accuracy:.2%}")
 
-    # Collect per-category samples into aggregator instead of logging per-subset
+    # Prepare per-sample correctness by reading the saved score file (header + failed entries)
+    failed_ids = set()
     try:
-        if aggregated_samples is not None:
-            has_reference = not is_relevance_or_irrelevance(test_category)
-            for i, result_item in enumerate(model_result):
-                # Input text from prompt entry if available
-                pe = {}
+        score_file = (
+            score_dir
+            / model_name
+            / get_directory_structure_by_category(test_category)
+            / f"{VERSION_PREFIX}_{test_category}_score.json"
+        )
+        if score_file.exists():
+            with open(score_file, "r") as f:
+                lines = f.readlines()
+            # skip header line; subsequent lines are failed entries with an "id" field
+            for line in lines[1:]:
                 try:
-                    pe = prompt[i]
+                    entry = json.loads(line)
+                    entry_id = entry.get("id")
+                    if entry_id is not None:
+                        failed_ids.add(entry_id)
                 except Exception:
-                    pe = {}
+                    continue
+    except Exception as e:
+        print(f"[Weave] Failed to parse score file for subset {test_category}: {e}")
+
+    # Build per-subset samples and (optionally) aggregate to the per-model list
+    samples_for_subset = []
+    try:
+        has_reference = not is_relevance_or_irrelevance(test_category)
+        is_multi = is_multi_turn(test_category)
+
+        for i, result_item in enumerate(model_result):
+            # Extract input content from prompt entry when available
+            pe = {}
+            try:
+                pe = prompt[i]
+            except Exception:
+                pe = {}
+
+            # Structured payload to show chat-style conversation in a single trace for multi-turn
+            input_payload = None
+            if is_multi and isinstance(pe, dict):
+                try:
+                    # Build standard chat messages list: [{role, content}, ...]
+                    messages = []
+                    prompt_turns = pe.get("question") or []  # list[list[dict]]
+                    model_turns = result_item.get("result") or []  # list[list]
+
+                    for t_idx, turn_msgs in enumerate(prompt_turns):
+                        # Append user/system/assistant messages provided by prompt
+                        try:
+                            for m in (turn_msgs or []):
+                                role = m.get("role", "user")
+                                content = m.get("content", "")
+                                messages.append({"role": str(role), "content": str(content)})
+                        except Exception:
+                            pass
+
+                        # Append the model's final assistant message for this turn (if any)
+                        try:
+                            turn_outputs = model_turns[t_idx] if t_idx < len(model_turns) else []
+                            if isinstance(turn_outputs, list) and len(turn_outputs) > 0:
+                                assistant_text = str(turn_outputs[-1])
+                                if assistant_text:
+                                    messages.append({"role": "assistant", "content": assistant_text})
+                        except Exception:
+                            pass
+
+                    if messages:
+                        input_payload = {"input": "multi_turn_chat", "messages": messages}
+                except Exception:
+                    input_payload = None
+
+            # Fallback simple input text
+            if input_payload is None:
                 if isinstance(pe, dict):
                     input_text = (
                         pe.get("question")
@@ -750,42 +813,81 @@ def evaluate_task(
                             input_text = str(pe)
                 else:
                     input_text = str(pe)
+            else:
+                input_text = ""  # covered by _input_payload
 
-                # Prediction text normalization
-                pred_obj = result_item.get("result", "")
-                if isinstance(pred_obj, (str, int, float)):
+            # Prediction normalization (stringify)
+            pred_obj = result_item.get("result", "")
+            if isinstance(pred_obj, (str, int, float)):
+                prediction_text = str(pred_obj)
+            else:
+                try:
+                    prediction_text = json.dumps(pred_obj, ensure_ascii=False)
+                except Exception:
                     prediction_text = str(pred_obj)
-                else:
-                    try:
-                        prediction_text = json.dumps(pred_obj, ensure_ascii=False)
-                    except Exception:
-                        prediction_text = str(pred_obj)
 
-                # Reference when available
-                reference_text = None
-                if has_reference:
-                    try:
-                        pa_item = possible_answer[i].get("ground_truth")
-                        if isinstance(pa_item, (str, int, float)):
+            # Reference when available
+            reference_text = None
+            if has_reference:
+                try:
+                    pa_item = possible_answer[i].get("ground_truth")
+                    if isinstance(pa_item, (str, int, float)):
+                        reference_text = str(pa_item)
+                    else:
+                        try:
+                            reference_text = json.dumps(pa_item, ensure_ascii=False)
+                        except Exception:
                             reference_text = str(pa_item)
-                        else:
-                            try:
-                                reference_text = json.dumps(pa_item, ensure_ascii=False)
-                            except Exception:
-                                reference_text = str(pa_item)
-                    except Exception:
-                        reference_text = None
+                except Exception:
+                    reference_text = None
 
-                aggregated_samples.append({
-                    "input": input_text or "",
-                    "prediction": prediction_text or "",
-                    "reference": reference_text,
-                    "evaluation": {},
-                    "id": result_item.get("id", i),
-                    "_subset_name": test_category,
-                })
+            entry_id = result_item.get("id", i)
+            is_correct = 0.0 if entry_id in failed_ids else 1.0
+
+            # Per-sample token/latency aggregation from BFCL metadata
+            def _sum_nested(value):
+                try:
+                    if isinstance(value, (int, float)):
+                        return float(value)
+                    total = 0.0
+                    stack = [value]
+                    while stack:
+                        cur = stack.pop()
+                        if isinstance(cur, (list, tuple)):
+                            stack.extend(cur)
+                        elif isinstance(cur, (int, float)):
+                            total += float(cur)
+                    return float(total)
+                except Exception:
+                    return 0.0
+
+            tokens_in = _sum_nested(result_item.get("input_token_count", 0))
+            tokens_out = _sum_nested(result_item.get("output_token_count", 0))
+            latency_sec = _sum_nested(result_item.get("latency", 0))
+
+            sample = {
+                "input": input_text or "",
+                "prediction": prediction_text or "",
+                "reference": reference_text,
+                "evaluation": {
+                    "correct": is_correct,
+                    "input_tokens": tokens_in,
+                    "output_tokens": tokens_out,
+                    "latency_seconds": latency_sec,
+                },
+                "id": entry_id,
+                "_subset_name": test_category,
+            }
+            if input_payload is not None:
+                sample["_input_payload"] = input_payload
+
+            samples_for_subset.append(sample)
+            if aggregated_samples is not None:
+                aggregated_samples.append(sample)
     except Exception as e:
         print(f"[Weave] BFCL {test_category} sample aggregation skipped: {e}")
+
+    # Subset 단위에서는 Weave 로깅을 하지 않고, 모델 단위에서 한 번에 로깅합니다.
 
     # Wandb logging (similar to HalluLens)
     try:
@@ -934,47 +1036,97 @@ def runner(model_names, test_categories, result_dir, score_dir):
     # --- Weave Evals logging across all models/categories (aggregate and per-sample) ---
     try:
         from llm_eval.wandb_controller import WeaveEvalsController
+        from bfcl_eval.constants.model_config import MODEL_CONFIG_MAPPING
 
-        # First, log aggregate/summary metrics per model across all categories
+        # Log ONCE per model: one Weave evaluation containing all subsets
         for model_name, model_results in leaderboard_table.items():
+            # Aggregate overall
             total_correct = 0
             total_count = 0
-            for result in model_results.values():
-                if isinstance(result, dict) and "accuracy" in result:
-                    correct_count = result.get("correct_count")
-                    if correct_count is not None:
-                        total_correct += correct_count
-                    else:
-                        # fallback: compute from accuracy * total_count
-                        try:
-                            total_correct += int(result.get("accuracy", 0) * result.get("total_count", 0))
-                        except Exception:
-                            pass
-                    total_count += result.get("total_count", 0)
+            subset_metrics = {}
+            # Aggregates for tokens/latency
+            total_input_tokens = 0.0
+            total_output_tokens = 0.0
+            latency_values = []
+            for test_category, result in model_results.items():
+                if not (isinstance(result, dict) and "accuracy" in result):
+                    continue
+                correct_count = result.get("correct_count")
+                if correct_count is not None:
+                    total_correct += correct_count
+                else:
+                    try:
+                        total_correct += int(result.get("accuracy", 0) * result.get("total_count", 0))
+                    except Exception:
+                        pass
+                total_count += result.get("total_count", 0)
+                # Per-subset accuracy as separate columns
+                subset_metrics[str(test_category)] = result.get("accuracy", 0.0)
+
+            # Pull per-trace token/latency from samples
+            for s in model_to_samples.get(model_name, []):
+                ev = s.get("evaluation", {}) or {}
+                try:
+                    total_input_tokens += float(ev.get("input_tokens", 0) or 0)
+                except Exception:
+                    pass
+                try:
+                    total_output_tokens += float(ev.get("output_tokens", 0) or 0)
+                except Exception:
+                    pass
+                lat = ev.get("latency_seconds")
+                if isinstance(lat, (int, float)):
+                    latency_values.append(float(lat))
+
             overall_accuracy = (total_correct / total_count) if total_count > 0 else 0.0
-            summary_metrics = {
-                "AVG": overall_accuracy,
-                "total_count": total_count,
-                "correct_count": total_correct,
-            }
+
+            # Build summary with per-subset columns + overall
+            summary_metrics = {"AVG": overall_accuracy}
+            summary_metrics.update(subset_metrics)
+            # Optionally expose counts if useful
+            summary_metrics["total_count"] = total_count
+            summary_metrics["correct_count"] = total_correct
+
+            # Token totals
+            summary_metrics["input_tokens_total"] = total_input_tokens
+            summary_metrics["output_tokens_total"] = total_output_tokens
+            # Cost (if model pricing is available)
+            try:
+                cfg = MODEL_CONFIG_MAPPING.get(model_name)
+                if cfg and (cfg.input_price is not None) and (cfg.output_price is not None):
+                    cost_usd = (
+                        total_input_tokens * float(cfg.input_price) / 1_000_000.0
+                        + total_output_tokens * float(cfg.output_price) / 1_000_000.0
+                    )
+                    summary_metrics["cost_usd_total"] = round(cost_usd, 4)
+            except Exception:
+                pass
+
+            # Latency stats
+            if latency_values:
+                latency_values.sort()
+                n = len(latency_values)
+                mean_latency = sum(latency_values) / n
+                p95_idx = max(0, min(n - 1, int(0.95 * n) - 1))
+                p95_latency = latency_values[p95_idx]
+                summary_metrics["latency_mean_sec"] = round(mean_latency, 3)
+                summary_metrics["latency_p95_sec"] = round(p95_latency, 3)
+
             model_name_display = model_name.replace("_", "/")
-            # NOTE: WeaveEvalsController.log() is disabled to avoid duplicate evaluations
-            # The evaluation is created by evaluator.py via evaluation_logger.finish()
-            # which captures token/latency data from log_prediction() during inference
-            # WeaveEvalsController.log(
-            #     dataset_name="bfcl",
-            #     subset="overall",  # single eval containing all subsets
-            #     split="test",
-            #     model_backend_name="bfcl",
-            #     model_name=model_name_display,
-            #     scaling_method_name=None,
-            #     evaluation_method_name="BFCL-Evaluation",
-            #     language_penalize=False,
-            #     target_lang="en",
-            #     samples=model_to_samples.get(model_name, []),
-            #     metrics=summary_metrics,
-            #     wandb_params={},
-            # )
+            WeaveEvalsController.log(
+                dataset_name="bfcl",
+                subset="overall",
+                split="test",
+                model_backend_name="bfcl",
+                model_name=model_name_display,
+                scaling_method_name=None,
+                evaluation_method_name="BFCL-Evaluation",
+                language_penalize=False,
+                target_lang="en",
+                samples=model_to_samples.get(model_name, []),
+                metrics=summary_metrics,
+                wandb_params={},
+            )
     except Exception as e:
         print(f"[Weave] BFCL all logging skipped: {e}")
 
