@@ -156,9 +156,9 @@ class KobbqDataset(BaseDataset):
                 })
                 # 카테고리별 카운트 갱신
                 category_counts[category] = current_count + 1
-                if getattr(self, "dev_mode", False) and len(processed_list) >= 2:
+                if self.dev and category_counts[category] >= self.limit:
                     break
-                if getattr(self, "limit", None) and len(processed_list) >= self.limit:
+                if category_counts[category] >= self.num_samples:
                     break
 
         return processed_list

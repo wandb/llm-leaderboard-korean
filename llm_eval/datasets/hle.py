@@ -95,11 +95,11 @@ class HLEDataset(BaseDataset):
             subset_list = [self.subset]
 
         processed_list: List[Dict[str, Any]] = []
+        subset_counts: Dict[str, int] = {subset_name: 0 for subset_name in subset_list}
         for subset_name in subset_list:
             items = split_data.get(subset_name, [])
             if not isinstance(items, list):
                 continue
-            added = 0
             for item in items:
                 try:
                     question_text = (item.get("question") or "").strip()
@@ -113,8 +113,7 @@ class HLEDataset(BaseDataset):
                     possible_answers = [ans.strip() for ans in gold_answer.split(',') if str(ans).strip()]
                     reference = possible_answers[0] if possible_answers else ""
 
-                    processed_list.append(
-                        {
+                    sample = {
                             "input": final_input,
                             "reference": reference,
                             "_subset_name": subset_name,
@@ -122,16 +121,18 @@ class HLEDataset(BaseDataset):
                                 "all_references": possible_answers,
                             },
                         }
-                    )
-                    added += 1  
-                    if getattr(self, "dev_mode", False) and added >= 2:
-                        break
-                    if getattr(self, "limit", None) and added >= self.limit:
-                        break
+                    if not self.dev:
+                        if subset_counts[subset_name] < self.num_samples:
+                            processed_list.append(sample)
+                            subset_counts[subset_name] = subset_counts.get(subset_name, 0) + 1
+                    else:
+                        if subset_counts[subset_name] < self.limit:
+                            processed_list.append(sample)
+                            subset_counts[subset_name] = subset_counts.get(subset_name, 0) + 1
                 except Exception as e:
                     logger.error(f"Failed to process item: {e}")
                     continue
-
+        print(subset_counts)
         logger.info(f"Loaded {len(processed_list)} text-only samples.")
         return processed_list
 

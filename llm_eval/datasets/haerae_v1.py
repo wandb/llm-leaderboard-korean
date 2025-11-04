@@ -87,13 +87,11 @@ class HaeraeDatasetV1(BaseDataset):
             subset_list = [self.subset]
 
         results: List[Dict[str, Any]] = []
-        print(self.limit)
-        print(subset_list)
+        subset_counts: Dict[str, int] = {subset_name: 0 for subset_name in subset_list}
         for subset_name in subset_list:
             items = split_data.get(subset_name, [])
             if not isinstance(items, list):
                 continue
-            added = 0
             for item in items:
                 query = item.get("query", "")
                 query = query.replace("### 정답", "").strip()
@@ -103,24 +101,32 @@ class HaeraeDatasetV1(BaseDataset):
                     else query
                 )
                 answer = (item.get("answer", "") or "").strip()
-                results.append({
+                sample = {
                     "input": final_input,
                     "reference": answer,
                     "options": ["(A)", "(B)", "(C)", "(D)", "(E)"],
                     "_subset_name": subset_name,
-                })
-                added += 1
+                }
                 # dev/limit 처리
-                if getattr(self, "dev_mode", False) and added >= 2:
-                    break
-                if subset_name == "reading_comprehension":
-                    if getattr(self, "limit", None) and added >= 100:
-                        break
+                if not self.dev:
+                    if subset_name == "reading_comprehension":
+                        if subset_counts[subset_name] < 100:
+                            results.append(sample)
+                            subset_counts[subset_name] = subset_counts.get(subset_name, 0) + 1
+                    else:
+                        if subset_counts[subset_name] < self.num_samples:
+                            results.append(sample)
+                            subset_counts[subset_name] = subset_counts.get(subset_name, 0) + 1
                 else:
-                    if getattr(self, "limit", None) and added >= self.limit:
-                        break
-                
-
+                    if subset_name == "reading_comprehension":
+                        if subset_counts[subset_name] < 10:
+                            results.append(sample)
+                            subset_counts[subset_name] = subset_counts.get(subset_name, 0) + 1
+                    else:
+                        if subset_counts[subset_name] < self.limit:
+                            results.append(sample)
+                            subset_counts[subset_name] = subset_counts.get(subset_name, 0) + 1
+        print(subset_counts)
         return results
 
     # HF Hub 의존 변환 로직은 제거되었습니다.
