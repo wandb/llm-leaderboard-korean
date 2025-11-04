@@ -108,9 +108,9 @@ class IFEvalKoDataset(BaseDataset):
                 },
             })
 
-            if getattr(self, "dev_mode", False) and len(results) >= 2:
+            if self.dev and len(results) >= self.limit:
                 break
-            if getattr(self, "limit", None) and len(results) >= self.limit:
+            if len(results) >= self.num_samples:
                 break
         return results
 

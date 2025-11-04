@@ -76,7 +76,7 @@ class SWEBenchDataset(BaseDataset):
                 effective_limit = self.limit
             else:
                 effective_limit = min(effective_limit, self.limit)
-
+        print(f"effective_limit: {effective_limit}, limit: {self.limit}, max_samples: {self.max_samples}")
         samples = []
         for idx, instance in enumerate(self._raw_data):
             # Apply limit

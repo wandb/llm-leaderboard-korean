@@ -7,7 +7,7 @@ wandb:
   run_name: swebench-o4mini-2
 
 # testmode configurations
-testmode: false
+testmode: true
 
 # LLM 호출 간 간격(초). 누락 시 오류 방지를 위해 기본값 제공
 inference_interval: 0.0
@@ -15,7 +15,9 @@ inference_interval: 0.0
 mt_bench:
   split: test
   subset: ["roleplay", "humanities", "writing", "reasoning", "coding"]
-  limit: 100
+  params:
+    num_samples: 10 # 각 서브셋당 최대 10개의 샘플만 존재
+    limit: 2
   evaluation:
     method: "mt_bench_judge"
     params:
@@ -25,42 +27,49 @@ mt_bench:
       batch_size: 10
       max_tokens: 512
       temperature: 0.0
-# dataset configurations
-# SWE-bench Verified 설정
-
 
 komoral:
   split: test
   subset: default
-  limit: 100
+  params:
+    num_samples: 100
+    limit: 2
   evaluation:
     method: string_match
-
 
 kobbq:
   split: test
   subset: default
-  limit: 100
+  params:
+    num_samples: 100
+    limit: 2
   evaluation:
     method: string_match
 
 squad_kor_v1:
   split: test
   subset: default
-  limit: 100
+  params:
+    num_samples: 100
+    limit: 2
   evaluation:
     method: char_f1
 
 ifeval_ko:
   split: test
   subset: default
-  limit: 100
+  params:
+    num_samples: 100
+    limit: 2
   evaluation:
     method: ifeval_strict
 
 mrcr_2_needles:
   split: train
   subset: 128k
+  params:
+    num_samples: 100
+    limit: 2
   evaluation:
     method: sequence_match
     params:
@@ -78,7 +87,9 @@ mrcr_2_needles:
 
 haerae_bench_v1:
   subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history, reading_comprehension]
-  limit: 20
+  params:
+    num_samples: 20 # RC 100개, 나머지 20개 씩 총 100개
+    limit: 2
   split: test
   evaluation:
     method: string_match
@@ -88,20 +99,26 @@ haerae_bench_v1:
 korean_parallel_corpora:
   subset: [e2k, k2e]
   split: test
-  limit: 50
+  params:
+    num_samples: 50
+    limit: 2
   evaluation:
     method: comet_score
 
 korean_hate_speech:
   split: train
   subset: default
-  limit: 100
+  params:
+    num_samples: 100
+    limit: 2
   evaluation:
     method: string_match
 
 kmmlu:
   split: test
-  limit: 3
+  params:
+    num_samples: 3 # 45개 카테고리
+    limit: 1
   evaluation:
     method: "string_match"
     params:
@@ -109,7 +126,9 @@ kmmlu:
     
 kmmlu_pro:
   split: test
-  limit: 2
+  params:
+    num_samples: 2 # 61개 카테고리
+    limit: 1
   evaluation:
     method: "string_match"
     params:
@@ -117,7 +136,7 @@ kmmlu_pro:
 
 # kmmlu_hard:
 #   split: test
-#   limit: 10
+#   num_samples: 10
 #   evaluation:
 #     method: "string_match"
 #     params:
@@ -125,8 +144,10 @@ kmmlu_pro:
 
 kobalt_700:
   split: test
-  limit: 100
   subset: ["Syntax", "Semantics"] #, "Pragmatics", "Phonetics/Phonology", "Morphology"]
+  params:
+    num_samples: 100
+    limit: 2
   evaluation:
     method: "string_match"
     params:
@@ -134,8 +155,10 @@ kobalt_700:
 
 aime2025:
   split: test
-  limit: 50
   subset: ["AIME2025-I", "AIME2025-II"]
+  params:
+    num_samples: 15
+    limit: 2
   evaluation:
     method: "math_match"
     params:
@@ -144,7 +167,9 @@ aime2025:
 hrm8k:
   split: test
   subset: ["GSM8K", "KSM", "MATH", "MMMLU", "OMNI_MATH"]
-  limit: 20
+  params:
+    num_samples: 20
+    limit: 2
   evaluation:
     method: "math_match"
     params:
@@ -153,21 +178,27 @@ hrm8k:
 hle:
   subset: ["Other", "Humanities/Social Science", "Math", "Physics", "Computer Science/AI", "Biology/Medicine", "Chemistry", "Engineering"]
   split: test
-  limit: 13
+  params:
+    num_samples: 15 # 총 8개 카테고리
+    limit: 2
   evaluation:
     method: "string_match"
 
 arc_agi:
   split: evaluation
   subset: default
-  limit: 100
+  params:
+    num_samples: 100
+    limit: 2
   evaluation:
     method: "grid_match"
 
 halluLens:
   split: test
   subset: [precise_wikiqa, mixed_entities, generated_entities]
-  limit: 100
+  params:
+    num_samples: 100
+    limit: 2
   evaluation:
     abstention:
       model: gpt-4o-mini
@@ -190,7 +221,9 @@ bfcl:
     multi_turn_miss_func,
     multi_turn_miss_param,
   ]
-  limit: 10
+  params:
+    num_samples: 7
+    limit: 3
   # 동시성 제어: BFCL 모델 inference 시 동시에 보낼 스레드 개수
   num_threads: 32
   evaluation:
@@ -202,10 +235,10 @@ swebench:
   # Dataset configuration
   split: test
   subset: default
-  limit: 80  # Maximum number of samples to evaluate
-
   # Dataset parameters (passed to Dataset constructor)
   params:
+    num_samples: 77  # Maximum number of samples to evaluate
+    limit: 3
     artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v4
     dataset_dir: .
 
@@ -245,6 +278,6 @@ swebench:
 # arc_agi2:
 #   split: evaluation
 #   subset: default
-#   limit: 1000
+#   num_samples: 1000
 #   evaluation:
 #     method: "grid_match"
