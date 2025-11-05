@@ -19,7 +19,7 @@ def remove_file(file_path):
 
 class NonsenseNameInference:
     """method = together, openai, vllm, custom"""
-    def __init__(self, output_base_dir, generate_model, prompt_path, seed, method='together', limit=None, backend_kwargs=None):
+    def __init__(self, output_base_dir, generate_model, prompt_path, seed, method='together', limit=None, backend_kwargs=None, evaluation_logger=None):
         self.output_base_dir = output_base_dir
         self.generate_model = generate_model
         self.inference_method = method
@@ -27,6 +27,7 @@ class NonsenseNameInference:
         self.seed = seed
         self.limit = limit
         self.backend_kwargs = backend_kwargs or {}
+        self.evaluation_logger = evaluation_logger  # Accept external logger
         self.TASKNAME = prompt_path.split('/')[-1].replace('_all_not_exist.csv', '') #  f"{seed}_{BUSINESS_N}_{EVENT_N}_{PRODUCT_N}"
         print('INFER TASKNAME', self.TASKNAME)
     
@@ -48,13 +49,42 @@ class NonsenseNameInference:
             f"{all_prompts} should contain Korean prompts."
         )
 
-        exp.run_exp(task=TASKNAME, 
-                    model_path=generate_model, 
-                    all_prompts=all_prompts, 
-                    inference_method=self.inference_method, 
-                    max_tokens=256, 
+        # Use external EvaluationLogger if provided, otherwise create a new one
+        if self.evaluation_logger is None:
+            # Create EvaluationLogger for automatic token/latency tracking
+            from weave import EvaluationLogger
+            model_name = generate_model.split("/")[-1]
+            model_label = model_name.replace("-", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
+            evaluation_logger = EvaluationLogger(
+                dataset=TASKNAME,
+                model=model_label,
+                eval_attributes={
+                    "dataset_name": TASKNAME,
+                    "model_name": generate_model,
+                    "evaluation_method_name": "HalluLens",
+                },
+            )
+            should_finish = True
+        else:
+            evaluation_logger = self.evaluation_logger
+            should_finish = False  # Don't finish external logger
+
+        exp.run_exp(task=TASKNAME,
+                    model_path=generate_model,
+                    all_prompts=all_prompts,
+                    inference_method=self.inference_method,
+                    max_tokens=256,
                     base_path=self.output_base_dir,
-                    backend_kwargs=self.backend_kwargs)
+                    backend_kwargs=self.backend_kwargs,
+                    evaluation_logger=evaluation_logger)
+
+        # Only finalize if we created the logger internally
+        if should_finish:
+            try:
+                evaluation_logger.finish()
+            except Exception as e:
+                print(f"Warning: Failed to finalize EvaluationLogger: {e}")
+
         print(TASKNAME, 'Inference completed')
 
     def remove_existing_files(self):

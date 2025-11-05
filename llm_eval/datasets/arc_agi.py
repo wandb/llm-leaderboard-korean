@@ -133,9 +133,9 @@ class ARCAGIDataset(BaseDataset):
                     "_subset_name": subset_name,
                 }
             )
-            if getattr(self, "dev_mode", False) and len(samples) >= 2:
+            if self.dev and len(samples) >= self.limit:
                 break
-            if getattr(self, "limit", None) and len(samples) >= self.limit:
+            if len(samples) >= self.num_samples:
                 break
 
         return samples

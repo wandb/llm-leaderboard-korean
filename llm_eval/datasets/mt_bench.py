@@ -170,9 +170,8 @@ class MTBenchDataset(BaseDataset):
 
         # Build samples (single-turn focus: use turns[0])
         results: List[Dict[str, Any]] = []
-        added = 0
         # When dev_mode is enabled, collect up to 2 samples per category (subset)
-        category_counts: Dict[str, int] = {}
+        category_counts: Dict[str, int] = {cat_key: 0 for cat_key in allowed_subsets}
         for q in questions:
             try:
                 qid = q.get("question_id")
@@ -187,9 +186,6 @@ class MTBenchDataset(BaseDataset):
 
                 # Filter by allowed subsets if provided
                 if allowed_subsets is not None and cat_norm not in allowed_subsets:
-                    continue
-                # If in dev_mode, limit to 2 samples per category
-                if getattr(self, "dev_mode", False) and category_counts.get(cat_key, 0) >= 2:
                     continue
 
                 question_1 = str(turns[0])
@@ -226,16 +222,18 @@ class MTBenchDataset(BaseDataset):
                 if ref_answer_1:
                     sample["ref_answer_1"] = ref_answer_1
 
-                results.append(sample)
-                added += 1
                 # Track per-category sample count in dev_mode
-                if getattr(self, "dev_mode", False):
-                    category_counts[cat_key] = category_counts.get(cat_key, 0) + 1
-                if getattr(self, "limit", None) and added >= self.limit:
-                    break
+                if not self.dev:
+                    if category_counts[cat_key] < self.num_samples:
+                        results.append(sample)
+                        category_counts[cat_key] = category_counts.get(cat_key, 0) + 1
+                else:
+                    if category_counts[cat_key] < self.limit:
+                        results.append(sample)
+                        category_counts[cat_key] = category_counts.get(cat_key, 0) + 1
             except Exception:
                 continue
-
+        print(category_counts)
         return results
 
     def get_raw_samples(self) -> Any:

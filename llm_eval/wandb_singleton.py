@@ -41,39 +41,43 @@ class WandbConfigSingleton:
         return artifact_path
 
     @classmethod
-    def collect_leaderboard_table(cls, table_name: str, leaderboard_table: wandb.Table):
+    def collect_leaderboard_table(cls, table_name: str, leaderboard_table):
+        """
+        Collect a leaderboard table for later logging at finish().
+        Accepts either a pandas DataFrame or a wandb.Table.
+        """
         cls._instance.leaderboard_tables[table_name] = leaderboard_table
 
     @classmethod
     def log_overall_leaderboard_table(cls, model_name: str, release_date: str, size_category: str, model_size: str, dataset_names: List[str]) -> wandb.Table:
         final_score_key_dict = {
             "mt_bench": {
-                "columns": ["model_name", "roleplay/average_judge_score", "humanities/average_judge_score", "writing/average_judge_score", "reasoning/average_judge_score", "coding/average_judge_score"],
+                "columns": ["model_name", "roleplay", "humanities", "writing", "reasoning", "coding"],
                 "mapper": {
-                    "roleplay/average_judge_score": "GLP_표현",
-                    "humanities/average_judge_score": "GLP_표현",
-                    "writing/average_judge_score": "GLP_표현",
-                    "reasoning/average_judge_score": "GLP_논리적추론",
-                    "coding/average_judge_score": "GLP_코딩능력"
+                    "roleplay": "GLP_표현",
+                    "humanities": "GLP_표현",
+                    "writing": "GLP_표현",
+                    "reasoning": "GLP_논리적추론",
+                    "coding": "GLP_코딩능력"
                 }
             },
             "hle": 
             {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_전문적지식"
+                    "score": "GLP_전문적지식"
                 }
             },
             "hrm8k": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_수학적추론"
+                    "score": "GLP_수학적추론"
                 }
             },
             "aime2025": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_수학적추론"
+                    "score": "GLP_수학적추론"
                 }
             },
             "kobalt_700": {
@@ -84,27 +88,27 @@ class WandbConfigSingleton:
                 }
             },
             "kmmlu": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_일반적지식"
+                    "score": "GLP_일반적지식"
                 }
             },
             "kmmlu_pro": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_전문적지식"
+                    "score": "GLP_전문적지식"
                 }
             },
             "korean_hate_speech": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "ALT_유해성방지"
+                    "score": "ALT_유해성방지"
                 }
             },
             "korean_parallel_corpora": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_번역"
+                    "score": "GLP_번역"
                 }
             },
             "haerae_bench_v1": {
@@ -119,57 +123,57 @@ class WandbConfigSingleton:
                 }
             },
             "ifeval_ko": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "ALT_제어성"
+                    "score": "ALT_제어성"
                 }
             },
             "squad_kor_v1": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_정보검색"
+                    "score": "GLP_정보검색"
                 }
             },
             "kobbq": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "ALT_편향성방지"
+                    "score": "ALT_편향성방지"
                 }
             },
             "komoral": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "ALT_윤리/도덕"
+                    "score": "ALT_윤리/도덕"
                 }
             },
             "arc_agi": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_추상적추론"
+                    "score": "GLP_추상적추론"
                 }
             },
-            "swe_bench_verified": {
-                "columns": ["model_name", "AVG"],
+            "swebench": {
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_코딩능력"
+                    "score": "GLP_코딩능력"
                 }
             },
             "bfcl": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_함수호출"
+                    "score": "GLP_함수호출"
                 }
             },
             "mrcr_2_needles": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "GLP_장문맥이해"
+                    "score": "GLP_장문맥이해"
                 }
             },
             "halluLens": {
-                "columns": ["model_name", "AVG"],
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "AVG": "ALT_환각방지"
+                    "score": "ALT_환각방지"
                 }
             }
         }
@@ -217,27 +221,82 @@ class WandbConfigSingleton:
 
         # Only compute GLP/ALT averages if the required columns exist
         # This handles cases where only external benchmarks are run
-        glp_cols_exist = all(col in table_mean.columns for col in GLP_COLUMN_WEIGHT.keys())
-        alt_cols_exist = all(col in table_mean.columns for col in ALT_COLUMN_WEIGHT.keys())
 
-        if glp_cols_exist:
-            table_mean['범용언어성능(GLP)_AVG'] = weighted_average(table_mean, GLP_COLUMN_WEIGHT)
-        if alt_cols_exist:
-            table_mean['가치정렬성능(ALT)_AVG'] = weighted_average(table_mean, ALT_COLUMN_WEIGHT)
+        table_mean['범용언어성능(GLP)_AVG'] = weighted_average(table_mean, GLP_COLUMN_WEIGHT)
+        table_mean['가치정렬성능(ALT)_AVG'] = weighted_average(table_mean, ALT_COLUMN_WEIGHT)
 
         # Only compute TOTAL_AVG if both GLP and ALT exist
-        if glp_cols_exist and alt_cols_exist:
-            table_mean['TOTAL_AVG'] = (table_mean['범용언어성능(GLP)_AVG'] + table_mean['가치정렬성능(ALT)_AVG']) / 2
+        table_mean['TOTAL_AVG'] = (table_mean['범용언어성능(GLP)_AVG'] + table_mean['가치정렬성능(ALT)_AVG']) / 2
         table_mean['release_date'] = release_date
         table_mean['size_category'] = 'None' if size_category is None else size_category
         table_mean['model_size'] = 'None' if model_size is None else model_size
         table_mean = table_mean.reset_index()
         # Build desired column list, but only include columns that actually exist
         # This handles cases where external benchmarks don't have GLP/ALT columns
-        desired_columns = ['model_name', 'size_category', 'TOTAL_AVG', '범용언어성능(GLP)_AVG', '가치정렬성능(ALT)_AVG'] + list(GLP_COLUMN_WEIGHT.keys()) + list(ALT_COLUMN_WEIGHT.keys())
+        desired_columns = ['model_name', 'release_date', 'size_category', 'TOTAL_AVG', '범용언어성능(GLP)_AVG', '가치정렬성능(ALT)_AVG'] + list(GLP_COLUMN_WEIGHT.keys()) + list(ALT_COLUMN_WEIGHT.keys())
         existing_columns = [col for col in desired_columns if col in table_mean.columns]
         table_mean = table_mean[existing_columns]
 
         leaderboard_table = wandb.Table(dataframe=table_mean)
         cls._instance.run.log({"leaderboard_table": leaderboard_table})
+
+        df_alt = cls.create_radar_chart(table_mean, ALT_COLUMN_WEIGHT.keys())
+        df_glp = cls.create_radar_chart(table_mean, GLP_COLUMN_WEIGHT.keys())
+        cls._instance.run.log({"alt_radar_table": wandb.Table(dataframe=df_alt)})
+        cls._instance.run.log({"glp_radar_table": wandb.Table(dataframe=df_glp)})
         # return leaderboard_table
+
+    @classmethod
+    def create_radar_chart(cls, df: pd.DataFrame, columns: List[str]):
+        return df[columns].transpose().reset_index().rename(columns={'index': 'category', 0: 'score'})
+
+    @classmethod
+    def finish(
+        cls,
+        summary: Optional[dict] = None,
+        log_collected_tables: bool = True,
+        reset: bool = True,
+    ) -> None:
+        """
+        Finalize the global W&B run held by the singleton.
+
+        - Logs any collected leaderboard tables (DataFrame or wandb.Table)
+        - Optionally updates run summary with provided dict
+        - Finishes the run and optionally resets the singleton so it can be re-initialized
+        """
+        if cls._instance is None:
+            return
+
+        inst = cls._instance
+        try:
+            # Log collected leaderboard tables if any
+            if log_collected_tables and getattr(inst, "leaderboard_tables", None):
+                for name, table in inst.leaderboard_tables.items():
+                    try:
+                        if isinstance(table, pd.DataFrame):
+                            wb_table = wandb.Table(dataframe=table)
+                        else:
+                            wb_table = table
+                        inst.run.log({f"{name}_leaderboard_table": wb_table})
+                    except Exception:
+                        # Best-effort logging; continue on error
+                        pass
+
+            # Update summary if provided
+            if summary:
+                try:
+                    inst.run.summary.update(summary)
+                except Exception:
+                    pass
+
+            # Finish the run
+            try:
+                inst.run.finish()
+            except Exception:
+                try:
+                    wandb.finish()
+                except Exception:
+                    pass
+        finally:
+            if reset:
+                cls._instance = None

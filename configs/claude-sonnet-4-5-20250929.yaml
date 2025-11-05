@@ -8,4 +8,4 @@ model:
     temperature: 0.0
   release_date: "2025-09-29"
   model_size: None
-  size_category: middle
+  size_category: unknown
