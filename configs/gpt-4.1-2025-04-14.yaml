@@ -6,7 +6,7 @@ model:
     batch_size: 32
     max_tokens: 32768
     temperature: 0.0
-  release_date: "2024-11-20"
+  release_date: "2024-04-14"
   model_size: None
   size_category: unknown
 
