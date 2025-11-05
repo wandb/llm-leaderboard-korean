@@ -29,14 +29,12 @@ class WeaveModelAdapter(Model):
 
     # Define fields as class attributes for Weave Model
     model_backend: str
-    model_name: str
     model_params: Dict[str, Any]
 
-    def __init__(self, model_backend: str, model_name: str, model_params: Dict[str, Any] = None):
+    def __init__(self, model_backend: str, model_params: Dict[str, Any] = None):
         # Pass fields to parent __init__
         super().__init__(
             model_backend=model_backend,
-            model_name=model_name,
             model_params=model_params or {}
         )
         # Use private attribute for cached model (not a Weave field)
@@ -74,7 +72,6 @@ class WeaveModelAdapter(Model):
                 return {
                     "prediction": result.get("prediction", ""),
                     "metadata": {
-                        "model_name": self.model_name,
                         "sample_id": sample.get("id", None),
                     }
                 }
@@ -243,9 +240,10 @@ def run_with_standard_weave(
             weave_dataset.append(weave_sample)
 
         # Create model adapter
-        model_adapter = WeaveModelAdapter(
+        import types
+        NewModelAdapter = types.new_class(model_params.get("model_name", model_name), (WeaveModelAdapter,))
+        model_adapter = NewModelAdapter(
             model_backend=model_name,
-            model_name=model_params.get("model_name", model_name),
             model_params=model_params
         )
 
