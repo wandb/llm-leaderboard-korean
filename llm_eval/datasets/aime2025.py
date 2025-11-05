@@ -121,7 +121,7 @@ class AIME2025Dataset(BaseDataset):
             "then end with a single line in the form 'Answer: X'.\n\n{question}"
         )
         template = self.base_prompt_template or default_template
-
+        print(len(items))
         for item in items:
             question = str(item.get("question", "")).strip()
             reference = str(item.get("answer", "")).strip()
@@ -133,7 +133,9 @@ class AIME2025Dataset(BaseDataset):
                     "_subset_name": subset_name,
                 }
             )
-            if getattr(self, "dev_mode", False) and len(processed) >= 2:
+            if self.dev and len(processed) >= self.limit:
+                break
+            if len(processed) >= self.num_samples:
                 break
         return processed
 

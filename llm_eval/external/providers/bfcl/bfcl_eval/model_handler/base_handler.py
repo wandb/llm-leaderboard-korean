@@ -437,8 +437,8 @@ class BaseHandler:
 
             count = 0
             while True:
-                print("-" * 100)
-                print(f"ID: {test_entry_id.replace('multi_turn_', '')}, Turn: {turn_idx}, Step: {count}")
+                # print("-" * 100)
+                # print(f"ID: {test_entry_id.replace('multi_turn_', '')}, Turn: {turn_idx}, Step: {count}")
                 current_step_inference_log: list[dict] = []
                 # Add to the current_turn_inference_log at beginning of each step so that we don't need to bother dealing with the break statements
                 current_turn_inference_log[f"step_{count}"] = current_step_inference_log

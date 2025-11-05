@@ -52,7 +52,7 @@ def precise_wikiqa_runner(
     TASKNAME = f'precise_wikiqa'
 
     model_name = model.split("/")[-1]
-    print(f"Running {TASKNAME} with model {model_name}")
+    # print(f"Running {TASKNAME} with model {model_name}")
 
     QAs_df = None
 
@@ -91,12 +91,6 @@ def precise_wikiqa_runner(
         evaluation_logger=evaluation_logger)
     print('Inference completed')
 
-    # Finalize EvaluationLogger after inference
-    try:
-        evaluation_logger.finish()
-    except Exception as e:
-        print(f"Warning: Failed to finalize EvaluationLogger: {e}")
-
     print(f"Starting Evaluation for {model}")
     # evaluator 모델을 동적으로 지정: PreciseQAEval 내부 속성 재설정
     pq = PreciseQAEval(model_path=model, TASKNAME=TASKNAME)
@@ -109,52 +103,54 @@ def precise_wikiqa_runner(
 
     _log_to_wandb(pd.DataFrame([eval_result]), TASKNAME)
 
-    # Weave Evals logging
+    # Weave Evals logging - Log evaluation results to traces and summary
     try:
         model_name = model.split("/")[-1]
         gen_path = f"./output/{TASKNAME}/{model_name}/generation.jsonl"
         os.makedirs(os.path.dirname(gen_path), exist_ok=True)
         gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
+
         # zip evaluation flags per index
         abstentions: List[bool] = eval_result.get("abstantion", []) or []
         halus: List[bool] = eval_result.get("halu_test_res", []) or []
-        samples: List[Dict[str, Any]] = []
-        for i, g in enumerate(gens):
-            ev: Dict[str, Any] = {}
-            if i < len(abstentions):
-                ev["refusal"] = bool(abstentions[i])
-            if i < len(halus):
-                ev["is_hallucinated"] = bool(halus[i])
-            sample = {
-                "input": g.get("prompt", ""),
-                "prediction": g.get("generation", ""),
-                "reference": g.get("answer", None),
-                "evaluation": ev,
-            }
-            samples.append(sample)
 
+        # Log each trace's evaluation result
+        for i, g in enumerate(gens):
+            inputs_payload = {
+                "input": g.get("prompt", ""),
+                "reference": g.get("answer", None),
+                "index": i
+            }
+            output_text = g.get("generation", "")
+
+            # Log prediction with input/output
+            pred_logger = evaluation_logger.log_prediction(
+                inputs=inputs_payload,
+                output=output_text
+            )
+
+            # Log evaluation scores for this trace
+            if i < len(abstentions):
+                pred_logger.log_score(scorer="refusal", score=float(abstentions[i]))
+            if i < len(halus):
+                pred_logger.log_score(scorer="is_hallucinated", score=float(halus[i]))
+
+            pred_logger.finish()
+
+        # Log summary metrics
         metrics = {
             k: v for k, v in eval_result.items() if isinstance(v, (int, float))
         }
-        # NOTE: WeaveEvalsController.log() is disabled to avoid duplicate evaluations
-        # The evaluation is created via evaluation_logger.finish() (line 96)
-        # which captures token/latency data from log_prediction() during inference
-        # WeaveEvalsController.log(
-        #     dataset_name=TASKNAME,
-        #     subset=None,
-        #     split="test",
-        #     model_backend_name=inference_method,
-        #     model_name=model,
-        #     scaling_method_name=None,
-        #     evaluation_method_name="HalluLens-PreciseQAEval",
-        #     language_penalize=False,
-        #     target_lang="ko",
-        #     samples=samples,
-        #     metrics=metrics,
-        #     wandb_params={},
-        # )
+        evaluation_logger.log_summary(summary=metrics)
+
     except Exception as e:
-        print(f"[Weave] precise_wikiqa logging skipped: {e}")
+        print(f"[Weave] precise_wikiqa evaluation logging error: {e}")
+
+    # Finalize EvaluationLogger after all logging is complete
+    try:
+        evaluation_logger.finish()
+    except Exception as e:
+        print(f"Warning: Failed to finalize EvaluationLogger: {e}")
     
     return pd.DataFrame([eval_result])
 
@@ -222,19 +218,13 @@ def longwiki_runner(
 
     print('\n***Inference completed')
 
-    # Finalize EvaluationLogger after inference
-    try:
-        evaluation_logger.finish()
-    except Exception as e:
-        print(f"Warning: Failed to finalize EvaluationLogger: {e}")
-
     # RUN EVALUATION:
-    print("============= [[ {} ]] =================".format("dynamic"))
-    print(f"Running evaluation for {model_name};")
-    print(f"** Refusal Evaluator: {abstain_evaluator}")
-    print(f"** Claim Extractor: {claim_extractor}")
-    print(f"** Verifier: {verifier}")
-    print("=========================================")
+    # print("============= [[ {} ]] =================".format("dynamic"))
+    # print(f"Running evaluation for {model_name};")
+    # print(f"** Refusal Evaluator: {abstain_evaluator}")
+    # print(f"** Claim Extractor: {claim_extractor}")
+    # print(f"** Verifier: {verifier}")
+    # print("=========================================")
     eval_result, overall_result_df = run_eval(
         do_extract_only=do_extract_only,
         model=model,
@@ -246,48 +236,46 @@ def longwiki_runner(
         k=k,
     )
 
-    print('\n***Evaluation completed')
+    # print('\n***Evaluation completed')
 
     _log_to_wandb(pd.DataFrame([eval_result]), TASKNAME)
     _log_to_wandb(overall_result_df, TASKNAME + "_detailed" + model_name)
 
-    # Weave Evals logging
+    # Weave Evals logging - Log evaluation results to traces and summary
     try:
         # Build per-sample entries from overall_result_df
-        samples: List[Dict[str, Any]] = []
         for _, row in (overall_result_df or pd.DataFrame()).iterrows():
-            eval_fields: Dict[str, Any] = {}
+            inputs_payload = {
+                "input": row.get("prompt", ""),
+                "reference": row.get("claim", None),
+            }
+            output_text = str(row.get("sentence", ""))
+
+            # Log prediction with input/output
+            pred_logger = evaluation_logger.log_prediction(
+                inputs=inputs_payload,
+                output=output_text
+            )
+
+            # Log evaluation scores for this trace
             for key in ["is_supported", "precision", "recall", "f1", "k", "n_claims"]:
                 if key in row and pd.notna(row[key]):
-                    eval_fields[key] = row[key]
-            sample = {
-                "input": row.get("prompt", ""),
-                "prediction": str(row.get("sentence", "")),
-                "reference": row.get("claim", None),
-                "evaluation": eval_fields,
-            }
-            samples.append(sample)
+                    pred_logger.log_score(scorer=key, score=float(row[key]))
 
+            pred_logger.finish()
+
+        # Log summary metrics
         metrics = {k: v for k, v in (eval_result or {}).items() if isinstance(v, (int, float))}
-        # NOTE: WeaveEvalsController.log() is disabled to avoid duplicate evaluations
-        # The evaluation is created via evaluation_logger.finish() (line 224)
-        # which captures token/latency data from log_prediction() during inference
-        # WeaveEvalsController.log(
-        #     dataset_name=TASKNAME,
-        #     subset="dynamic",
-        #     split="test",
-        #     model_backend_name=inference_method,
-        #     model_name=model,
-        #     scaling_method_name=None,
-        #     evaluation_method_name="HalluLens-LongWiki-FactHalu",
-        #     language_penalize=False,
-        #     target_lang="ko",
-        #     samples=samples,
-        #     metrics=metrics,
-        #     wandb_params={},
-        # )
+        evaluation_logger.log_summary(summary=metrics)
+
     except Exception as e:
-        print(f"[Weave] longwiki logging skipped: {e}")
+        print(f"[Weave] longwiki evaluation logging error: {e}")
+
+    # Finalize EvaluationLogger after all logging is complete
+    try:
+        evaluation_logger.finish()
+    except Exception as e:
+        print(f"Warning: Failed to finalize EvaluationLogger: {e}")
 
     return pd.DataFrame([eval_result])
 
@@ -313,9 +301,32 @@ def non_mixed_entity_runner(
         raise Exception("No prompt path provided")
     TASKNAME = f"{EXP}_{seed}_{N}"
 
-    # run inference
-    inference = NonsenseMixedInference(TASKNAME, output_base_dir, tested_model, prompt_path, seed,
-                                       inference_method, limit=limit, backend_kwargs=backend_kwargs)
+    # Create EvaluationLogger for tracking
+    from weave import EvaluationLogger
+    model_name = tested_model.split("/")[-1]
+    model_label = model_name.replace("-", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
+    evaluation_logger = EvaluationLogger(
+        dataset=TASKNAME,
+        model=model_label,
+        eval_attributes={
+            "dataset_name": TASKNAME,
+            "model_name": tested_model,
+            "evaluation_method_name": "HalluLens-NonMixedEntity",
+        },
+    )
+
+    # run inference with evaluation_logger
+    inference = NonsenseMixedInference(
+        TASKNAME,
+        output_base_dir,
+        tested_model,
+        prompt_path,
+        seed,
+        inference_method,
+        limit=limit,
+        backend_kwargs=backend_kwargs,
+        evaluation_logger=evaluation_logger
+    )
     if infer_overwrite:
         inference.remove_existing_files()
     inference.run_inference()
@@ -332,40 +343,44 @@ def non_mixed_entity_runner(
     # Log to evaluation result to wandb
     result_df = _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
 
-    # Weave Evals logging
+    # Weave Evals logging - Log evaluation results to traces and summary
     try:
         gen_path = f"{task_path}/generation.jsonl"
         gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
         refusals: List[bool] = res.get("refusal_eval_raw", []) or []
-        samples: List[Dict[str, Any]] = []
+
+        # Log each trace's evaluation result
         for i, g in enumerate(gens):
-            ev: Dict[str, Any] = {"refusal": bool(refusals[i])} if i < len(refusals) else {}
-            samples.append({
+            inputs_payload = {
                 "input": g.get("prompt", ""),
-                "prediction": g.get("generation", ""),
-                "reference": None,
-                "evaluation": ev,
-            })
+                "index": i
+            }
+            output_text = g.get("generation", "")
+
+            # Log prediction with input/output
+            pred_logger = evaluation_logger.log_prediction(
+                inputs=inputs_payload,
+                output=output_text
+            )
+
+            # Log evaluation score for this trace
+            if i < len(refusals):
+                pred_logger.log_score(scorer="refusal", score=float(refusals[i]))
+
+            pred_logger.finish()
+
+        # Log summary metrics
         metrics = {k: v for k, v in (res or {}).items() if isinstance(v, (int, float))}
-        # NOTE: WeaveEvalsController.log() is disabled to avoid duplicate evaluations
-        # Evaluations are created via evaluation_logger.finish() in the inference functions
-        # which capture token/latency data from log_prediction() during inference
-        # WeaveEvalsController.log(
-        #     dataset_name=inference.TASKNAME,
-        #     subset=None,
-        #     split="test",
-        #     model_backend_name=inference_method,
-        #     model_name=tested_model,
-        #     scaling_method_name=None,
-        #     evaluation_method_name="HalluLens-NonMixedEntity",
-        #     language_penalize=False,
-        #     target_lang="ko",
-        #     samples=samples,
-        #     metrics=metrics,
-        #     wandb_params={},
-        # )
+        evaluation_logger.log_summary(summary=metrics)
+
     except Exception as e:
-        print(f"[Weave] non_mixed_entity logging skipped: {e}")
+        print(f"[Weave] non_mixed_entity evaluation logging error: {e}")
+
+    # Finalize EvaluationLogger after all logging is complete
+    try:
+        evaluation_logger.finish()
+    except Exception as e:
+        print(f"Warning: Failed to finalize EvaluationLogger: {e}")
 
     return result_df
 
@@ -385,54 +400,87 @@ def non_generated_entity_runner(
     if prompt_path == None:
         raise Exception("No prompt path provided")
 
-    inference = NonsenseNameInference(output_base_dir, generate_model, prompt_path, seed, inference_method, limit=limit, backend_kwargs=backend_kwargs)
+    # First create inference object to get TASKNAME
+    inference = NonsenseNameInference(
+        output_base_dir,
+        generate_model,
+        prompt_path,
+        seed,
+        inference_method,
+        limit=limit,
+        backend_kwargs=backend_kwargs,
+        evaluation_logger=None  # Will set it below
+    )
+
     if infer_overwrite:
         inference.remove_existing_files()
+
+    # Create EvaluationLogger for tracking
+    from weave import EvaluationLogger
+    model_name = generate_model.split("/")[-1]
+    model_label = model_name.replace("-", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
+    evaluation_logger = EvaluationLogger(
+        dataset=inference.TASKNAME,
+        model=model_label,
+        eval_attributes={
+            "dataset_name": inference.TASKNAME,
+            "model_name": generate_model,
+            "evaluation_method_name": "HalluLens-NonGeneratedEntity",
+        },
+    )
+
+    # Set the evaluation_logger in the inference object
+    inference.evaluation_logger = evaluation_logger
+
     inference.run_inference()
 
     eval = NonsenseNameEval(output_base_dir, generate_model, prompt_path, evaluator=evaluator_model)
     res, task_path = eval.run_eval(eval_overwrite)
     N = len(res['refusal_eval_raw'])
     refusal_rate = sum(res['refusal_eval_raw']) / N * 100
-    print(f"[{res['model']}] || Refusal rate: {refusal_rate} || N = {N}")
+    # print(f"[{res['model']}] || Refusal rate: {refusal_rate} || N = {N}")
 
     # Log to evaluation result to wandb
     result_df = _log_non_refusal_result_to_wandb(task_path, inference.TASKNAME)
 
-    # Weave Evals logging
+    # Weave Evals logging - Log evaluation results to traces and summary
     try:
         gen_path = f"{task_path}/generation.jsonl"
         gens: List[Dict[str, Any]] = [json.loads(line) for line in open(gen_path, "r")]
         refusals: List[bool] = res.get("refusal_eval_raw", []) or []
-        samples: List[Dict[str, Any]] = []
+
+        # Log each trace's evaluation result
         for i, g in enumerate(gens):
-            ev: Dict[str, Any] = {"refusal": bool(refusals[i])} if i < len(refusals) else {}
-            samples.append({
+            inputs_payload = {
                 "input": g.get("prompt", ""),
-                "prediction": g.get("generation", ""),
-                "reference": None,
-                "evaluation": ev,
-            })
+                "index": i
+            }
+            output_text = g.get("generation", "")
+
+            # Log prediction with input/output
+            pred_logger = evaluation_logger.log_prediction(
+                inputs=inputs_payload,
+                output=output_text
+            )
+
+            # Log evaluation score for this trace
+            if i < len(refusals):
+                pred_logger.log_score(scorer="refusal", score=float(refusals[i]))
+
+            pred_logger.finish()
+
+        # Log summary metrics
         metrics = {k: v for k, v in (res or {}).items() if isinstance(v, (int, float))}
-        # NOTE: WeaveEvalsController.log() is disabled to avoid duplicate evaluations
-        # Evaluations are created via evaluation_logger.finish() in the inference functions
-        # which capture token/latency data from log_prediction() during inference
-        # WeaveEvalsController.log(
-        #     dataset_name=inference.TASKNAME,
-        #     subset=None,
-        #     split="test",
-        #     model_backend_name=inference_method,
-        #     model_name=generate_model,
-        #     scaling_method_name=None,
-        #     evaluation_method_name="HalluLens-NonGeneratedEntity",
-        #     language_penalize=False,
-        #     target_lang="ko",
-        #     samples=samples,
-        #     metrics=metrics,
-        #     wandb_params={},
-        # )
+        evaluation_logger.log_summary(summary=metrics)
+
     except Exception as e:
-        print(f"[Weave] non_generated_entity logging skipped: {e}")
+        print(f"[Weave] non_generated_entity evaluation logging error: {e}")
+
+    # Finalize EvaluationLogger after all logging is complete
+    try:
+        evaluation_logger.finish()
+    except Exception as e:
+        print(f"Warning: Failed to finalize EvaluationLogger: {e}")
 
     return result_df
 

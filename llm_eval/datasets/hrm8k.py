@@ -125,7 +125,6 @@ class HRM8KDataset(BaseDataset):
 문제:{question}
 """
 
-        
         for item in items:
             # Extract and clean the question text.
             raw_question = item.get("question", "").strip()
@@ -140,9 +139,9 @@ class HRM8KDataset(BaseDataset):
                 "reference": answer.strip(),
                 "_subset_name": subset_name,
             })
-            if getattr(self, "dev_mode", False) and len(processed_list) >= 2:
+            if self.dev and len(processed_list) >= self.limit:
                 break
-            if getattr(self, "limit", None) and len(processed_list) >= self.limit:
+            if len(processed_list) >= self.num_samples:
                 break
         return processed_list
 

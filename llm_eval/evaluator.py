@@ -262,6 +262,7 @@ def run_multiple_from_configs(
     *,
     language_penalize: Optional[bool] = None,
     target_lang: Optional[str] = None,
+    use_standard_weave: bool = False,
 ) -> Dict[str, EvaluationResult]:
     """
     Load two YAML configs (base + model) and run multiple benchmarks sequentially
@@ -356,12 +357,6 @@ def run_multiple_from_configs(
 
         subset = ds_cfg.get("subset")
         split = ds_cfg.get("split", "test")
-        limit = ds_cfg.get("limit", None)
-
-        # Apply testmode limit override for swebench
-        if testmode and ds_key.lower() == "swebench":
-            limit = 5
-            logger.info(f"testmode enabled: overriding swebench limit to {limit}")
 
         # dataset-specific params
         dataset_params = ds_cfg.get("params") or {}
@@ -370,8 +365,6 @@ def run_multiple_from_configs(
         if "dev" not in dataset_params:
             # most datasets in this repo accept 'dev' kwarg (popped in __init__)
             dataset_params["dev"] = bool(testmode)
-        if "limit" not in dataset_params:
-            dataset_params["limit"] = limit
 
         # evaluation configuration
         eval_cfg = ds_cfg.get("evaluation") or {}
@@ -391,6 +384,7 @@ def run_multiple_from_configs(
         logger.info(f"Running dataset '{ds_key}' with split='{split}', subset='{subset}', eval='{eval_method}'")
 
         # Branch out HalluLens to external evaluator module
+        # HalluLens has integrated inference+evaluation pipeline, so Standard Weave is not applicable
         if str(ds_key).lower() == "hallulens":
             from llm_eval.external.providers.hallulens.evaluator import run_hallulens_from_configs
             result_map = run_hallulens_from_configs(
@@ -400,8 +394,9 @@ def run_multiple_from_configs(
             results.update(result_map)
             continue
 
-        # Branch out SWE-bench Verified to external evaluator module
-        if str(ds_key).lower() == "swe_bench_verified":
+        # Branch out SWE-bench to external evaluator module
+        # But allow Standard Weave if requested
+        if str(ds_key).lower() in ["swe_bench_verified", "swebench"] and not use_standard_weave:
             from llm_eval.external.providers.swe_bench_verified.evaluator import (
                 run_swebench_verified_from_configs,
             )
@@ -420,6 +415,34 @@ def run_multiple_from_configs(
                 model_config_path=model_config_path,
             )
             results.update(result_map)
+            continue
+
+        # Merge dataset-specific model params override if provided
+        ds_model_params_override = ds_cfg.get("model_params") or {}
+        merged_model_params = {**model_params, **ds_model_params_override}
+
+        # Use Standard Weave Evaluation if requested
+        if use_standard_weave:
+            logger.info(f"Using Standard Weave Evaluation for dataset '{ds_key}'")
+            from llm_eval.standard_weave_runner import run_with_standard_weave
+
+            # Update ds_cfg with processed params (including dev flag)
+            ds_cfg_with_params = ds_cfg.copy()
+            ds_cfg_with_params["params"] = dataset_params
+            print(f"ds_cfg_with_params: {ds_cfg_with_params}")
+
+            result = run_with_standard_weave(
+                dataset_key=ds_key,
+                dataset_config=ds_cfg_with_params,
+                model_name=model_name,
+                model_params=merged_model_params,
+                wandb_params=wandb_params,
+                evaluation_method=eval_method,
+                evaluator_params=eval_params,
+                language_penalize=lang_penalize_final,
+                target_lang=target_lang_final,
+            )
+            results[ds_key] = result
             continue
 
         # If mt_bench_judge (or llm_judge) embeds judge config in evaluation.params, honor it

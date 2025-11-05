@@ -72,7 +72,8 @@ class IFEvalStrictEvaluator(BaseEvaluator):
 
             sample["evaluation"] = {
                 "prompt_level_strict_acc": out.follow_all_instructions,
-                "inst_level_strict_acc": out.follow_instruction_list,
+                "inst_level_strict_acc": sum(out.follow_instruction_list)/len(out.follow_instruction_list),
+                "ifeval_strict_accuracy": (out.follow_all_instructions + sum(out.follow_instruction_list)/len(out.follow_instruction_list))/2,
             }
 
         metrics = {

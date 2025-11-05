@@ -8,4 +8,4 @@ model:
     max_completion_tokens: 2048
   release_date: "2025-04-16"
   model_size: None
-  size_category: mini
+  size_category: unknown

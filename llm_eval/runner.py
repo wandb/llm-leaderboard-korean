@@ -33,6 +33,7 @@ from llm_eval.utils.prompt_template import (
 )
 from llm_eval.utils.metrics import language_penalizer
 from llm_eval.wandb_controller import WeaveInferenceController
+from llm_eval.weave_evaluator import EnhancedWeaveController
 
 logger = get_logger(name="runner", level=logging.INFO)
 
@@ -58,6 +59,7 @@ class PipelineConfig:
     few_shot_split: Optional[str] = None
     few_shot_instruction: str = DEFAULT_FEW_SHOT_INSTRUCTION
     few_shot_example_template: str = DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE
+    use_enhanced_weave: bool = False  # Use enhanced Weave controller with scorer integration
 
     def __post_init__(self):
         """Validate and normalize configuration after initialization."""
@@ -433,6 +435,7 @@ class PipelineRunner:
         few_shot_split: Optional[str] = None,
         few_shot_instruction: Optional[str] = DEFAULT_FEW_SHOT_INSTRUCTION,
         few_shot_example_template: str = DEFAULT_FEW_SHOT_EXAMPLE_TEMPLATE,
+        use_enhanced_weave: bool = False,
     ):
         """
         Initialize the PipelineRunner with configuration parameters.
@@ -476,6 +479,7 @@ class PipelineRunner:
             few_shot_split=few_shot_split,
             few_shot_instruction=few_shot_instruction,
             few_shot_example_template=few_shot_example_template,
+            use_enhanced_weave=use_enhanced_weave,
         )
 
         # Initialize specialized handlers
@@ -529,42 +533,80 @@ class PipelineRunner:
             if not evaluation_samples:
                 return self._create_empty_result(few_shot_prefix, "No samples for evaluation after few-shot processing")
 
-            # Step 2: Initialize Weave inference controller
-            weave_controller = WeaveInferenceController(
-                dataset_name=self.config.dataset_name,
-                subset=self.config.subset,
-                split=self.config.split,
-                model_backend_name=self.config.model_backend_name,
-                model_name=(self.config.model_backend_params or {}).get("model_name"),
-                scaling_method_name=self.config.scaling_method_name,
-                evaluation_method_name=self.config.evaluation_method_name,
-                language_penalize=self.config.language_penalize,
-                target_lang=self.config.target_lang,
-                batch_size=self.config.model_backend_params.get("batch_size", 32),
-            )
-            weave_controller.initialize()
+            # Step 2: Initialize Weave controller based on configuration
+            if self.config.use_enhanced_weave:
+                # Use enhanced controller with scorer integration
+                logger.info("Using Enhanced Weave Controller with scorer integration")
+                weave_controller = EnhancedWeaveController(
+                    dataset_name=self.config.dataset_name,
+                    subset=self.config.subset,
+                    split=self.config.split,
+                    model_backend_name=self.config.model_backend_name,
+                    model_name=(self.config.model_backend_params or {}).get("model_name"),
+                    evaluation_method_name=self.config.evaluation_method_name,
+                    evaluator=self.components.evaluator,
+                    batch_size=self.config.model_backend_params.get("batch_size", 32),
+                )
+                weave_controller.initialize()
 
-            # Step 2.5: Prepare samples for inference
-            inference_samples = self.few_shot_handler.process_samples_for_inference(
-                evaluation_samples, few_shot_prefix
-            )
-            logger.info(f"Prepared {len(inference_samples)} samples for model inference.")
+                # Step 2.5: Prepare samples for inference
+                inference_samples = self.few_shot_handler.process_samples_for_inference(
+                    evaluation_samples, few_shot_prefix
+                )
+                logger.info(f"Prepared {len(inference_samples)} samples for model inference and evaluation.")
 
-            # Step 3: Run inference with Weave logging
-            # This ensures LLM calls happen inside log_prediction contexts
-            # for automatic token usage and latency tracking
-            predictions = weave_controller.run_inference_with_logging(
-                inference_samples, self.components.model.generate_batch
-            )
+                # Step 3: Run inference and evaluation with enhanced Weave logging
+                # This combines inference and evaluation, logging scores for each prediction
+                predictions = weave_controller.run_inference_and_evaluation(
+                    inference_samples, self.components.model.generate_batch
+                )
 
-            # Step 4: Evaluate predictions
-            eval_dict = self._run_evaluation(predictions)
+                # Step 4: Create eval_dict from predictions (already evaluated)
+                eval_dict = {
+                    "samples": predictions,
+                    "metrics": self._compute_metrics_from_predictions(predictions)
+                }
 
-            # Step 5: Apply language penalization if enabled
-            self.language_penalizer.apply_penalization(eval_dict)
+                # Step 5: Apply language penalization if enabled
+                self.language_penalizer.apply_penalization(eval_dict)
 
-            # Step 6: Finalize Weave logging with summary metrics
-            weave_controller.finalize(eval_dict.get("metrics", {}))
+                # Step 6: Finalize Weave logging with summary metrics
+                weave_controller.finalize(eval_dict.get("metrics", {}))
+            else:
+                # Use original controller
+                weave_controller = WeaveInferenceController(
+                    dataset_name=self.config.dataset_name,
+                    subset=self.config.subset,
+                    split=self.config.split,
+                    model_backend_name=self.config.model_backend_name,
+                    model_name=(self.config.model_backend_params or {}).get("model_name"),
+                    scaling_method_name=self.config.scaling_method_name,
+                    evaluation_method_name=self.config.evaluation_method_name,
+                    language_penalize=self.config.language_penalize,
+                    target_lang=self.config.target_lang,
+                    batch_size=self.config.model_backend_params.get("batch_size", 32),
+                )
+                weave_controller.initialize()
+
+                # Step 2.5: Prepare samples for inference
+                inference_samples = self.few_shot_handler.process_samples_for_inference(
+                    evaluation_samples, few_shot_prefix
+                )
+                logger.info(f"Prepared {len(inference_samples)} samples for model inference.")
+
+                # Step 3: Run inference with Weave logging
+                predictions = weave_controller.run_inference_with_logging(
+                    inference_samples, self.components.model.generate_batch
+                )
+
+                # Step 4: Evaluate predictions
+                eval_dict = self._run_evaluation(predictions)
+
+                # Step 5: Apply language penalization if enabled
+                self.language_penalizer.apply_penalization(eval_dict)
+
+                # Step 6: Finalize Weave logging with summary metrics
+                weave_controller.finalize(eval_dict.get("metrics", {}))
 
             # Step 7: Create final result
             return self._create_final_result(eval_dict, few_shot_prefix, start_time)
@@ -592,6 +634,38 @@ class PipelineRunner:
         except Exception as e:
             logger.error(f"Error during evaluation with '{self.config.evaluation_method_name}': {e}", exc_info=True)
             raise
+
+    def _compute_metrics_from_predictions(self, predictions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Compute aggregate metrics from predictions with evaluation scores."""
+        metrics = {}
+
+        # Collect all unique score names
+        score_names = set()
+        for pred in predictions:
+            if "evaluation" in pred and isinstance(pred["evaluation"], dict):
+                score_names.update(pred["evaluation"].keys())
+
+        # Compute average for each score
+        for score_name in score_names:
+            scores = []
+            for pred in predictions:
+                if "evaluation" in pred and score_name in pred["evaluation"]:
+                    score_value = pred["evaluation"][score_name]
+                    if isinstance(score_value, (int, float)):
+                        scores.append(score_value)
+
+            if scores:
+                metrics[f"{score_name}_avg"] = sum(scores) / len(scores)
+                metrics[f"{score_name}_count"] = len(scores)
+
+        # Add overall accuracy if exact_match exists
+        if "exact_match_avg" in metrics:
+            metrics["accuracy"] = metrics["exact_match_avg"]
+
+        # Add sample count
+        metrics["num_samples"] = len(predictions)
+
+        return metrics
 
 
     def _create_pipeline_info(self, few_shot_prefix: str, elapsed_time: float) -> Dict[str, Any]:
