@@ -227,7 +227,7 @@ class WandbConfigSingleton:
 
         # Only compute TOTAL_AVG if both GLP and ALT exist
         table_mean['TOTAL_AVG'] = (table_mean['범용언어성능(GLP)_AVG'] + table_mean['가치정렬성능(ALT)_AVG']) / 2
-        table_mean['release_date'] = release_date
+        table_mean['release_date'] = pd.to_datetime(release_date, format='%Y-%m-%d')
         table_mean['size_category'] = 'None' if size_category is None else size_category
         table_mean['model_size'] = 'None' if model_size is None else model_size
         table_mean = table_mean.reset_index()
@@ -240,15 +240,42 @@ class WandbConfigSingleton:
         leaderboard_table = wandb.Table(dataframe=table_mean)
         cls._instance.run.log({"leaderboard_table": leaderboard_table})
 
-        df_alt = cls.create_radar_chart(table_mean, ALT_COLUMN_WEIGHT.keys())
-        df_glp = cls.create_radar_chart(table_mean, GLP_COLUMN_WEIGHT.keys())
-        cls._instance.run.log({"alt_radar_table": wandb.Table(dataframe=df_alt)})
-        cls._instance.run.log({"glp_radar_table": wandb.Table(dataframe=df_glp)})
+        glp_radar_table, glp_detail_radar_table, alt_radar_table, alt_detail_radar_table = cls.create_glp_alt_radar_table(table_mean)
+        cls._instance.run.log({"alt_radar_table": wandb.Table(dataframe=alt_radar_table)})
+        cls._instance.run.log({"glp_radar_table": wandb.Table(dataframe=glp_radar_table)})
+        cls._instance.run.log({"glp_detail_radar_table": wandb.Table(dataframe=glp_detail_radar_table)})
+        cls._instance.run.log({"alt_detail_radar_table": wandb.Table(dataframe=alt_detail_radar_table)})
         # return leaderboard_table
 
     @classmethod
-    def create_radar_chart(cls, df: pd.DataFrame, columns: List[str]):
-        return df[columns].transpose().reset_index().rename(columns={'index': 'category', 0: 'score'})
+    def create_glp_alt_radar_table(cls, df: pd.DataFrame):
+        GLP_COLUMN_MAPPER = {
+            "GLP_구문해석": "기본언어성능",
+            "GLP_의미해석": "기본언어성능",
+            "GLP_표현": "응용언어성능",
+            "GLP_번역": "응용언어성능",
+            "GLP_정보검색": "응용언어성능",
+            "GLP_장문맥이해": "응용언어성능",
+            "GLP_일반적지식": "지식/질의응답",
+            "GLP_전문적지식": "지식/질의응답",
+            "GLP_수학적추론": "추론능력",
+            "GLP_논리적추론": "추론능력",
+            "GLP_추상적추론": "추론능력",
+            "GLP_함수호출": "어플리케이션개발",
+            "GLP_코딩능력": "어플리케이션개발",
+        }
+        ALT_COLUMN_MAPPER = {
+            "ALT_제어성": "제어성",
+            "ALT_유해성방지": "유해성방지",
+            "ALT_편향성방지": "평향성방지",
+            "ALT_윤리/도덕": "윤리/도덕",
+            "ALT_환각방지": "환각방지",
+        }
+        glp_radar_table = df[GLP_COLUMN_MAPPER.keys()].rename(columns=GLP_COLUMN_MAPPER).transpose().reset_index().groupby("index").mean().reset_index().rename(columns={'index': 'category', 0: 'score'})
+        glp_detail_radar_table = df[GLP_COLUMN_MAPPER.keys()].transpose().reset_index().rename(columns={'index': 'category', 0: 'score'})
+        alt_radar_table = df[ALT_COLUMN_MAPPER.keys()].rename(columns=ALT_COLUMN_MAPPER).transpose().reset_index().groupby("index").mean().reset_index().rename(columns={'index': 'category', 0: 'score'})
+        alt_detail_radar_table = df[ALT_COLUMN_MAPPER.keys()].transpose().reset_index().rename(columns={'index': 'category', 0: 'score'})
+        return glp_radar_table, glp_detail_radar_table, alt_radar_table, alt_detail_radar_table
 
     @classmethod
     def finish(
