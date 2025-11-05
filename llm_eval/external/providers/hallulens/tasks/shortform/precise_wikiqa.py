@@ -115,7 +115,7 @@ class PreciseQAEval:
             except:
                 pass
         halu_test_res = []
-        for i in passed_idx:
+        for i in passed_idx[:len(halu_eval_raw)]: # 인덱스 오류 방지 by limit 설정
             txt = halu_eval_raw[i]
             if txt.lower() not in ['correct', 'incorrect', 'unverifiable']: print(txt)
             hallucinated_judge = False if txt.lower() == 'correct' or txt.lower() == 'yes' else True
