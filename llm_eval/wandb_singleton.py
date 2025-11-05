@@ -236,11 +236,9 @@ class WandbConfigSingleton:
         desired_columns = ['model_name', 'release_date', 'size_category', 'TOTAL_AVG', '범용언어성능(GLP)_AVG', '가치정렬성능(ALT)_AVG'] + list(GLP_COLUMN_WEIGHT.keys()) + list(ALT_COLUMN_WEIGHT.keys())
         existing_columns = [col for col in desired_columns if col in table_mean.columns]
         table_mean = table_mean[existing_columns]
-        table_mean.to_csv(f"leaderboard_table.csv", index=False)
 
         leaderboard_table = wandb.Table(dataframe=table_mean)
         cls._instance.run.log({"leaderboard_table": leaderboard_table})
-
 
         df_alt = cls.create_radar_chart(table_mean, ALT_COLUMN_WEIGHT.keys())
         df_glp = cls.create_radar_chart(table_mean, GLP_COLUMN_WEIGHT.keys())
@@ -250,7 +248,7 @@ class WandbConfigSingleton:
 
     @classmethod
     def create_radar_chart(cls, df: pd.DataFrame, columns: List[str]):
-        return df[columns].transpose().rename(columns={0: 'score'})
+        return df[columns].transpose().reset_index().rename(columns={'index': 'category', 0: 'score'})
 
     @classmethod
     def finish(
