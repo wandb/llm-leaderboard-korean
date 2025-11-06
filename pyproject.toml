@@ -35,14 +35,55 @@ dependencies = [
     "tqdm>=4.64.0",
     "langdetect>=1.0.9",
     "httpx>=0.24.0",
-    "vllm>=0.4.0",
     "accelerate>=0.20.0",
     "spacy>=3.4.0",
     "scikit-learn>=1.1.0",
     "wandb>=0.21.3",
+    "weave>=0.50.0",
+    "pyyaml>=6.0",
+    "immutabledict>=4.0.0",
+    "python-dotenv>=1.0.0",
+    "huggingface-hub>=0.20.0",
+    "tabulate>=0.9.0",
+    "tenacity>=8.0.0",
+    "typer>=0.9.0",
+    "beautifulsoup4>=4.11.0",
+    "sentence-transformers>=2.2.0",
+    "fuzzywuzzy>=0.18.0",
+    "python-Levenshtein>=0.20.0",
+    "jsonlines>=4.0.0",
+    "segtok>=1.5.0",
+    "together>=1.2.0",
+    "ratelimit>=2.2.1",
+    "anthropic>=0.29.0",
+    "google-genai>=0.3.0",
+    "cohere>=5.5.0",
+    "boto3>=1.28.0",
+    "rank-bm25>=0.2.2",
+    "html2text>=2020.1.16",
+    "serpapi>=0.1.5",
+    "retry>=0.9.2",
+    "tree-sitter==0.21.3",
+    "tree-sitter-javascript==0.21.4",
+    "tree-sitter-java==0.21.0",
+    "overrides>=7.4.0",
+    "mistralai>=0.4.0",
+    "qwen-agent>=0.0.9",
+    "dashscope>=1.13.0",
+    "writerai>=0.1.0",
+    "openai>=1.40.0",
+    "requests>=2.31.0",
+    "httpx>=0.27.0",
+    "datamodel-code-generator>=0.25.0",
 ]
 
 [project.optional-dependencies]
+vllm = [
+    "vllm>=0.4.0",
+]
+vllm = [
+    "vllm>=0.4.0",
+]
 dev = [
     "pre-commit==4.0.1",
     "pytest>=7.3.0",
@@ -63,3 +104,13 @@ Documentation = "https://github.com/HAE-RAE/haerae-evaluation-toolkit/tree/main/
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["llm_eval*"]
+
+[tool.uv.workspace]
+members = [
+    "myproject",
+]
+
+[tool.uv.workspace]
+members = [
+    "myproject",
+]
