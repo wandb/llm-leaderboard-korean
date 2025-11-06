@@ -74,8 +74,6 @@ class FireworksHandler(OpenAICompletionsHandler):
         return {
             "model_responses": model_responses,
             "model_responses_message_for_chat_history": tool_calls,
-            "input_token": api_response.usage.prompt_tokens,
-            "output_token": api_response.usage.completion_tokens,
         }
 
     def add_first_turn_message_FC(

@@ -99,9 +99,6 @@ class BaseHandler:
         # A mapping from turn index to function to holdout
         holdout_function: dict[int, list] = test_entry.get("missed_function", {})
 
-        total_input_token_count: list[list[float]] = []
-        total_output_token_count: list[list[float]] = []
-        total_latency: list[list[float]] = []
         all_model_response: list[list] = []  # The model response that will be used for later evaluation
         all_inference_log: list[list[dict]] = []  # The debugging log for human to understand
         force_quit = False  # Whether the model has been forced to quit. If True, this whole entry will be failed.
@@ -176,9 +173,6 @@ class BaseHandler:
 
             current_turn_response = []
             current_turn_inference_log: list[dict] = {"begin_of_turn_query": current_turn_message}
-            current_turn_input_token_count: list[float] = []
-            current_turn_output_token_count: list[float] = []
-            current_turn_latency: list[float] = []
             current_turn_reasoning_content = []
 
             count = 0
@@ -209,10 +203,6 @@ class BaseHandler:
                 inference_data = self._add_assistant_message_FC(inference_data, model_response_data)
 
                 # Process the metadata
-                current_turn_input_token_count.append(model_response_data["input_token"])
-                current_turn_output_token_count.append(model_response_data["output_token"])
-                current_turn_latency.append(query_latency)
-
                 current_turn_response.append(model_responses)
 
                 reasoning_content = model_response_data.get("reasoning_content", "")
@@ -299,9 +289,6 @@ class BaseHandler:
             all_model_response.append(current_turn_response)
             all_inference_log.append(current_turn_inference_log)
             all_reasoning_content.append(current_turn_reasoning_content)
-            total_input_token_count.append(current_turn_input_token_count)
-            total_output_token_count.append(current_turn_output_token_count)
-            total_latency.append(current_turn_latency)
 
             if not exclude_state_log:
                 state_log = []
@@ -331,9 +318,6 @@ class BaseHandler:
             memory_instance._flush_memory_to_local_file()
 
         metadata = {
-            "input_token_count": total_input_token_count,
-            "output_token_count": total_output_token_count,
-            "latency": total_latency,
             "inference_log": all_inference_log,
         }
 
@@ -358,9 +342,6 @@ class BaseHandler:
         # A mapping from turn index to function to holdout
         holdout_function: dict[int, list] = test_entry.get("missed_function", {})
 
-        total_input_token_count: list[list[float]] = []
-        total_output_token_count: list[list[float]] = []
-        total_latency: list[list[float]] = []
         # The model response that will be used for later evaluation
         all_model_response: list[list] = []
         # Only for reasoning models, reasoning content will be stored as part of metadata and in inference log
@@ -431,9 +412,6 @@ class BaseHandler:
             current_turn_response = []
             current_turn_reasoning_content = []
             current_turn_inference_log: list[dict] = {"begin_of_turn_query": current_turn_message}
-            current_turn_input_token_count: list[float] = []
-            current_turn_output_token_count: list[float] = []
-            current_turn_latency: list[float] = []
 
             count = 0
             while True:
@@ -463,10 +441,6 @@ class BaseHandler:
                 inference_data = self._add_assistant_message_prompting(inference_data, model_response_data)
 
                 # Process the metadata
-                current_turn_input_token_count.append(model_response_data["input_token"])
-                current_turn_output_token_count.append(model_response_data["output_token"])
-                current_turn_latency.append(query_latency)
-
                 current_turn_response.append(model_responses)
                 reasoning_content = model_response_data.get("reasoning_content", "")
                 current_turn_reasoning_content.append(reasoning_content)
@@ -552,9 +526,6 @@ class BaseHandler:
             all_model_response.append(current_turn_response)
             all_reasoning_content.append(current_turn_reasoning_content)
             all_inference_log.append(current_turn_inference_log)
-            total_input_token_count.append(current_turn_input_token_count)
-            total_output_token_count.append(current_turn_output_token_count)
-            total_latency.append(current_turn_latency)
 
             if not exclude_state_log:
                 state_log = []
@@ -584,9 +555,6 @@ class BaseHandler:
             memory_instance._flush_memory_to_local_file()
 
         metadata = {
-            "input_token_count": total_input_token_count,
-            "output_token_count": total_output_token_count,
-            "latency": total_latency,
             "inference_log": all_inference_log,
         }
         # We only include reasoning content if it exists and is not empty
@@ -616,9 +584,6 @@ class BaseHandler:
                     "content": inference_data.get("inference_input_log", ""),
                 }
             ]
-        metadata["input_token_count"] = model_response_data["input_token"]
-        metadata["output_token_count"] = model_response_data["output_token"]
-        metadata["latency"] = query_latency
 
         if "reasoning_content" in model_response_data and model_response_data["reasoning_content"] != "":
             metadata["reasoning_content"] = model_response_data["reasoning_content"]
@@ -644,9 +609,6 @@ class BaseHandler:
                     "content": inference_data.get("inference_input_log", ""),
                 }
             ]
-        metadata["input_token_count"] = model_response_data["input_token"]
-        metadata["output_token_count"] = model_response_data["output_token"]
-        metadata["latency"] = query_latency
 
         if "reasoning_content" in model_response_data and model_response_data["reasoning_content"] != "":
             metadata["reasoning_content"] = model_response_data["reasoning_content"]
@@ -748,7 +710,7 @@ class BaseHandler:
 
     def _parse_query_response_FC(self, api_response: Any) -> dict:
         """
-        Parses the raw response from the model API to extract the result, input token count, and output token count.
+        Parses the raw response from the model API to extract the result.
 
         Args:
             api_response (any): The raw response from the model API.
@@ -756,8 +718,6 @@ class BaseHandler:
         Returns:
             A dict containing the following elements:
                 - model_responses (any): The parsed result that can be directly used as input to the decode method.
-                - input_token (int): The number of tokens used in the input to the model.
-                - output_token (int): The number of tokens generated by the model as output.
                 - tool_call_ids (list[str]): The IDs of the tool calls that are generated by the model. Optional.
                 - Any other metadata that is specific to the model.
         """
@@ -823,7 +783,7 @@ class BaseHandler:
 
     def _parse_query_response_prompting(self, api_response: Any) -> dict:
         """
-        Parses the raw response from the model API to extract the result, input token count, and output token count.
+        Parses the raw response from the model API to extract the result.
 
         Args:
             api_response (any): The raw response from the model API.
@@ -831,8 +791,6 @@ class BaseHandler:
         Returns:
             A dict containing the following elements:
                 - model_responses (any): The parsed result that can be directly used as input to the decode method.
-                - input_token (int): The number of tokens used in the input to the model.
-                - output_token (int): The number of tokens generated by the model as output.
                 - Any other metadata that is specific to the model.
         """
         raise NotImplementedError

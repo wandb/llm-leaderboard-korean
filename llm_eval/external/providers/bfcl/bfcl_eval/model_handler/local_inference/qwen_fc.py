@@ -277,8 +277,6 @@ class QwenFCHandler(OSSHandler):
             "model_responses": cleaned_response,
             "reasoning_content": reasoning_content,
             "model_responses_message_for_chat_history": model_responses_message_for_chat_history,
-            "input_token": api_response.usage.prompt_tokens,
-            "output_token": api_response.usage.completion_tokens,
         }
 
     @override

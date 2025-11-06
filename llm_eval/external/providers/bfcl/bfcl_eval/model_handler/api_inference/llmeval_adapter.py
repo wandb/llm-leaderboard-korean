@@ -149,8 +149,6 @@ class LLMEvalBFCLHandler(BaseHandler):
         return {
             "model_responses": content,
             "model_responses_message_for_chat_history": {"role": "assistant", "content": content},
-            "input_token": 0,
-            "output_token": 0,
         }
 
     def add_first_turn_message_prompting(self, inference_data: dict, first_turn_message: list[dict]) -> dict:

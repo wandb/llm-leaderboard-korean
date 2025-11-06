@@ -127,8 +127,6 @@ class OpenAICompletionsHandler(BaseHandler):
             "model_responses": model_responses,
             "model_responses_message_for_chat_history": model_responses_message_for_chat_history,
             "tool_call_ids": tool_call_ids,
-            "input_token": api_response.usage.prompt_tokens,
-            "output_token": api_response.usage.completion_tokens,
         }
 
     def add_first_turn_message_FC(
@@ -241,8 +239,6 @@ class OpenAICompletionsHandler(BaseHandler):
         return {
             "model_responses": api_response.choices[0].message.content,
             "model_responses_message_for_chat_history": api_response.choices[0].message,
-            "input_token": api_response.usage.prompt_tokens,
-            "output_token": api_response.usage.completion_tokens,
         }
 
     def add_first_turn_message_prompting(

@@ -180,8 +180,6 @@ class ArchHandler(OSSHandler):
         return {
             "model_responses": model_responses,
             "model_responses_message_for_chat_history": model_responses_message_for_chat_history,
-            "input_token": api_response.usage.prompt_tokens,
-            "output_token": api_response.usage.completion_tokens,
         }
 
     @override
