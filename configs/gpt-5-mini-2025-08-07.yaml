@@ -1,32 +1,30 @@
 model:
-  name: openai_responses  # Using OpenAI Responses API for reasoning models
+  name: litellm
   params:
     model_name: gpt-5-mini-2025-08-07
-    api_base: https://api.openai.com/v1
-    batch_size: 16  # Lower for reasoning models
-    max_tokens: 32768  # Model limit for GPT-5-mini (will be automatically capped)
-    temperature: 1.0  # Required for reasoning models
-    timeout: 600.0  # 10 minutes for reasoning chains
-    reasoning:
-      effort: "high"  # "low", "medium", or "high"
-      summary: "auto"  # "auto", "full", or "none"
+    provider: openai
+    batch_size: 32
+    max_tokens: 65536
+    temperature: 1
+    reasoning_effort: "high"
   release_date: "2025-08-07"
   model_size: None
-  size_category: mini
+  size_category: unknown
 
-# Override dataset settings from base_config.yaml for this model
-# Testing with 5 samples
+# SWE-bench test configuration to verify Weave automatic tracking
 swebench:
-  limit: 1  # Test with 1 sample to verify token tracking
+  limit: 2  # Test with 5 samples to verify Weave auto-tracking at scale
   params:
     artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v4
     dataset_dir: .
   model_params:
-    max_tokens: 32768  # Model limit for GPT-5-mini
-    timeout: 900.0  # 15 minutes for complex reasoning
-    reasoning:
-      effort: "high"  # Max reasoning effort for best results
+    max_tokens: 65536  # Model limit for GPT-5-mini
+    timeout: 300.0  # Longer timeout for SWE-bench
   evaluation:
     params:
-      concurrency: 1  # Sequential processing for reasoning models
-      timeout_sec: 2400  # 40 minutes per test for complex patches
+      concurrency: 1
+      timeout_sec: 1800
+
+mrcr_2_needles:
+  model_params:
+    max_tokens: 65536

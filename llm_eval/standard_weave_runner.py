@@ -251,9 +251,21 @@ def run_with_standard_weave(
         scorers = create_dataset_scorers(dataset_key, subset, evaluation_method, evaluator_params)
         logger.info(f"Created {len(scorers)} scorers for evaluation")
 
+        # Create named Weave dataset (exclude subset from name; fallback to raw list if not supported)
+        dataset_name_str = str(dataset_key)
+        try:
+            # Prefer explicit constructor signature if available
+            from weave import Dataset as WeaveDataset  # type: ignore
+            try:
+                named_dataset = WeaveDataset(name=dataset_name_str, rows=weave_dataset)  # type: ignore
+            except TypeError:
+                named_dataset = WeaveDataset(weave_dataset, name=dataset_name_str)  # type: ignore
+        except Exception:
+            named_dataset = weave_dataset
+
         # Create Weave evaluation
         evaluation = Evaluation(
-            dataset=weave_dataset,
+            dataset=named_dataset,
             scorers=scorers,
             name=f"{dataset_key}_evaluation"
         )

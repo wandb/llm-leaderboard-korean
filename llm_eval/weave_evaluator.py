@@ -361,9 +361,20 @@ class StandardWeaveEvaluator:
                 metadata={"dataset": self.dataset_name}
             )
 
+        # Create named Weave dataset (fallback to raw list if not supported)
+        dataset_name_str = str(self.dataset_name)
+        try:
+            from weave import Dataset as WeaveDataset  # type: ignore
+            try:
+                named_dataset = WeaveDataset(name=dataset_name_str, rows=dataset)  # type: ignore
+            except TypeError:
+                named_dataset = WeaveDataset(dataset, name=dataset_name_str)  # type: ignore
+        except Exception:
+            named_dataset = dataset
+
         # Create evaluation
         evaluation = Evaluation(
-            dataset=dataset,
+            dataset=named_dataset,
             scorers=all_scorers,
             name=f"{self.dataset_name}_evaluation"
         )

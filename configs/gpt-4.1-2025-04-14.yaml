@@ -23,3 +23,7 @@ swebench:
     params:
       concurrency: 1
       timeout_sec: 1800
+
+mrcr_2_needles:
+  model_params:
+    max_tokens: 32768

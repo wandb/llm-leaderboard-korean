@@ -9,3 +9,8 @@ model:
   release_date: "2025-09-29"
   model_size: None
   size_category: unknown
+
+
+mrcr_2_needles:
+  model_params:
+    max_tokens: 32768
