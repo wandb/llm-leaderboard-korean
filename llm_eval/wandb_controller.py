@@ -310,19 +310,19 @@ class WeaveEvalsController:
                 pred_logger.log_score(scorer="language_penalizer", score=float(item["language_penalizer"]))
             
 
-        # Also create a dedicated prediction that logs eval-level metrics as scores for easy visibility
-        try:
-            if metrics:
-                with elog.log_prediction(inputs={"summary": True}, output="") as sum_pred:
-                    for k, v in (metrics or {}).items():
-                        # only log numeric metrics as scores
-                        try:
-                            score_val = float(v)
-                            sum_pred.log_score(scorer=str(k), score=score_val)
-                        except Exception:
-                            pass
-        except Exception:
-            pass
+        # # Also create a dedicated prediction that logs eval-level metrics as scores for easy visibility
+        # try:
+        #     if metrics:
+        #         with elog.log_prediction(inputs={"summary": True}, output="") as sum_pred:
+        #             for k, v in (metrics or {}).items():
+        #                 # only log numeric metrics as scores
+        #                 try:
+        #                     score_val = float(v)
+        #                     sum_pred.log_score(scorer=str(k), score=score_val)
+        #                 except Exception:
+        #                     pass
+        # except Exception:
+        #     pass
 
         elog.log_summary(summary=metrics or {})
         elog.finish()

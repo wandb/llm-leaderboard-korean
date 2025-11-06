@@ -78,8 +78,6 @@ class GorillaHandler(BaseHandler):
 
         return {
             "model_responses": api_response["choices"][0]["message"]["content"],
-            "input_token": api_response["usage"]["prompt_tokens"],
-            "output_token": api_response["usage"]["completion_tokens"],
         }
 
     def add_first_turn_message_FC(

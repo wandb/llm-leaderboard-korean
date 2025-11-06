@@ -167,8 +167,6 @@ class OpenAIResponsesHandler(BaseHandler):
             "model_responses_message_for_chat_history": api_response.output,
             "tool_call_ids": tool_call_ids,
             "reasoning_content": reasoning_content,
-            "input_token": api_response.usage.input_tokens,
-            "output_token": api_response.usage.output_tokens,
         }
 
     def add_first_turn_message_FC(
@@ -267,8 +265,6 @@ class OpenAIResponsesHandler(BaseHandler):
             "model_responses": api_response.output_text,
             "model_responses_message_for_chat_history": api_response.output,
             "reasoning_content": reasoning_content,
-            "input_token": api_response.usage.input_tokens,
-            "output_token": api_response.usage.output_tokens,
         }
 
     def add_first_turn_message_prompting(

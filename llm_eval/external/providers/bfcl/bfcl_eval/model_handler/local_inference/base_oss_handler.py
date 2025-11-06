@@ -394,8 +394,6 @@ class OSSHandler(BaseHandler, EnforceOverrides):
     def _parse_query_response_prompting(self, api_response: Any) -> dict:
         return {
             "model_responses": api_response.output[0].content[0].text,
-            "input_token": api_response.usage.prompt_tokens,
-            "output_token": api_response.usage.completion_tokens,
         }
 
     @override

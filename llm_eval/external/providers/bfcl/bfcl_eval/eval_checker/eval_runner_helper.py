@@ -123,44 +123,6 @@ def record_result(leaderboard_table, model_name, test_category, accuracy, total_
         "total_count": total_count,
     }
 
-
-def record_cost_latency(leaderboard_table, model_name, model_output_data):
-    def process_data(key, data, output_list):
-        # All entries are either a list of list (in multi-turn), or a single value (in single-turn)
-        if key in data:
-            if isinstance(data[key], list) and all(
-                isinstance(inner_item, list) for inner_item in data[key]
-            ):
-                flattened_list = sum(data[key], [])
-                output_list.extend(
-                    [
-                        item
-                        for item in flattened_list
-                        if isinstance(item, (int, float)) and item != 0
-                    ]
-                )
-            else:
-                if isinstance(data[key], (int, float)) and data[key] != 0:
-                    output_list.append(data[key])
-
-    if model_name not in leaderboard_table:
-        leaderboard_table[model_name] = {}
-        leaderboard_table[model_name]["cost"] = {"input_data": [], "output_data": []}
-        leaderboard_table[model_name]["latency"] = {"data": []}
-
-    input_token = []
-    output_token = []
-    latency = []
-    for data in model_output_data:
-        process_data("latency", data, latency)
-        process_data("input_token_count", data, input_token)
-        process_data("output_token_count", data, output_token)
-
-    leaderboard_table[model_name]["cost"]["input_data"].extend(input_token)
-    leaderboard_table[model_name]["cost"]["output_data"].extend(output_token)
-    leaderboard_table[model_name]["latency"]["data"].extend(latency)
-
-
 def save_eval_results(
     result,
     correct_count,
@@ -191,43 +153,6 @@ def save_eval_results(
     write_list_of_dicts_to_file(output_file_name, result, output_file_dir)
 
     return accuracy, len(model_result)
-
-
-def get_cost_latency_info(model_name, cost_data, latency_data):
-    cost, mean_latency, std_latency, percentile_95_latency = "N/A", "N/A", "N/A", "N/A"
-    model_config = MODEL_CONFIG_MAPPING[model_name]
-
-    # For API models, we use the input and output token counts to calculate the cost
-    if model_config.input_price is not None and model_config.output_price is not None:
-        if len(cost_data["input_data"]) > 0 and len(cost_data["output_data"]) > 0:
-            total_input_tokens = sum(cost_data["input_data"])
-            total_output_tokens = sum(cost_data["output_data"])
-            # price is in USD per million tokens
-            cost = (
-                total_input_tokens * model_config.input_price / 1000000
-                + total_output_tokens * model_config.output_price / 1000000
-            )
-            cost = round(cost, 2)
-
-    # For local-hosted models, we calculate the total GPU cost by summing all latencies and multiplying by the hourly GPU price.
-    elif len(latency_data["data"]) > 0:
-        total_latency_seconds = sum(latency_data["data"])
-        total_latency_hours = total_latency_seconds / 3600
-
-        # Divide by 100 since we are doing 100x parallel inference; this is an approximation to the GPU up-time.
-        cost = total_latency_hours * H100_X8_PRICE_PER_HOUR / LOCAL_SERVER_MAX_CONCURRENT_REQUEST
-        cost = round(cost, 2)
-
-    # Calculate latency statistics for ALL models (both API and local)
-    if len(latency_data["data"]) != 0:
-        mean_latency = statistics.mean(latency_data["data"])
-        std_latency = statistics.stdev(latency_data["data"])
-        percentile_95_latency = np.percentile(latency_data["data"], 95)
-        mean_latency = round(mean_latency, 2)
-        std_latency = round(std_latency, 2)
-        percentile_95_latency = round(percentile_95_latency, 2)
-
-    return cost, mean_latency, std_latency, percentile_95_latency
 
 
 def get_category_score(score_dict: dict, test_category: str) -> dict:
@@ -299,12 +224,6 @@ def generate_leaderboard_csv(leaderboard_table, output_path):
     for model_name, value in leaderboard_table.items():
         model_name_escaped = model_name.replace("_", "/")
         model_config = MODEL_CONFIG_MAPPING[model_name_escaped]
-
-        cost_data = value.get("cost", {"input_data": [], "output_data": []})
-        latency_data = value.get("latency", {"data": []})
-        cost, latency_mean, latency_std, percentile_95_latency = get_cost_latency_info(
-            model_name_escaped, cost_data, latency_data
-        )
 
         # Non-Live Score
         python_simple_ast_non_live = get_category_score(value, "simple_python")
@@ -524,10 +443,6 @@ def generate_leaderboard_csv(leaderboard_table, output_path):
                 total_overall_accuracy["display_accuracy"],
                 model_config.display_name,
                 model_config.url,
-                cost,
-                latency_mean,
-                latency_std,
-                percentile_95_latency,
                 summary_ast_non_live["display_accuracy"],
                 simple_ast_non_live["display_accuracy"],
                 multiple_ast_non_live["display_accuracy"],
@@ -610,7 +525,7 @@ def generate_leaderboard_csv(leaderboard_table, output_path):
         file_path=output_path / "data_overall.csv",
         header=COLUMNS_OVERALL,
         sort_column_index=1,
-        no_conversion_numeric_column_index=[4, 5, 6, 7, 32, 33],
+        no_conversion_numeric_column_index=[32, 33],
     )
 
     # wandb_project = os.getenv("WANDB_BFCL_PROJECT")

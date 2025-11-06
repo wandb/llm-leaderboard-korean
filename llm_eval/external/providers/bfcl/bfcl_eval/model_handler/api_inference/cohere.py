@@ -107,20 +107,12 @@ class CohereHandler(BaseHandler):
             chat_turn_to_append.citations = response_message.citations
         inference_data["chat_turns"].append(chat_turn_to_append)
 
-        input_token: float | None = None
-        output_token: float | None = None
-        if response.usage and response.usage.billed_units:
-            input_token = response.usage.billed_units.input_tokens
-            output_token = response.usage.billed_units.output_tokens
-
         metadata = {
             "model_responses": (
                 chat_turn_to_append.content if chat_turn_to_append.content else None
             ),
             "tool_calls": model_tool_calls,
             "chat_history": [],
-            "input_token": input_token or 0,
-            "output_token": output_token or 0,
         }
         return metadata, latency
 
@@ -196,8 +188,6 @@ class CohereHandler(BaseHandler):
             "reasoning_content": reasoning_content or None,
             "tool_calls": api_response["tool_calls"],
             "chat_history": api_response["chat_history"],
-            "input_token": api_response["input_token"],
-            "output_token": api_response["output_token"],
         }
 
     def add_first_turn_message_FC(

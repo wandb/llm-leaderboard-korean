@@ -152,8 +152,6 @@ class NovaHandler(BaseHandler):
             "model_responses": model_responses,
             "model_responses_message_for_chat_history": model_responses_message_for_chat_history,
             "tool_call_ids": tool_call_ids,
-            "input_token": api_response["usage"]["inputTokens"],
-            "output_token": api_response["usage"]["outputTokens"],
         }
 
     def add_first_turn_message_FC(

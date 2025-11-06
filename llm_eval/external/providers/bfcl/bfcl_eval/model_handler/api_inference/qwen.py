@@ -139,9 +139,6 @@ class QwenAPIHandler(OpenAICompletionsHandler):
             "model_responses_message_for_chat_history": model_response_message_for_chat_history,
             "reasoning_content": reasoning_content,
             "tool_call_ids": tool_call_ids,
-            # chunk is the last chunk of the stream response
-            "input_token": chunk.usage.prompt_tokens,
-            "output_token": chunk.usage.completion_tokens,
         }
 
         if not reasoning_content:
@@ -192,9 +189,6 @@ class QwenAPIHandler(OpenAICompletionsHandler):
                 "content": answer_content,
             },
             "reasoning_content": reasoning_content,
-            # chunk is the last chunk of the stream response
-            "input_token": chunk.usage.prompt_tokens,
-            "output_token": chunk.usage.completion_tokens,
         }
 
         # Attach reasoning content to the assistant message for the next turn if present
@@ -294,8 +288,6 @@ class QwenAgentThinkHandler(OpenAICompletionsHandler):
             "model_responses": model_responses,
             "model_responses_message_for_chat_history": api_response["choices"][0]["message"],
             "tool_call_ids": tool_call_ids,
-            "input_token": api_response.get("usage", {}).get("prompt_tokens", 0),
-            "output_token": api_response.get("usage", {}).get("completion_tokens", 0),
         }
         return response_data
         

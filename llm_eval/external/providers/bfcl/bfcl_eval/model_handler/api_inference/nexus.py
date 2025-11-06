@@ -189,8 +189,6 @@ class NexusHandler(BaseHandler):
             "model_responses": api_response[0]["generated_text"]
             .replace("Call:", "")
             .strip(),
-            "input_token": "N/A",
-            "output_token": "N/A",
         }
 
     def add_first_turn_message_FC(

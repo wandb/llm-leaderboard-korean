@@ -181,8 +181,6 @@ class GeminiHandler(BaseHandler):
             "model_responses_message_for_chat_history": response_function_call_content,
             "tool_call_func_names": tool_call_func_names,
             "reasoning_content": "\n".join(reasoning_content),
-            "input_token": api_response.usage_metadata.prompt_token_count,
-            "output_token": api_response.usage_metadata.candidates_token_count,
         }
 
     def add_first_turn_message_FC(
@@ -307,8 +305,6 @@ class GeminiHandler(BaseHandler):
         return {
             "model_responses": model_responses,
             "reasoning_content": reasoning_content,
-            "input_token": api_response.usage_metadata.prompt_token_count,
-            "output_token": api_response.usage_metadata.candidates_token_count,
         }
 
     def add_first_turn_message_prompting(

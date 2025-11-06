@@ -657,7 +657,6 @@ def evaluate_task(
 ):
     print(f"🔍 Running test: {test_category}")
 
-    record_cost_latency(leaderboard_table, model_name, model_result)
 
     # Find the corresponding prompt entries
     prompt = load_dataset_entry(test_category, include_prereq=False, include_language_specific_hint=False)
@@ -861,19 +860,12 @@ def evaluate_task(
                 except Exception:
                     return 0.0
 
-            tokens_in = _sum_nested(result_item.get("input_token_count", 0))
-            tokens_out = _sum_nested(result_item.get("output_token_count", 0))
-            latency_sec = _sum_nested(result_item.get("latency", 0))
-
             sample = {
                 "input": input_text or "",
                 "prediction": prediction_text or "",
                 "reference": reference_text,
                 "evaluation": {
                     "correct": is_correct,
-                    "input_tokens": tokens_in,
-                    "output_tokens": tokens_out,
-                    "latency_seconds": latency_sec,
                 },
                 "id": entry_id,
                 "_subset_name": test_category,
@@ -1044,10 +1036,6 @@ def runner(model_names, test_categories, result_dir, score_dir):
             total_correct = 0
             total_count = 0
             subset_metrics = {}
-            # Aggregates for tokens/latency
-            total_input_tokens = 0.0
-            total_output_tokens = 0.0
-            latency_values = []
             for test_category, result in model_results.items():
                 if not (isinstance(result, dict) and "accuracy" in result):
                     continue
@@ -1066,17 +1054,7 @@ def runner(model_names, test_categories, result_dir, score_dir):
             # Pull per-trace token/latency from samples
             for s in model_to_samples.get(model_name, []):
                 ev = s.get("evaluation", {}) or {}
-                try:
-                    total_input_tokens += float(ev.get("input_tokens", 0) or 0)
-                except Exception:
-                    pass
-                try:
-                    total_output_tokens += float(ev.get("output_tokens", 0) or 0)
-                except Exception:
-                    pass
-                lat = ev.get("latency_seconds")
-                if isinstance(lat, (int, float)):
-                    latency_values.append(float(lat))
+                
 
             overall_accuracy = (total_correct / total_count) if total_count > 0 else 0.0
 
@@ -1087,30 +1065,7 @@ def runner(model_names, test_categories, result_dir, score_dir):
             summary_metrics["total_count"] = total_count
             summary_metrics["correct_count"] = total_correct
 
-            # Token totals
-            summary_metrics["input_tokens_total"] = total_input_tokens
-            summary_metrics["output_tokens_total"] = total_output_tokens
-            # Cost (if model pricing is available)
-            try:
-                cfg = MODEL_CONFIG_MAPPING.get(model_name)
-                if cfg and (cfg.input_price is not None) and (cfg.output_price is not None):
-                    cost_usd = (
-                        total_input_tokens * float(cfg.input_price) / 1_000_000.0
-                        + total_output_tokens * float(cfg.output_price) / 1_000_000.0
-                    )
-                    summary_metrics["cost_usd_total"] = round(cost_usd, 4)
-            except Exception:
-                pass
-
-            # Latency stats
-            if latency_values:
-                latency_values.sort()
-                n = len(latency_values)
-                mean_latency = sum(latency_values) / n
-                p95_idx = max(0, min(n - 1, int(0.95 * n) - 1))
-                p95_latency = latency_values[p95_idx]
-                summary_metrics["latency_mean_sec"] = round(mean_latency, 3)
-                summary_metrics["latency_p95_sec"] = round(p95_latency, 3)
+            
 
             model_name_display = model_name.replace("_", "/")
             WeaveEvalsController.log(

@@ -71,8 +71,6 @@ class MiningHandler(OpenAICompletionsHandler):
         return {
             "model_responses": tool_calls,
             "model_responses_message_for_chat_history": message,
-            "input_token": api_response.usage.prompt_tokens,
-            "output_token": api_response.usage.completion_tokens,
         }
 
     def mining_system_prompt_pre_processing_chat_model(self,prompts, function_docs, test_category):

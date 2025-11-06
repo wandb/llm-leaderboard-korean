@@ -192,8 +192,6 @@ class QwenHandler(OSSHandler):
         return {
             "model_responses": cleaned_response,
             "reasoning_content": reasoning_content,
-            "input_token": api_response.usage.prompt_tokens,
-            "output_token": api_response.usage.completion_tokens,
         }
 
     @override

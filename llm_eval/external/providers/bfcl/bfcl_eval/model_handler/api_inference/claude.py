@@ -182,8 +182,6 @@ class ClaudeHandler(BaseHandler):
             "model_responses": model_responses,
             "model_responses_message_for_chat_history": model_responses_message_for_chat_history,
             "tool_call_ids": tool_call_ids,
-            "input_token": api_response.usage.input_tokens,
-            "output_token": api_response.usage.output_tokens,
         }
 
     def add_first_turn_message_FC(
@@ -311,8 +309,6 @@ class ClaudeHandler(BaseHandler):
     def _parse_query_response_prompting(self, api_response: Any) -> dict:
         return {
             "model_responses": api_response.content[0].text,
-            "input_token": api_response.usage.input_tokens,
-            "output_token": api_response.usage.output_tokens,
         }
 
     def add_first_turn_message_prompting(
