@@ -7,7 +7,7 @@ wandb:
   run_name: swebench-o4mini-2
 
 # testmode configurations
-testmode: true
+testmode: false
 
 # LLM 호출 간 간격(초). 누락 시 오류 방지를 위해 기본값 제공
 inference_interval: 0.0
@@ -85,8 +85,19 @@ mrcr_2_needles:
     retry_max: 4
     retry_base_delay: 1.5
 
-haerae_bench_v1:
-  subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history, reading_comprehension]
+haerae_bench_v1_w_RC:
+  subset: [reading_comprehension]
+  params:
+    num_samples: 100 # RC 100개, 나머지 20개 씩 총 100개
+    limit: 2
+  split: test
+  evaluation:
+    method: string_match
+    params:
+      mcqa: true
+
+haerae_bench_v1_wo_RC:
+  subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history]
   params:
     num_samples: 20 # RC 100개, 나머지 20개 씩 총 100개
     limit: 2
@@ -142,9 +153,20 @@ kmmlu_pro:
 #     params:
 #       mcqa: true
 
-kobalt_700:
+kobalt_700_syntax:
   split: test
-  subset: ["Syntax", "Semantics"] #, "Pragmatics", "Phonetics/Phonology", "Morphology"]
+  subset: ["Syntax"] #, "Pragmatics", "Phonetics/Phonology", "Morphology"]
+  params:
+    num_samples: 100
+    limit: 2
+  evaluation:
+    method: "string_match"
+    params:
+      mcqa: true
+
+kobalt_700_semantic:
+  split: test
+  subset: ["Semantics"] #, "Pragmatics", "Phonetics/Phonology", "Morphology"]
   params:
     num_samples: 100
     limit: 2

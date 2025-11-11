@@ -112,7 +112,7 @@ class StringMatchEvaluator(BaseEvaluator):
 
         return self._normalize_text(raw_output)
 
-    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Computes accuracy by comparing the normalized prediction against the normalized reference.
         
@@ -181,14 +181,36 @@ class StringMatchEvaluator(BaseEvaluator):
                 "options": sample.get("options", None)
             }
 
-        # 전체 AVG는 항상 포함
-        metrics: Dict[str, float] = {"AVG": (correct / total if total > 0 else 0.0)}
-        if isinstance(subsets, (list, tuple, str)):
-            if isinstance(subsets, str):
-                subsets = [subsets]
-            for sname, st in stats.items():
-                s_total = st["total"]
-                s_correct = st["correct"]
-                s_acc = (s_correct / s_total) if s_total > 0 else 0.0
-                metrics[f"{sname}/accuracy"] = s_acc
+        # 메트릭 구성
+        metrics: Dict[str, Any] = {}
+
+        # 단일 샘플 평가 시 (Weave scorer에서 호출)
+        if total == 1:
+            # 단일 샘플일 때는 정답 여부를 boolean으로 반환
+            sample = samples[0]
+            is_correct = sample["evaluation"]["is_correct"]
+
+            # 정답 여부를 boolean으로 반환
+            metrics["is_correct"] = is_correct
+
+            # subset 정보가 있으면 메타데이터로 포함
+            subset_name = sample.get("_subset_name")
+            if subset_name:
+                metrics["subset"] = subset_name
+
+        else:
+            # 다중 샘플 평가 시 (전체 데이터셋 평가)
+            # subset별 accuracy 계산
+            if isinstance(subsets, (list, tuple, str)):
+                if isinstance(subsets, str):
+                    subsets = [subsets]
+                for sname, st in stats.items():
+                    s_total = st["total"]
+                    s_correct = st["correct"]
+                    s_acc = (s_correct / s_total) if s_total > 0 else 0.0
+                    metrics[f"{sname}/accuracy"] = s_acc
+
+            # 전체 평균은 항상 포함
+            metrics["AVG"] = (correct / total if total > 0 else 0.0)
+
         return metrics

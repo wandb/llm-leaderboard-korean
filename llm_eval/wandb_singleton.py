@@ -80,11 +80,16 @@ class WandbConfigSingleton:
                     "score": "GLP_수학적추론"
                 }
             },
-            "kobalt_700": {
-                "columns": ["model_name", "Semantics/accuracy", "Syntax/accuracy"],
+            "kobalt_700_syntax": {
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "Semantics/accuracy": "GLP_의미해석",
-                    "Syntax/accuracy": "GLP_구문해석"
+                    "score": "GLP_구문해석",
+                }
+            },
+            "kobalt_700_semantic": {
+                "columns": ["model_name", "score"],
+                "mapper": {
+                    "score": "GLP_의미해석"
                 }
             },
             "kmmlu": {
@@ -111,15 +116,16 @@ class WandbConfigSingleton:
                     "score": "GLP_번역"
                 }
             },
-            "haerae_bench_v1": {
-                "columns": ["model_name", "reading_comprehension/accuracy", "general_knowledge/accuracy", "history/accuracy", "loan_words/accuracy", "rare_words/accuracy", "standard_nomenclature/accuracy"],
+            "haerae_bench_v1_w_RC": {
+                "columns": ["model_name", "score"],
                 "mapper": {
-                    "reading_comprehension/accuracy": "GLP_의미해석",
-                    "general_knowledge/accuracy": "GLP_일반적지식",
-                    "history/accuracy": "GLP_일반적지식",
-                    "loan_words/accuracy": "GLP_일반적지식",
-                    "rare_words/accuracy": "GLP_일반적지식",
-                    "standard_nomenclature/accuracy": "GLP_일반적지식"
+                    "score": "GLP_의미해석",
+                }
+            },
+            "haerae_bench_v1_wo_RC": {
+                "columns": ["model_name", "score"],
+                "mapper": {
+                    "score": "GLP_일반적지식",
                 }
             },
             "ifeval_ko": {

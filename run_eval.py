@@ -70,7 +70,7 @@ if __name__ == "__main__":
     if args.dataset:
         selected_datasets = [args.dataset]
     else:
-        selected_datasets = ["mt_bench", "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "mrcr_2_needles", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi", "aime2025", "hrm8k", "bfcl", "swebench", "korean_parallel_corpora"]
+        selected_datasets = ["mt_bench", "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "mrcr_2_needles", "haerae_bench_v1_w_RC", "haerae_bench_v1_wo_RC", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700_syntax", "kobalt_700_semantic", "hle", "arc_agi", "aime2025", "hrm8k", "bfcl", "swebench", "korean_parallel_corpora"]
         # selected_datasets = ["mt_bench", "halluLens", "hle", "aime2025", "hrm8k", "bfcl"]#, "swe_bench_verified"]
         # selected_datasets = ["hle", "aime2025", "hrm8k", "komoral", "kmmlu", "halluLens", "bfcl", "swebench", "mt_bench"]#, "swe_bench_verified"]
         # selected_datasets = ["halluLens", "bfcl", "swebench", "mt_bench"]#, "swe_bench_verified"]
