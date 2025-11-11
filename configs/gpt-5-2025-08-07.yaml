@@ -13,19 +13,3 @@ model:
   release_date: "2025-08-07"
   model_size: None
   size_category: large
-
-# Override dataset settings from base_config.yaml for this model
-swebench:
-  limit: 80  # Full dataset evaluation
-  params:
-    artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v4
-    dataset_dir: .
-  model_params:
-    max_tokens: 65536  # Model limit for GPT-5
-    timeout: 900.0  # 15 minutes for complex reasoning
-    reasoning:
-      effort: "high"  # Max reasoning effort for best results
-  evaluation:
-    params:
-      concurrency: 4  # Parallel processing (4 concurrent jobs)
-      timeout_sec: 2400  # 40 minutes per test for complex patches
