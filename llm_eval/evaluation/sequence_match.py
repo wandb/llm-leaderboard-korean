@@ -67,10 +67,34 @@ class SequenceMatchEvaluator(BaseEvaluator):
             return text[len(prefix):]
         return text
 
-    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, Any]:
         if not samples:
             return {"sequence_match_score": 0.0}
 
+        # 단일 샘플 평가 시 (Weave scorer에서 호출)
+        if len(samples) == 1:
+            sample = samples[0]
+            prediction = self.parse_prediction(sample.get("prediction"))
+            reference = self.parse_prediction(sample.get("reference"))
+            prefix = self._get_prefix(sample)
+
+            has_prefix = True
+            if self.prefix_key:
+                has_prefix = bool(prefix) and prediction.startswith(prefix)
+                if self.require_prefix and not has_prefix:
+                    ratio = 0.0
+                    self._update_sample(sample, has_prefix, ratio, prefix)
+                    return {"sequence_match_score": ratio}
+
+            if self.strip_prefix and prefix:
+                prediction = self._strip(prediction, prefix)
+                reference = self._strip(reference, prefix)
+
+            ratio = SequenceMatcher(None, prediction, reference).ratio()
+            self._update_sample(sample, has_prefix, ratio, prefix)
+            return {"sequence_match_score": ratio}
+
+        # 다중 샘플 평가 시
         total_ratio = 0.0
         prefix_miss = 0
         # 요청된 subsets 기준 초기화
@@ -115,7 +139,7 @@ class SequenceMatchEvaluator(BaseEvaluator):
 
         # 전체 메트릭 유지 (sequence_match_score, prefix_miss_rate, AVG)
         avg_ratio = total_ratio / len(samples)
-        metrics: Dict[str, float] = {"sequence_match_score": avg_ratio, "AVG": avg_ratio}
+        metrics: Dict[str, Any] = {"sequence_match_score": avg_ratio, "AVG": avg_ratio}
         if self.prefix_key:
             metrics["sequence_match_prefix_miss_rate"] = prefix_miss / len(samples)
         # subsets 전달 여부에 따라 분기

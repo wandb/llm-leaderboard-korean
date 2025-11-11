@@ -13,20 +13,3 @@ model:
   release_date: "2025-08-07"
   model_size: None
   size_category: mini
-
-# Override dataset settings from base_config.yaml for this model
-# Testing with 5 samples
-swebench:
-  limit: 1  # Test with 1 sample to verify token tracking
-  params:
-    artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v4
-    dataset_dir: .
-  model_params:
-    max_tokens: 32768  # Model limit for GPT-5-mini
-    timeout: 900.0  # 15 minutes for complex reasoning
-    reasoning:
-      effort: "high"  # Max reasoning effort for best results
-  evaluation:
-    params:
-      concurrency: 1  # Sequential processing for reasoning models
-      timeout_sec: 2400  # 40 minutes per test for complex patches
