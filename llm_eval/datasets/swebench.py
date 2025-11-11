@@ -45,13 +45,11 @@ class SWEBenchDataset(BaseDataset):
         subset: str = None,
         artifacts_path: Optional[str] = None,
         dataset_dir: str = ".",
-        max_samples: Optional[int] = None,
         **kwargs
     ):
         super().__init__(dataset_name, split, subset, **kwargs)
         self.artifacts_path = artifacts_path
         self.dataset_dir = dataset_dir
-        self.max_samples = max_samples
         self._raw_data = None
 
     def load(self) -> List[Dict[str, Any]]:
@@ -68,15 +66,11 @@ class SWEBenchDataset(BaseDataset):
             self._raw_data = self._load_from_wandb()
 
         # Determine effective limit (from multiple sources)
-        effective_limit = None
-        if self.max_samples is not None:
-            effective_limit = self.max_samples
-        if self.limit is not None:
-            if effective_limit is None:
-                effective_limit = self.limit
-            else:
-                effective_limit = min(effective_limit, self.limit)
-        print(f"effective_limit: {effective_limit}, limit: {self.limit}, max_samples: {self.max_samples}")
+        if self.dev:
+            effective_limit = self.limit
+        else:
+            effective_limit = self.num_samples
+        print(f"effective_limit: {effective_limit}, limit: {self.limit}, num_samples: {self.num_samples}")
         samples = []
         for idx, instance in enumerate(self._raw_data):
             # Apply limit
@@ -257,6 +251,5 @@ Include only the minimal changes necessary to fix the bug."""
             "name": self.dataset_name,
             "split": self.split,
             "artifacts_path": self.artifacts_path,
-            "max_samples": self.max_samples,
-            "num_samples": len(self._raw_data) if self._raw_data else 0,
+            "num_samples": self.num_samples,
         }
