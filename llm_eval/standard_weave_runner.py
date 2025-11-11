@@ -364,7 +364,7 @@ def run_with_standard_weave(
             scores["coding"] = metric["coding/average_judge_score"]["mean"]
         elif "char_f1_scorer" in metrics:
             metric = metrics["char_f1_scorer"]
-            scores['score'] = metric["AVG"]["mean"]
+            scores['score'] = metric["char_f1"]["mean"]
         elif "math_match_scorer" in metrics:
             metric = metrics["math_match_scorer"]
             scores['score'] = metric["AVG"]["mean"]
