@@ -119,16 +119,28 @@ def create_dataset_scorers(dataset_name: str, subset: List[str], evaluation_meth
             # Add any additional fields from kwargs
             for key, value in kwargs.items():
                 if key not in sample:
-                    sample[key] = value
+                    # _subset_name과 subset 모두 문자열로 변환
+                    if key in ["_subset_name", "subset"] and value is not None:
+                        sample[key] = str(value) if not isinstance(value, str) else value
+                    else:
+                        sample[key] = value
 
             # Run evaluation on single sample
             try:
+                # 샘플의 실제 subset 정보를 사용 (전체 subset 리스트 대신)
+                sample_subset = sample.get("_subset_name")
+
                 # evaluate_predictions expects 'samples' parameter
                 # It modifies samples in-place and returns metrics
                 eval_result = evaluator.evaluate_predictions(
-                    subsets=subset,
+                    subsets=[sample_subset] if sample_subset else None,
                     samples=[sample]
                 )
+
+                # subset 정보는 이제 input에 있으므로 output에서는 제거
+                if "subset" in eval_result:
+                    del eval_result["subset"]
+
                 return eval_result
 
                 # # Check if evaluator added evaluation info to sample
@@ -237,6 +249,14 @@ def run_with_standard_weave(
             if "reference" not in weave_sample:
                 weave_sample["reference"] = ""
 
+            # Move _subset_name to a clear 'subset' field for Weave display
+            if "_subset_name" in weave_sample:
+                subset_value = weave_sample["_subset_name"]
+                # Ensure subset is a string
+                weave_sample["subset"] = str(subset_value) if not isinstance(subset_value, str) else subset_value
+                # Keep _subset_name for backward compatibility but ensure it's also a string
+                weave_sample["_subset_name"] = weave_sample["subset"]
+
             weave_dataset.append(weave_sample)
 
         # Create model adapter
@@ -268,9 +288,10 @@ def run_with_standard_weave(
         if "string_match_scorer" in results:
             logger.debug(f"string_match_scorer keys: {list(results['string_match_scorer'].keys())}")
             if "subset" in results["string_match_scorer"]:
-                logger.info(f"Found subset information in results")
-            if "score" in results["string_match_scorer"]:
-                logger.info(f"Score field found: {results['string_match_scorer']['score']}")
+                subset_info = results["string_match_scorer"]["subset"]
+                logger.info(f"Found subset information in results: {type(subset_info)} - {subset_info}")
+            if "is_correct" in results["string_match_scorer"]:
+                logger.info(f"is_correct field found: {results['string_match_scorer']['is_correct']}")
 
         # Process results
         metrics = results
@@ -296,26 +317,30 @@ def run_with_standard_weave(
                 scores['accuracy'] = metric["score"]["mean"]
 
             # subset 정보 처리
-            # Weave는 마지막 샘플의 subset만 보여주므로
-            # 실제 데이터셋의 subset 정보를 활용해야 함
-            if "subset" in metric:
-                # subset은 보통 마지막 평가 샘플의 값
-                # 하지만 이것은 하나의 subset 이름일 뿐
-                subset_value = metric["subset"]
+            # 데이터셋에서 실제 subset 정보 추출
+            unique_subsets = set()
+            for sample in weave_dataset:
+                if "_subset_name" in sample and sample["_subset_name"]:
+                    unique_subsets.add(sample["_subset_name"])
 
-                # subset이 딕셔너리 형태로 집계된 경우 (Weave가 그룹화한 경우)
-                if isinstance(subset_value, dict):
-                    scores['subset'] = list(subset_value.keys())
-                # subset이 문자열인 경우 (마지막 샘플의 subset)
-                elif isinstance(subset_value, str):
-                    # 전체 데이터셋에서 고유한 subset들을 찾아야 함
-                    unique_subsets = set()
-                    for sample in weave_dataset:
-                        if "_subset_name" in sample:
-                            unique_subsets.add(sample["_subset_name"])
-                    scores['subset'] = list(unique_subsets) if unique_subsets else subset_value
+            if unique_subsets:
+                scores['subset'] = sorted(list(unique_subsets))
+            else:
+                # Weave metric에서 subset 정보 확인
+                if "subset" in metric:
+                    subset_value = metric["subset"]
+                    # subset이 딕셔너리 형태로 집계된 경우
+                    if isinstance(subset_value, dict):
+                        scores['subset'] = list(subset_value.keys())
+                    # subset이 문자열인 경우
+                    elif isinstance(subset_value, str):
+                        scores['subset'] = [subset_value]
+                    else:
+                        scores['subset'] = 'N/A'
+                else:
+                    scores['subset'] = 'N/A'
 
-                logger.info(f"Evaluation includes subsets: {scores.get('subset', 'N/A')}")
+            logger.info(f"Evaluation includes subsets: {scores.get('subset', 'N/A')}")
         elif "ifeval_strict_scorer" in metrics:
             metric = metrics["ifeval_strict_scorer"]
             scores['score'] = metric["AVG"]["mean"]
@@ -355,10 +380,18 @@ def run_with_standard_weave(
         # Log to W&B if configured
         if wandb_params:
             table_name = f"{dataset_key}_leaderboard"
+
+            # subset 정보 처리 - 리스트인 경우 문자열로 변환
+            subset_value = scores.get('subset', 'N/A')
+            if isinstance(subset_value, list):
+                subset_value = ', '.join(subset_value) if subset_value else 'N/A'
+            elif not isinstance(subset_value, str):
+                subset_value = str(subset_value)
+
             data = {
                 "model_name": model_params.get("model_name", model_name),
                 "score": scores.get('accuracy', scores.get('score', 0.0)),  # accuracy 우선, 없으면 score
-                "subset": scores.get('subset', 'N/A'),  # subset 정보 추가
+                "subset": subset_value,  # subset 정보 추가 (문자열로 변환됨)
                 **{k: v for k, v in scores.items() if k not in ['accuracy', 'score', 'subset']}
             }
             df = pd.DataFrame([data])

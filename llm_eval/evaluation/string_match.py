@@ -193,10 +193,8 @@ class StringMatchEvaluator(BaseEvaluator):
             # 정답 여부를 boolean으로 반환
             metrics["is_correct"] = is_correct
 
-            # subset 정보가 있으면 메타데이터로 포함
-            subset_name = sample.get("_subset_name")
-            if subset_name:
-                metrics["subset"] = subset_name
+            # subset 정보는 이제 input에 있으므로 output에는 포함하지 않음
+            # (Weave는 input의 subset 필드를 자동으로 컬럼으로 표시함)
 
         else:
             # 다중 샘플 평가 시 (전체 데이터셋 평가)
