@@ -346,7 +346,14 @@ def run_with_standard_weave(
             scores['score'] = metric["AVG"]["mean"]
         elif "sequence_match_scorer" in metrics:
             metric = metrics["sequence_match_scorer"]
-            scores['score'] = metric["AVG"]["mean"]
+            # sequence_match_scorer returns 'sequence_match_score' not 'AVG'
+            if "sequence_match_score" in metric:
+                scores['score'] = metric["sequence_match_score"]["mean"]
+            elif "AVG" in metric:
+                scores['score'] = metric["AVG"]["mean"]
+            else:
+                logger.warning(f"Neither 'sequence_match_score' nor 'AVG' found in sequence_match_scorer metrics: {metric.keys()}")
+                scores['score'] = 0.0
         elif "mt_bench_judge_scorer" in metrics:
             metric = metrics["mt_bench_judge_scorer"]
             scores['score'] = metric["AVG"]["mean"]
