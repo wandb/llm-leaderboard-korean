@@ -264,30 +264,17 @@ def run_with_standard_weave(
 
         logger.info("Evaluation completed, processing results...")
 
+        # Debug: Weave 결과 구조 확인
+        if "string_match_scorer" in results:
+            logger.debug(f"string_match_scorer keys: {list(results['string_match_scorer'].keys())}")
+            if "subset" in results["string_match_scorer"]:
+                logger.info(f"Found subset information in results")
+            if "score" in results["string_match_scorer"]:
+                logger.info(f"Score field found: {results['string_match_scorer']['score']}")
+
         # Process results
         metrics = results
         samples_with_scores = []
-
-        # # Calculate aggregate metrics
-        # if samples_with_scores:
-        #     score_totals = {}
-        #     score_counts = {}
-
-        #     for sample in samples_with_scores:
-        #         if "evaluation" in sample:
-        #             for score_name, score_value in sample["evaluation"].items():
-        #                 if isinstance(score_value, (int, float)):
-        #                     if score_name not in score_totals:
-        #                         score_totals[score_name] = 0
-        #                         score_counts[score_name] = 0
-        #                     score_totals[score_name] += score_value
-        #                     score_counts[score_name] += 1
-
-        #     # Calculate averages
-        #     for score_name in score_totals:
-        #         metrics[f"{score_name}_avg"] = score_totals[score_name] / score_counts[score_name]
-        #         metrics[f"{score_name}_total"] = score_totals[score_name]
-        #         metrics[f"{score_name}_count"] = score_counts[score_name]
 
         # Add overall metrics
         metrics["num_samples"] = len(samples_with_scores) if samples_with_scores else len(weave_dataset)
@@ -295,11 +282,40 @@ def run_with_standard_weave(
 
         if "string_match_scorer" in metrics:
             metric = metrics["string_match_scorer"]
-            scores['score'] = metric["AVG"]["mean"]
-            # for haerae_bench_v1/kobalt subsets
-            for key, value in metric.items():
-                if key != "AVG":
-                    scores[key] = value["mean"]
+
+            # 전체 accuracy 계산
+            if "is_correct" in metric and isinstance(metric["is_correct"], dict):
+                # boolean 값이 집계된 경우 (true_fraction이 accuracy)
+                scores['accuracy'] = metric["is_correct"].get("true_fraction", 0.0)
+            elif "accuracy" in metric and isinstance(metric["accuracy"], dict):
+                scores['accuracy'] = metric["accuracy"]["mean"]
+            # 기존 형식 호환성 유지
+            elif "AVG" in metric:
+                scores['accuracy'] = metric["AVG"]["mean"]
+            elif "score" in metric:
+                scores['accuracy'] = metric["score"]["mean"]
+
+            # subset 정보 처리
+            # Weave는 마지막 샘플의 subset만 보여주므로
+            # 실제 데이터셋의 subset 정보를 활용해야 함
+            if "subset" in metric:
+                # subset은 보통 마지막 평가 샘플의 값
+                # 하지만 이것은 하나의 subset 이름일 뿐
+                subset_value = metric["subset"]
+
+                # subset이 딕셔너리 형태로 집계된 경우 (Weave가 그룹화한 경우)
+                if isinstance(subset_value, dict):
+                    scores['subset'] = list(subset_value.keys())
+                # subset이 문자열인 경우 (마지막 샘플의 subset)
+                elif isinstance(subset_value, str):
+                    # 전체 데이터셋에서 고유한 subset들을 찾아야 함
+                    unique_subsets = set()
+                    for sample in weave_dataset:
+                        if "_subset_name" in sample:
+                            unique_subsets.add(sample["_subset_name"])
+                    scores['subset'] = list(unique_subsets) if unique_subsets else subset_value
+
+                logger.info(f"Evaluation includes subsets: {scores.get('subset', 'N/A')}")
         elif "ifeval_strict_scorer" in metrics:
             metric = metrics["ifeval_strict_scorer"]
             scores['score'] = metric["AVG"]["mean"]
@@ -341,8 +357,9 @@ def run_with_standard_weave(
             table_name = f"{dataset_key}_leaderboard"
             data = {
                 "model_name": model_params.get("model_name", model_name),
-                "score": scores['score'],
-                **{k: v for k, v in scores.items()}
+                "score": scores.get('accuracy', scores.get('score', 0.0)),  # accuracy 우선, 없으면 score
+                "subset": scores.get('subset', 'N/A'),  # subset 정보 추가
+                **{k: v for k, v in scores.items() if k not in ['accuracy', 'score', 'subset']}
             }
             df = pd.DataFrame([data])
 
@@ -353,6 +370,20 @@ def run_with_standard_weave(
                 run.log({table_name: wandb.Table(dataframe=df)})
 
         logger.info(f"Standard Weave Evaluation completed for '{dataset_key}'. Metrics: {metrics}")
+
+        # 최종 메트릭 구성에 scores 정보 추가
+        if scores:
+            # string_match_scorer의 결과를 더 명확하게 구성
+            if "string_match_scorer" in metrics:
+                final_scorer_metrics = {
+                    "accuracy": scores.get('accuracy', 0.0),
+                }
+                # subset 정보가 있으면 추가
+                if 'subset' in scores:
+                    final_scorer_metrics["subset"] = scores['subset']
+
+                # 기존 메트릭 구조 업데이트
+                metrics["string_match_scorer_summary"] = final_scorer_metrics
 
         return EvaluationResult(
             metrics=metrics,
@@ -365,7 +396,8 @@ def run_with_standard_weave(
                 "evaluation_method": evaluation_method,
                 "weave_evaluation": True,
                 "num_scorers": len(scorers),
-                "status": "completed"
+                "status": "completed",
+                "scores": scores  # scores 정보도 info에 포함
             }
         )
 

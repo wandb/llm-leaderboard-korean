@@ -4,7 +4,7 @@ import json
 from .base import BaseDataset
 from . import register_dataset
 
-@register_dataset("haerae_bench_v1")
+@register_dataset("haerae_bench_v1", "haerae_bench_v1_w_RC", "haerae_bench_v1_wo_RC")
 class HaeraeDatasetV1(BaseDataset):
     """
     Haerae Bench dataset class.
