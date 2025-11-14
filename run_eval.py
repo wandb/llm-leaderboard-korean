@@ -59,35 +59,11 @@ def run_all_from_configs(
     run.finish()
     WandbConfigSingleton.finish()
 
-    # Clean up any pending asyncio tasks from weave
-    import asyncio
-    try:
-        loop = asyncio.get_running_loop()
-        pending = asyncio.all_tasks(loop)
-        for task in pending:
-            task.cancel()
-    except RuntimeError:
-        # No running event loop
-        pass
-
-    # Force garbage collection to clean up resources
-    import gc
-    gc.collect()
-
     return result
 
 
 if __name__ == "__main__":
     import argparse
-    import warnings
-    import sys
-
-    # Suppress ResourceWarning for unclosed aiohttp sessions from weave library
-    warnings.filterwarnings("ignore", category=ResourceWarning, message="Unclosed.*")
-
-    # Alternative: Set environment variable to suppress asyncio debug mode
-    import os
-    os.environ["PYTHONWARNINGS"] = "ignore::ResourceWarning"
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", type=str, default=None)
     parser.add_argument("--config", type=str, default=None)
