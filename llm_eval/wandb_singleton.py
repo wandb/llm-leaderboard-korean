@@ -231,15 +231,15 @@ class WandbConfigSingleton:
         table_mean['범용언어성능(GLP)_AVG'] = weighted_average(table_mean, GLP_COLUMN_WEIGHT)
         table_mean['가치정렬성능(ALT)_AVG'] = weighted_average(table_mean, ALT_COLUMN_WEIGHT)
 
-        # Only compute TOTAL_AVG if both GLP and ALT exist
-        table_mean['TOTAL_AVG'] = (table_mean['범용언어성능(GLP)_AVG'] + table_mean['가치정렬성능(ALT)_AVG']) / 2
+        # Only compute FINAL_SCORE if both GLP and ALT exist
+        table_mean['FINAL_SCORE'] = (table_mean['범용언어성능(GLP)_AVG'] + table_mean['가치정렬성능(ALT)_AVG']) / 2
         table_mean['release_date'] = pd.to_datetime(release_date, format='%Y-%m-%d')
         table_mean['size_category'] = 'None' if size_category is None else size_category
         table_mean['model_size'] = 'None' if model_size is None else model_size
         table_mean = table_mean.reset_index()
         # Build desired column list, but only include columns that actually exist
         # This handles cases where external benchmarks don't have GLP/ALT columns
-        desired_columns = ['model_name', 'release_date', 'size_category', 'TOTAL_AVG', '범용언어성능(GLP)_AVG', '가치정렬성능(ALT)_AVG'] + list(GLP_COLUMN_WEIGHT.keys()) + list(ALT_COLUMN_WEIGHT.keys())
+        desired_columns = ['model_name', 'release_date', 'size_category', 'FINAL_SCORE', '범용언어성능(GLP)_AVG', '가치정렬성능(ALT)_AVG'] + list(GLP_COLUMN_WEIGHT.keys()) + list(ALT_COLUMN_WEIGHT.keys())
         existing_columns = [col for col in desired_columns if col in table_mean.columns]
         table_mean = table_mean[existing_columns]
 
