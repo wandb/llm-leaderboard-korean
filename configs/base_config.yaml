@@ -10,6 +10,17 @@ testmode: false
 # LLM 호출 간 간격(초). 누락 시 오류 방지를 위해 기본값 제공
 inference_interval: 0.1
 
+haerae_bench_v1_wo_RC:
+  subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history]
+  params:
+    num_samples: 20 # RC 100개, 나머지 20개 씩 총 100개
+    limit: 2
+  split: test
+  evaluation:
+    method: string_match
+    params:
+      mcqa: true
+
 halluLens:
   split: test
   subset: [precise_wikiqa, mixed_entities, generated_entities]
@@ -22,7 +33,6 @@ halluLens:
     hallucination:
       model: gpt-4o
   model_params:
-    max_tokens: 256  # Model limit (will be automatically capped per model)
     temperature: 0.0
 
 bfcl:
@@ -49,7 +59,6 @@ bfcl:
   evaluation:
     model: gpt-4o-2024-11-20
   model_params:
-    max_tokens: 8096  # Model limit (will be automatically capped per model)
     temperature: 0.01
 
 
@@ -63,7 +72,6 @@ swebench:
     dataset_dir: .
 
   model_params:
-    max_tokens: 32768  # Model limit (will be automatically capped per model)
     temperature: 0.0
 
   evaluation:
@@ -90,10 +98,9 @@ mt_bench:
       model_name: gpt-4.1-2025-04-14
       api_base: https://api.openai.com/v1
       batch_size: 32
-      max_tokens: 2048
+
       temperature: 0.0
   model_params:
-    max_tokens: 1024  # Model limit (will be automatically capped per model)
     temperature: 0.7
 
 komoral:
@@ -104,8 +111,6 @@ komoral:
     limit: 2
   evaluation:
     method: string_match
-  model_params:
-    max_tokens: 10
 
 kobbq:
   split: test
@@ -117,8 +122,6 @@ kobbq:
     method: string_match
     params:
       mcqa: true
-  model_params:
-    max_tokens: 10
 
 squad_kor_v1:
   split: test
@@ -128,8 +131,6 @@ squad_kor_v1:
     limit: 2
   evaluation:
     method: char_f1
-  model_params:
-    max_tokens: 20
 
 ifeval_ko:
   split: test
@@ -139,8 +140,6 @@ ifeval_ko:
     limit: 2
   evaluation:
     method: ifeval_strict
-  model_params:
-    max_tokens: 2048  # Model limit (will be automatically capped per model)
 
 mrcr_2_needles:
   split: train
@@ -173,21 +172,6 @@ haerae_bench_v1_w_RC:
     method: string_match
     params:
       mcqa: true
-  model_params:
-    max_tokens: 10
-
-haerae_bench_v1_wo_RC:
-  subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history]
-  params:
-    num_samples: 20 # RC 100개, 나머지 20개 씩 총 100개
-    limit: 2
-  split: test
-  evaluation:
-    method: string_match
-    params:
-      mcqa: true
-  model_params:
-    max_tokens: 10
 
 korean_parallel_corpora:
   subset: [e2k, k2e]
@@ -206,8 +190,6 @@ korean_hate_speech:
     limit: 2
   evaluation:
     method: string_match
-  model_params:
-    max_tokens: 10
 
 kmmlu:
   split: test
@@ -218,8 +200,6 @@ kmmlu:
     method: "string_match"
     params:
       mcqa: true
-  model_params:
-    max_tokens: 2048
     
 kmmlu_pro:
   split: test
@@ -230,8 +210,6 @@ kmmlu_pro:
     method: "string_match"
     params:
       mcqa: true
-  model_params:
-    max_tokens: 2048
 
 # kmmlu_hard:
 #   split: test
@@ -251,8 +229,6 @@ kobalt_700_syntax:
     method: "string_match"
     params:
       mcqa: true
-  model_params:
-    max_tokens: 2048
 
 kobalt_700_semantic:
   split: test
@@ -264,8 +240,6 @@ kobalt_700_semantic:
     method: "string_match"
     params:
       mcqa: true
-  model_params:
-    max_tokens: 2048
 
 aime2025:
   split: test
@@ -297,8 +271,6 @@ hle:
     limit: 2
   evaluation:
     method: "string_match"
-  model_params:
-    max_tokens: 4096  # Model limit (will be automatically capped per model)
 
 arc_agi:
   split: evaluation
@@ -308,6 +280,3 @@ arc_agi:
     limit: 2
   evaluation:
     method: "grid_match"
-  model_params:
-    max_tokens: 4096  # Model limit (will be automatically capped per model)
-    temperature: 0.01

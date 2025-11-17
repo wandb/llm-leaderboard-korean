@@ -1,5 +1,5 @@
 model:
-  name: vllm
+  name: huggingface
   params:
     model_name_or_path: "LGAI-EXAONE/EXAONE-4.0-1.2B"
     batch_size: 1

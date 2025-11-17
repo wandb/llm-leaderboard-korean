@@ -1,0 +1,97 @@
+model:
+  name: litellm
+  params:
+    model_name: gemini-2.5-flash-lite
+    provider: gemini
+    batch_size: 32
+    max_tokens: 65536
+    temperature: 0.3
+  release_date: 2025-06-17
+  model_size: None
+  size_category: None
+  reasoning_effort: "high"
+
+
+halluLens:
+  model_params:
+    max_tokens: 65536
+
+bfcl:
+  model_params:
+    max_tokens: 65536
+
+swebench:
+  model_params:
+    max_tokens: 65536
+
+mt_bench:
+  model_params:
+    max_tokens: 65536
+
+komoral:
+  model_params:
+    max_tokens: 65536
+
+kobbq:
+  model_params:
+    max_tokens: 65536
+
+squad_kor_v1:
+  model_params:
+    max_tokens: 65536
+
+ifeval_ko:
+  model_params:
+    max_tokens: 65536
+
+mrcr_2_needles:
+  model_params:
+    max_tokens: 65536
+
+haerae_bench_v1_w_RC:
+  model_params:
+    max_tokens: 65536
+
+haerae_bench_v1_wo_RC:
+  model_params:
+    max_tokens: 65536
+
+korean_parallel_corpora:
+  model_params:
+    max_tokens: 65536
+
+korean_hate_speech:
+  model_params:
+    max_tokens: 65536
+
+kmmlu:
+  model_params:
+    max_tokens: 65536
+    
+kmmlu_pro:
+  model_params:
+    max_tokens: 65536
+
+kobalt_700_syntax:
+  model_params:
+    max_tokens: 65536
+
+kobalt_700_semantic:
+  model_params:
+    max_tokens: 65536
+
+aime2025:
+  model_params:
+    max_tokens: 65536
+
+hrm8k:
+  model_params:
+    max_tokens: 65536
+
+hle:
+  model_params:
+    max_tokens: 65536
+
+arc_agi:
+  model_params:
+    max_tokens: 65536
