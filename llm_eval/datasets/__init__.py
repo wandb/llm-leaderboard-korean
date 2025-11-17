@@ -5,18 +5,23 @@ from .base import BaseDataset
 DATASET_REGISTRY: Dict[str, Type[BaseDataset]] = {}
 
 # 2) Helper function to register a dataset class in the registry
-def register_dataset(name: str):
+def register_dataset(*names: str):
     """
-    Decorator to register a Dataset class in the registry.
-    Usage example:
+    Decorator to register a Dataset class in the registry with one or more names.
+    Usage examples:
         @register_dataset("hae_rae")
         class HaeRaeDataset(BaseDataset):
             ...
+
+        @register_dataset("kobalt_700", "kobalt_700_syntax", "kobalt_700_semantic")
+        class KoBALT700Dataset(BaseDataset):
+            ...
     """
     def decorator(cls: Type[BaseDataset]):
-        if name in DATASET_REGISTRY:
-            raise ValueError(f"Dataset '{name}' already registered.")
-        DATASET_REGISTRY[name] = cls
+        for name in names:
+            if name in DATASET_REGISTRY:
+                raise ValueError(f"Dataset '{name}' already registered.")
+            DATASET_REGISTRY[name] = cls
         return cls
     return decorator
 

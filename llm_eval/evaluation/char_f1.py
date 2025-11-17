@@ -46,8 +46,27 @@ class CharF1Evaluator(BaseEvaluator):
         # Use fuzzywuzzy token_sort_ratio as requested
         return fuzz.token_sort_ratio(pred, ref) / 100.0
 
-    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, Any]:
         n = len(samples)
+
+        # 단일 샘플 평가 시 (Weave scorer에서 호출)
+        if n == 1:
+            sample = samples[0]
+            pred = sample.get("prediction", "")
+            ref = sample.get("reference", "")
+            f1 = self._char_f1(pred, ref)
+
+            sample["evaluation"] = {
+                "normalized_pred": pred,
+                "normalized_ref": ref,
+                "char_f1": f1,
+            }
+
+            # 단일 샘플일 때는 F1 score만 반환
+            metrics: Dict[str, Any] = {"char_f1": f1}
+            return metrics
+
+        # 다중 샘플 평가 시
         # subset 별 집계를 위한 통계 구조
         stats = {}
         # subsets 가 문자열로 들어오는 경우 대비
@@ -81,7 +100,7 @@ class CharF1Evaluator(BaseEvaluator):
 
         # 전체 AVG는 항상 포함
         overall = stats["all"]["sum_f1"] / stats["all"]["count"] if stats["all"]["count"] > 0 else 0.0
-        metrics: Dict[str, float] = {"AVG": overall}
+        metrics: Dict[str, Any] = {"AVG": overall}
         if subsets:
             for sname, st in stats.items():
                 if sname == "all":
