@@ -1,0 +1,13 @@
+model:
+  name: litellm
+  params:
+    model_name: EXAONE-4.0-32B
+    provider: friendliai
+    batch_size: 32
+    max_tokens: 1024
+    temperature: 0.6
+    top_p: 0.95
+  release_date: "2024-07-15"
+  model_size: 32000000000
+  size_category: Large (30B+)
+

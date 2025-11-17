@@ -7,7 +7,7 @@ from . import register_dataset
 from .base import BaseDataset
 
 
-@register_dataset("kobalt_700")
+@register_dataset("kobalt_700", "kobalt_700_syntax", "kobalt_700_semantic")
 class KoBALT700Dataset(BaseDataset):
     """
     KoBALT-700 Dataset Class for data sourced from 'HAERAE-HUB/KoSimpleEval'.
