@@ -23,12 +23,18 @@ xai_configs = [
     "grok-4-fast-reasoning",
     "grok-4-0709",
 ]
+
+google_configs = [
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+]
+
 print("\n\n-----------------------------------------------------")
 print("-----------------------------------------------------")
 print("Running evaluations for all specified model configurations...")
 print("-----------------------------------------------------")
 print("-----------------------------------------------------\n\n")
-for config in openai_configs + xai_configs:# anthropic_configs + openai_configs + xai_configs:
+for config in google_configs:#openai_configs + xai_configs:# anthropic_configs + openai_configs + xai_configs:
     print("\n\n-----------------------------------------------------")
     print(f"||||   python run_eval.py --config {config}   ||||")
     print("-----------------------------------------------------\n\n")
