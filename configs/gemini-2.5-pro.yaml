@@ -1,7 +1,7 @@
 model:
   name: litellm
   params:
-    model_name: gemini-2.5-flash
+    model_name: gemini-2.5-pro
     provider: gemini
     batch_size: 32
     max_tokens: 65536
@@ -10,7 +10,6 @@ model:
   model_size: None
   size_category: None
   reasoning_effort: "high"
-
 
 halluLens:
   model_params:
