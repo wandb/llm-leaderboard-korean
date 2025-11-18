@@ -94,4 +94,8 @@ hle:
 
 arc_agi:
   model_params:
+<<<<<<< HEAD
     max_tokens: 65536
+=======
+    max_tokens: 65536
+>>>>>>> 3c49b9cc5c16e9d33c2bc1b525c1bdbf85d7f2d4

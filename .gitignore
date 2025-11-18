@@ -2,6 +2,7 @@
 /venv
 __pycache__/
 .env
+.ipynb_checkpoints/
 
 # Build artifacts
 build/
@@ -27,4 +28,6 @@ artifacts/
 # SWE-bench Verified
 logs/
 
-.ipynb_checkpoints
+# BFCL
+llm_eval/external/providers/bfcl/score/*
+llm_eval/external/providers/bfcl/result/*
