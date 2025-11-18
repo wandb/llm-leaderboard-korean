@@ -60,8 +60,8 @@ class Generation:
         return self.generation == other.generation and self.prompt == other.prompt
 
 
-encoding = AutoTokenizer.from_pretrained('meta-llama/Llama-3.1-405B-Instruct-FP8', trust_remote_code=True)
-
+encoding = None
+# encoding = AutoTokenizer.from_pretrained('meta-llama/Llama-3.1-405B-Instruct-FP8', trust_remote_code=True)
 
 class FactHalu:
     def __init__(

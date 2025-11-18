@@ -12,8 +12,10 @@ __pycache__/
 *.pyo
 .openhands/
 
-# BFCL dataset folder
+# BFCL
 llm_eval/datasets/bfcl/
+llm_eval/external/providers/bfcl/result/
+llm_eval/external/providers/bfcl/score/
 
 # HalluLens output folder
 output/
@@ -24,3 +26,5 @@ artifacts/
 
 # SWE-bench Verified
 logs/
+
+.ipynb_checkpoints

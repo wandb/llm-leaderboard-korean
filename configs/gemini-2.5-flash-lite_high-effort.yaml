@@ -1,12 +1,16 @@
+wandb:
+  params:
+    run_name: "gemini-2.5-flash-lite: high-effort"
+
 model:
   name: litellm
   params:
-    model_name: gemini-2.5-flash
+    model_name: gemini-2.5-flash-lite
     provider: gemini
     batch_size: 32
     max_tokens: 65536
     temperature: 0.3
-    reasoning_effort: "none"
+    reasoning_effort: "high"
   release_date: 2025-06-17
   model_size: None
   size_category: None

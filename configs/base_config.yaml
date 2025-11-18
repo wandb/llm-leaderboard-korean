@@ -2,15 +2,80 @@
 wandb:
   params:
     entity: horangi
-    project: horangi4-dev
+    project: horangi4
     project_dataset: horangi4-dataset
-  run_name: swebench-o4mini-2
 
 # testmode configurations
-testmode: true
-
+testmode: false
 # LLM 호출 간 간격(초). 누락 시 오류 방지를 위해 기본값 제공
-inference_interval: 0.0
+inference_interval: 0.1
+
+haerae_bench_v1_wo_RC:
+  subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history]
+  params:
+    num_samples: 20 # RC 100개, 나머지 20개 씩 총 100개
+    limit: 2
+  split: test
+  evaluation:
+    method: string_match
+    params:
+      mcqa: true
+
+halluLens:
+  split: test
+  subset: [precise_wikiqa, mixed_entities, generated_entities]
+  params:
+    num_samples: 100
+    limit: 2
+  evaluation:
+    abstention:
+      model: gpt-4o-mini
+    hallucination:
+      model: gpt-4o
+
+bfcl:
+  split: test
+  subset: [
+    simple_python,
+    simple_java,
+    simple_javascript,
+    multiple,
+    irrelevance,
+    live_simple,
+    live_multiple,
+    live_irrelevance,
+    live_relevance,
+    multi_turn_base,
+    multi_turn_miss_func,
+    multi_turn_miss_param,
+  ]
+  params:
+    num_samples: 10
+    limit: 3
+  # 동시성 제어: BFCL 모델 inference 시 동시에 보낼 스레드 개수
+  num_threads: 32
+  evaluation:
+    model: gpt-4o-2024-11-20
+
+
+swebench:
+  split: test
+  subset: default
+  params:
+    num_samples: 80  # Maximum number of samples to evaluate
+    limit: 2
+    artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v4
+    dataset_dir: .
+  evaluation:
+    method: swebench
+    params:
+      api_endpoint: https://api.nejumi-swebench.org/ # API server for running tests in Docker
+      # api_endpoint: http://localhost:8000  # For local development
+      timeout_sec: 1200
+      concurrency: 2
+      namespace: swebench
+      tag: latest
+
 
 mt_bench:
   split: test
@@ -24,8 +89,7 @@ mt_bench:
       judge_backend_name: openai_judge
       model_name: gpt-4.1-2025-04-14
       api_base: https://api.openai.com/v1
-      batch_size: 10
-      max_tokens: 512
+      batch_size: 32
       temperature: 0.0
 
 komoral:
@@ -45,6 +109,8 @@ kobbq:
     limit: 2
   evaluation:
     method: string_match
+    params:
+      mcqa: true
 
 squad_kor_v1:
   split: test
@@ -85,10 +151,10 @@ mrcr_2_needles:
     retry_max: 4
     retry_base_delay: 1.5
 
-haerae_bench_v1:
-  subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history, reading_comprehension]
+haerae_bench_v1_w_RC:
+  subset: [reading_comprehension]
   params:
-    num_samples: 20 # RC 100개, 나머지 20개 씩 총 100개
+    num_samples: 100 # RC 100개, 나머지 20개 씩 총 100개
     limit: 2
   split: test
   evaluation:
@@ -142,9 +208,20 @@ kmmlu_pro:
 #     params:
 #       mcqa: true
 
-kobalt_700:
+kobalt_700_syntax:
   split: test
-  subset: ["Syntax", "Semantics"] #, "Pragmatics", "Phonetics/Phonology", "Morphology"]
+  subset: ["Syntax"] #, "Pragmatics", "Phonetics/Phonology", "Morphology"]
+  params:
+    num_samples: 100
+    limit: 2
+  evaluation:
+    method: "string_match"
+    params:
+      mcqa: true
+
+kobalt_700_semantic:
+  split: test
+  subset: ["Semantics"] #, "Pragmatics", "Phonetics/Phonology", "Morphology"]
   params:
     num_samples: 100
     limit: 2
@@ -192,92 +269,3 @@ arc_agi:
     limit: 2
   evaluation:
     method: "grid_match"
-
-halluLens:
-  split: test
-  subset: [precise_wikiqa, mixed_entities, generated_entities]
-  params:
-    num_samples: 100
-    limit: 2
-  evaluation:
-    abstention:
-      model: gpt-4o-mini
-    hallucination:
-      model: gpt-4o
-
-bfcl:
-  split: test
-  subset: [
-    simple_python,
-    simple_java,
-    simple_javascript,
-    multiple,
-    irrelevance,
-    live_simple,
-    live_multiple,
-    live_irrelevance,
-    live_relevance,
-    multi_turn_base,
-    multi_turn_miss_func,
-    multi_turn_miss_param,
-  ]
-  params:
-    num_samples: 10
-    limit: 3
-  # 동시성 제어: BFCL 모델 inference 시 동시에 보낼 스레드 개수
-  num_threads: 32
-  evaluation:
-    model: gpt-4o-2024-11-20
-
-# ================= SWE-bench (integrated) =================
-# SWE-bench Verified dataset for evaluating code patch generation
-swebench:
-  # Dataset configuration
-  split: test
-  subset: default
-  # Dataset parameters (passed to Dataset constructor)
-  params:
-    num_samples: 80  # Maximum number of samples to evaluate
-    limit: 2
-    artifacts_path: horangi/horangi4-dataset/swebench_verified_official_80:v4
-    dataset_dir: .
-
-  # Model parameters override for this dataset
-  # These will override the model config from <model_name>.yaml
-  model_params:
-    max_tokens: 32768  # Model limit (will be automatically capped per model)
-    temperature: 0.0
-
-  # Evaluation method
-  evaluation:
-    method: swebench
-    params:
-      # API server for running tests in Docker
-      api_endpoint: https://api.nejumi-swebench.org/
-      # api_endpoint: http://localhost:8000  # For local development
-      timeout_sec: 1800  # 30 minutes per test
-      concurrency: 2  # Number of parallel jobs
-      namespace: swebench  # Docker image namespace
-      tag: latest  # Docker image tag
-
-  # Legacy settings (kept for backward compatibility with external/swe_bench)
-  max_samples: 80
-  max_workers: 2
-  background_eval: false
-  fc_enabled: true
-  prebuild_images: false
-  images:
-    namespace: swebench
-    tag: latest
-  api_server:
-    enabled: true
-    endpoint: https://api.nejumi-swebench.org/
-    timeout_sec: 1800
-    concurrency: 2
-
-# arc_agi2:
-#   split: evaluation
-#   subset: default
-#   num_samples: 1000
-#   evaluation:
-#     method: "grid_match"
