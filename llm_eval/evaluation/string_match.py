@@ -112,41 +112,31 @@ class StringMatchEvaluator(BaseEvaluator):
 
         return self._normalize_text(raw_output)
 
-    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
+    def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Computes accuracy by comparing the normalized prediction against the normalized reference.
-        
+
         For MCQA (Multiple-Choice Question Answering) tasks:
         - If 'mcqa' is enabled and an 'options' list is provided in the sample,
             the evaluation considers a prediction correct only if:
             1. The normalized prediction exactly matches the normalized reference.
             2. The normalized reference is one of the normalized options.
-        
-        For non-MCQA tasks, the prediction is considered correct if the normalized prediction 
+
+        For non-MCQA tasks, the prediction is considered correct if the normalized prediction
         exactly matches the normalized reference.
-        
+
         Each sample is augmented with detailed evaluation information in the 'evaluation' key.
-        
+
         Returns:
-            A dictionary with the computed accuracy metric, e.g. {"accuracy": 0.85}.
+            For single sample: {"is_correct": True/False}
+            For multiple samples: {"AVG": accuracy, "{subset}/accuracy": subset_accuracy}
         """
         total = len(samples)
-        correct = 0
-        # subset 별 집계를 위한 통계 구조 (요청된 subsets 기준으로 초기화)
-        stats: Dict[str, Dict[str, int]] = {}
-        # subsets 문자열 입력 대응 및 사전 초기화
-        if subsets:
-            if isinstance(subsets, str):
-                subsets = [subsets]
-            for subset in subsets:
-                stats[subset] = {"total": 0, "correct": 0}
 
-        # Log information when evaluating MCQA tasks with provided options.
-        # if self.mcqa and "options" in samples[0] and isinstance(samples[0]["options"], list) and samples[0]["options"]:
-        #     logger.info(f"Evaluating outputs using string match with mcqa={self.mcqa}")
+        # 단일 샘플 평가 시 (Weave scorer에서 호출) - 가장 일반적인 케이스
+        if total == 1:
+            sample = samples[0]
 
-        for sample in samples:
-            subset_name = sample.get("_subset_name")
             # Normalize the prediction and reference texts.
             pred_norm = self.parse_prediction(sample["prediction"])
             ref_norm = self.parse_prediction(sample["reference"])
@@ -160,6 +150,42 @@ class StringMatchEvaluator(BaseEvaluator):
                 is_correct = (pred_norm == ref_norm) and (ref_norm in normalized_options)
             else:
                 # For non-MCQA tasks, a simple exact match suffices.
+                is_correct = (pred_norm == ref_norm)
+
+            # Record detailed evaluation info within the sample for debugging and analysis.
+            sample["evaluation"] = {
+                "normalized_pred": pred_norm,
+                "normalized_ref": ref_norm,
+                "is_correct": is_correct,
+                "options": sample.get("options", None)
+            }
+
+            # 단일 샘플일 때는 정답 여부를 boolean으로 반환
+            # subset 정보는 이제 input에 있으므로 output에는 포함하지 않음
+            return {"is_correct": is_correct}
+
+        # 다중 샘플 평가 시 (전체 데이터셋 평가 - 일반적으로 사용 안함)
+        correct = 0
+        # subset 별 집계를 위한 통계 구조 (요청된 subsets 기준으로 초기화)
+        stats: Dict[str, Dict[str, int]] = {}
+        # subsets 문자열 입력 대응 및 사전 초기화
+        if subsets:
+            if isinstance(subsets, str):
+                subsets = [subsets]
+            for subset in subsets:
+                stats[subset] = {"total": 0, "correct": 0}
+
+        for sample in samples:
+            subset_name = sample.get("_subset_name")
+            # Normalize the prediction and reference texts.
+            pred_norm = self.parse_prediction(sample["prediction"])
+            ref_norm = self.parse_prediction(sample["reference"])
+
+            if self.mcqa and "options" in sample and isinstance(sample["options"], list) and sample["options"]:
+                # Normalize all provided options.
+                normalized_options = [self._normalize_text(opt) for opt in sample["options"]]
+                is_correct = (pred_norm == ref_norm) and (ref_norm in normalized_options)
+            else:
                 is_correct = (pred_norm == ref_norm)
 
             if is_correct:
@@ -181,8 +207,10 @@ class StringMatchEvaluator(BaseEvaluator):
                 "options": sample.get("options", None)
             }
 
-        # 전체 AVG는 항상 포함
-        metrics: Dict[str, float] = {"AVG": (correct / total if total > 0 else 0.0)}
+        # 메트릭 구성
+        metrics: Dict[str, Any] = {}
+
+        # subset별 accuracy 계산
         if isinstance(subsets, (list, tuple, str)):
             if isinstance(subsets, str):
                 subsets = [subsets]
@@ -191,4 +219,8 @@ class StringMatchEvaluator(BaseEvaluator):
                 s_correct = st["correct"]
                 s_acc = (s_correct / s_total) if s_total > 0 else 0.0
                 metrics[f"{sname}/accuracy"] = s_acc
+
+        # 전체 평균은 항상 포함
+        metrics["AVG"] = (correct / total if total > 0 else 0.0)
+
         return metrics

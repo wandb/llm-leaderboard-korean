@@ -1,16 +1,16 @@
 model:
-  name: litellm
+  name: litellm  # Using OpenAI Responses API for reasoning models
   params:
-    model_name: grok-4-fast-reasoning
-    provider: xai
-    max_tokens: 1024
-    temperature: 0.3
-    batch_size: 32
-    # reasoning_effort: "high"
-  release_date: "2025-07-09"
+    model_name: gpt-5-2025-08-07
+    provider: openai
+    batch_size: 16  # Lower for reasoning models
+    max_tokens: 65536  # Model limit for GPT-5-mini (will be automatically capped)
+    temperature: 1.0  # Required for reasoning models
+    timeout: 600.0  # 10 minutes for reasoning chains
+    reasoning_effort: "high"
+  release_date: "2025-08-07"
   model_size: None
   size_category: None
-
 
 halluLens:
   model_params:

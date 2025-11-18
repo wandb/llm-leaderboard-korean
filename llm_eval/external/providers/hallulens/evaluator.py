@@ -46,18 +46,22 @@ def run_hallulens_from_configs(
     ds_cfg = base_cfg.get(ds_key) or {}
     subset = ds_cfg.get("subset")
     split = ds_cfg.get("split", "test")
-    limit = ds_cfg.get("limit", None)
-    
-    # testmode 체크 - testmode가 true면 각 서브셋당 10개로 제한 (기존 limit 무시)
-    testmode = base_cfg.get("testmode", False)
-    # if testmode:
-    #     limit = 10
-    #     logger.info(f"testmode enabled: overriding halluLens limit to {limit} per subset")
 
-    # dataset-specific params
+    # dataset-specific params를 먼저 가져옴
     dataset_params = dict(ds_cfg.get("params") or {})
-    if "limit" not in dataset_params:
+
+    # testmode 체크 - testmode가 true면 limit 값 사용, false면 num_samples 사용
+    testmode = base_cfg.get("testmode", False)
+    if testmode:
+        # testmode일 때는 limit 값 사용 (config의 limit: 2)
+        limit = dataset_params.get("limit", 2)
         dataset_params["limit"] = limit
+        logger.info(f"testmode enabled: using halluLens limit={limit} per subset")
+    else:
+        # 일반 모드일 때는 num_samples 사용 (config의 num_samples: 100)
+        num_samples = dataset_params.get("num_samples", 100)
+        dataset_params["limit"] = num_samples
+        logger.info(f"normal mode: using halluLens num_samples={num_samples} per subset")
 
     # evaluator/evaluator-roles configuration from base_config
     hl_params = ds_cfg
