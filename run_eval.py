@@ -31,8 +31,22 @@ def run_all_from_configs(
     with open(base_config_path, "r", encoding="utf-8") as f:
         base_cfg = yaml.safe_load(f) or {}
     wandb_params: Dict[str, Any] = ((base_cfg.get("wandb") or {}).get("params") or {})
+    wandb_params['run_name'] = model_cfg.get("wandb", {}).get("params", {}).get("run_name", None)
     weave.init(f"{wandb_params.get('entity')}/{wandb_params.get('project')}")
-    run = wandb.init(entity=wandb_params.get("entity"), project=wandb_params.get("project"), name=model_name)
+    if wandb_params.get("run_name"):
+        run = wandb.init(
+            entity=wandb_params.get("entity"),
+            project=wandb_params.get("project"),
+            name=wandb_params.get("run_name"),
+            config={"model_config": model_cfg, "base_config": base_cfg},
+            )
+    else:
+        run = wandb.init(
+            entity=wandb_params.get("entity"),
+            project=wandb_params.get("project"),
+            name=model_name,
+            config={"model_config": model_cfg, "base_config": base_cfg},
+        )
     WandbConfigSingleton.initialize(run, model_name, wandb_params)
     if model_cfg.get("model").get("params").get("provider") == "hosted_vllm":
         from llm_eval.models.vllm_server_manager import start_vllm_server
@@ -70,7 +84,7 @@ if __name__ == "__main__":
     if args.dataset:
         selected_datasets = [args.dataset]
     else:
-        selected_datasets = ["mt_bench", "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "mrcr_2_needles", "haerae_bench_v1", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700", "hle", "arc_agi", "aime2025", "hrm8k", "bfcl", "swebench", "korean_parallel_corpora"]
+        selected_datasets = ["mt_bench", "halluLens", "ifeval_ko", "komoral", "korean_hate_speech", "mrcr_2_needles", "haerae_bench_v1_w_RC", "haerae_bench_v1_wo_RC", "squad_kor_v1", "kobbq", "kmmlu", "kmmlu_pro", "kobalt_700_syntax", "kobalt_700_semantic", "hle", "arc_agi", "aime2025", "hrm8k", "bfcl", "swebench", "korean_parallel_corpora"]
         # selected_datasets = ["mt_bench", "halluLens", "hle", "aime2025", "hrm8k", "bfcl"]#, "swe_bench_verified"]
         # selected_datasets = ["hle", "aime2025", "hrm8k", "komoral", "kmmlu", "halluLens", "bfcl", "swebench", "mt_bench"]#, "swe_bench_verified"]
         # selected_datasets = ["halluLens", "bfcl", "swebench", "mt_bench"]#, "swe_bench_verified"]

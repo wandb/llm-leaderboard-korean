@@ -382,7 +382,14 @@ def run_multiple_from_configs(
             eval_method = "string_match"
 
         logger.info(f"Running dataset '{ds_key}' with split='{split}', subset='{subset}', eval='{eval_method}'")
-
+        ds_cfg_with_params = ds_cfg.copy()
+        ds_cfg_with_params["params"] = dataset_params
+        ds_model_params_override = ds_cfg.get("model_params") or {}
+        merged_model_params = {**model_params, **ds_model_params_override}
+        print(f"ds_cfg_with_params: {ds_cfg_with_params}")
+        print(f"merged_model_params: {merged_model_params}")
+        print(f"eval_params: {eval_params}")
+        print(f"dataset_params: {dataset_params}")
         # Branch out HalluLens to external evaluator module
         # HalluLens has integrated inference+evaluation pipeline, so Standard Weave is not applicable
         if str(ds_key).lower() == "hallulens":
@@ -430,6 +437,9 @@ def run_multiple_from_configs(
             ds_cfg_with_params = ds_cfg.copy()
             ds_cfg_with_params["params"] = dataset_params
             print(f"ds_cfg_with_params: {ds_cfg_with_params}")
+            print(f"merged_model_params: {merged_model_params}")
+            print(f"eval_params: {eval_params}")
+            print(f"dataset_params: {dataset_params}")
 
             result = run_with_standard_weave(
                 dataset_key=ds_key,

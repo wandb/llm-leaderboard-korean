@@ -1,0 +1,16 @@
+wandb:
+  params:
+    run_name: "claude-opus-4-1-20250805: high-effort"
+
+model:
+  name: litellm
+  params:
+    model_name: claude-opus-4-1-20250805
+    provider: anthropic
+    batch_size: 32
+    max_tokens: 32000
+    temperature: 1.0
+    reasoning_effort: "high"
+  release_date: "2025-08-05"
+  model_size: None
+  size_category: None
