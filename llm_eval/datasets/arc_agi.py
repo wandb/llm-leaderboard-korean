@@ -14,12 +14,23 @@ logger = get_logger(name="arc_agi", level="INFO")
 Dataset = Any
 DatasetDict = Any
 
-DEFAULT_ARC_PROMPT_TEMPLATE = (
-    "You are given ARC tasks. Grids use digits 0-9 only.\n"
-    "Return only the final grid as comma-separated rows, with no extra text.\n\n"
-    "{examples}\n"
-    "{query_block}\n"
-)
+# DEFAULT_ARC_PROMPT_TEMPLATE = (
+#     # "You are given ARC tasks. Grids use digits 0-9 only.\n"
+#     # "Return only the final grid as comma-separated rows, with no extra text.\n\n"
+# )
+DEFAULT_ARC_PROMPT_TEMPLATE = """
+ARC 문제(Task)가 주어집니다. 그리드는 0~9 숫자만 사용합니다.
+문제를 해결하세요. 사고 과정은 내부에서만 진행하고, 절대 외부로 드러내지 마세요.
+- 출력 형식 (OUTPUT FORMAT):
+  - 숫자와 콤마로 이루어진 그리드만 출력하세요.
+  - 출력 전후에 어떤 텍스트도 추가하지 마세요.
+  - 따옴표, 코드 블록, 설명을 절대 포함하지 마세요.
+**숫자·콤마·줄바꿈으로 이루어진 그리드 이외의 문자가 출력되면 오답으로 간주됩니다.**
+**그리드만 그대로 출력하세요.**
+{examples}\n\n
+{query_block}\n
+"""
+
 
 Grid = List[List[int]]
 
