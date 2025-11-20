@@ -25,6 +25,34 @@ def _clean_text(text: str) -> str:
     text = _MULTI_NL_RE.sub("\n", text)
     return text.strip()
 
+def extract_grid_text(text: str):
+    row_pattern = re.compile(r'^\s*\d+(,\d+)*\s*$')
+    
+    grids = []
+    current_grid = []
+    
+    for line in text.splitlines():
+        line = line.strip()
+        
+        if row_pattern.match(line):
+            current_grid.append(line)
+        else:
+            # 숫자/콤마 라인이 끊기면 지금까지의 그리드를 저장
+            if current_grid:
+                grids.append(current_grid)
+                current_grid = []
+
+    # 마지막이 그리드로 끝나는 경우 처리
+    if current_grid:
+        grids.append(current_grid)
+
+    # 그리드가 하나도 없으면 빈 문자열 반환
+    if not grids:
+        return ""
+
+    # 마지막 그리드만 반환
+    return "\n".join(grids[-1])
+
 def _parse_grid(text: str) -> List[List[int]]:
     cleaned = _clean_text(text)
     if not cleaned:
@@ -76,6 +104,7 @@ class GridMatchEvaluator(BaseEvaluator):
         return input_text
 
     def parse_prediction(self, raw_output: str) -> str:
+        raw_output = extract_grid_text(raw_output)
         return _clean_text(raw_output)
 
     def evaluate_predictions(self, subsets: Optional[List[str]], samples: List[Dict[str, Any]]) -> Dict[str, float]:
@@ -111,6 +140,7 @@ class GridMatchEvaluator(BaseEvaluator):
         )
 
         return {
+            "cleaned_predictions": pred,
             "AVG": accuracy,
             "n_scored": float(n_scored),
             "n_correct": float(n_correct),

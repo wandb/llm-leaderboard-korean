@@ -44,13 +44,14 @@ class KMMLUProDataset(BaseDataset):
         if base_prompt_template is None:
             base_prompt_template = (
                 "다음은 전문 분야의 객관식 문제입니다. 당신의 추론 과정을 간결하게 요약한 후, "
-                "\"따라서, 정답은: X\"라고 결론지으십시오. 여기서 X는 (1), (2), (3), (4), (5) 중 하나입니다.\n\n"
-                "질문: {question}\n"
-                "1. {choice_1}\n"
-                "2. {choice_2}\n"
-                "3. {choice_3}\n"
-                "4. {choice_4}\n"
-                "5. {choice_5}"
+                "\"따라서, 정답은: X\"라고 결론지으십시오. 여기서 X는 1, 2, 3, 4, 5 중 하나입니다.\n\n"
+                "질문: {question}"
+                # "질문: {question}\n"
+                # "(1). {choice_1}\n"
+                # "(2). {choice_2}\n"
+                # "(3). {choice_3}\n"
+                # "(4). {choice_4}\n"
+                # "(5). {choice_5}"
             )
         super().__init__(
             dataset_name=dataset_name,
@@ -126,7 +127,7 @@ class KMMLUProDataset(BaseDataset):
         """
         processed_list = []
         # As the choices are 1-5, we provide them as default options.
-        options = ["(1)", "(2)", "(3)", "(4)", "(5)"]
+        options = ["1", "2", "3", "4", "5"]
 
         for item in items:
             question_text = item.get("question", "").strip()
@@ -145,7 +146,8 @@ class KMMLUProDataset(BaseDataset):
 
             # Convert the integer 'gold' answer to a string format like "(4)".
             gold_answer_index = item.get("gold")
-            reference = f"({gold_answer_index})" if gold_answer_index else ""
+            # reference = f"({gold_answer_index})" if gold_answer_index else ""
+            reference = gold_answer_index if gold_answer_index else ""
 
             processed_list.append(
                 {
