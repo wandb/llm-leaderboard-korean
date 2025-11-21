@@ -44,6 +44,13 @@ def run_bfcl_from_configs(
     model_block: Dict[str, Any] = model_cfg.get("model") or {}
     model_name: Optional[str] = model_block.get("name")
     model_params: Dict[str, Any] = model_block.get("params") or {}
+    
+    # Update if there are bfcl specific model config
+    bfcl_model_cfg: Dict[str, Any] = model_cfg.get("bfcl", {})
+    bfcl_model_params: Dict[str, Any] = bfcl_model_cfg.get("model_params") or {}
+    if bfcl_model_cfg:
+        model_params.update(bfcl_model_params)
+
     if not model_name:
         raise ValueError("model_config.yaml must contain 'model.name'")
 
@@ -97,14 +104,13 @@ def run_bfcl_from_configs(
     result_dir.mkdir(parents=True, exist_ok=True)
     score_dir.mkdir(parents=True, exist_ok=True)
 
-
     # ---------- Model Inference ----------
     try:
         logger.info(f"[BFCL] Running model inference for {len(test_categories)} categories")
         from .bfcl_eval._llm_response_generation import main as generation_main
 
         # Read concurrency from config (default: 32 if not provided)
-        bfcl_params: Dict[str, Any] = (ds_cfg.get("params") or {})
+        bfcl_params: Dict[str, Any] = ds_cfg.get("params") or {}
         num_threads_cfg: Optional[int] = bfcl_params.get("num_threads") or ds_cfg.get("num_threads")
         num_threads = int(num_threads_cfg) if num_threads_cfg is not None else 32
 
@@ -119,6 +125,7 @@ def run_bfcl_from_configs(
         try:
             if os.environ.get("BFCL_ENABLE_WEAVE_INFERENCE", "0") == "1":
                 from weave import EvaluationLogger
+
                 model_label = bfcl_model.replace("-", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
                 evaluation_logger = EvaluationLogger(
                     dataset="bfcl",
@@ -216,6 +223,7 @@ def run_bfcl_from_configs(
     # remove temporary result and score directories
     if testmode:
         import shutil
+
         shutil.rmtree(result_dir)
         shutil.rmtree(score_dir)
 
@@ -249,4 +257,3 @@ def get_bfcl_category_groups() -> Dict[str, List[str]]:
     Returns mapping of BFCL test category groups.
     """
     return TEST_COLLECTION_MAPPING
-
