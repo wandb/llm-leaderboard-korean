@@ -74,6 +74,7 @@ dependencies = [
     "requests>=2.31.0",
     "datamodel-code-generator>=0.25.0",
     "faiss-cpu>=1.7.4",
+    "vllm==0.11.0",
 ]
 
 [project.optional-dependencies]
