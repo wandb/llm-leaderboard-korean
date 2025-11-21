@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from llm_eval.external.providers.hallulens.utils import lm
 from llm_eval.models import load_model
 
+
 def run_exp(
     task: str,
     model_path: str,
@@ -23,10 +24,10 @@ def run_exp(
     inference_method="together",
     max_workers=64,
     max_tokens=512,
-    return_gen = False,
+    return_gen=False,
     backend_kwargs: Optional[Dict[str, Any]] = None,
     evaluation_logger: Optional[Any] = None,
-):  
+):
     if not generations_file_path:
         base_path = Path(base_path)
         model_name = model_path.split("/")[-1]
@@ -35,9 +36,9 @@ def run_exp(
         generations_file_path = output_folder / "generation.jsonl"
 
     generations_file_path = str(generations_file_path)
-    print('generations_file_path', generations_file_path)
+    print("generations_file_path", generations_file_path)
 
-    prompts =  all_prompts.prompt.to_list()
+    prompts = all_prompts.prompt.to_list()
 
     # get the response from the model
     # if inference_method == 'openai':
@@ -77,7 +78,7 @@ def run_exp(
     #         desc="Predict on together API",
     #     )
     # elif inference_method in ("openai_backend", "litellm_backend", "huggingface_backend", "vllm_backend"):
-        # Use llm_eval/models backends via registry
+    # Use llm_eval/models backends via registry
     backend_kwargs = backend_kwargs or {}
 
     # Build inputs for batch generation
@@ -110,13 +111,11 @@ def run_exp(
         )
         # If evaluation_logger is provided, process each input individually with log_prediction
         if evaluation_logger is not None:
+
             def process_input(idx_inp):
                 idx, inp = idx_inp
                 prompt_text = inp.get("input", "")
-                with evaluation_logger.log_prediction(
-                    inputs={"input": str(prompt_text), "index": idx},
-                    output=""
-                ) as pred_logger:
+                with evaluation_logger.log_prediction(inputs={"input": str(prompt_text), "index": idx}, output="") as pred_logger:
                     result = hallulens_inference_single(model, inp)
                     prediction_text = result.get("prediction") or ""
                     # Update output within the context
@@ -124,7 +123,7 @@ def run_exp(
                         try:
                             pred_logger.output = prediction_text
                         except (AttributeError, TypeError):
-                            if hasattr(pred_logger, '_output'):
+                            if hasattr(pred_logger, "_output"):
                                 pred_logger._output = prediction_text
                     return idx, prediction_text
 
@@ -154,23 +153,41 @@ def run_exp(
         # )
         # If evaluation_logger is provided, process each input individually with log_prediction
         if evaluation_logger is not None:
+
             def process_input(idx_inp):
                 idx, inp = idx_inp
                 prompt_text = inp.get("input", "")
-                with evaluation_logger.log_prediction(
-                    inputs={"input": str(prompt_text), "index": idx},
-                    output=""
-                ) as pred_logger:
+                # with evaluation_logger.log_prediction(inputs={"input": str(prompt_text), "index": idx}, output="") as pred_logger:
+                #     result = hallulens_inference_single(model, inp)
+                #     prediction_text = result.get("prediction") or ""
+                #     # Update output within the context
+                #     if pred_logger is not None:
+                #         try:
+                #             pred_logger.output = prediction_text
+                #         except (AttributeError, TypeError):
+                #             if hasattr(pred_logger, "_output"):
+                #                 pred_logger._output = prediction_text
+                #     return idx, prediction_text
+                
+                # NOTE: pred_logger does not support context manager in litellm
+                pred_logger = evaluation_logger.log_prediction(inputs={"input": str(prompt_text), "index": idx}, output="")
+
+                try:
                     result = hallulens_inference_single(model, inp)
                     prediction_text = result.get("prediction") or ""
-                    # Update output within the context
-                    if pred_logger is not None:
-                        try:
-                            pred_logger.output = prediction_text
-                        except (AttributeError, TypeError):
-                            if hasattr(pred_logger, '_output'):
-                                pred_logger._output = prediction_text
+
+                    # NOTE: pred_logger does not support output attribute in litellm
+                    # if pred_logger is not None:
+                    #     try:
+                    #         pred_logger.output = prediction_text
+                    #     except (AttributeError, TypeError):
+                    #         if hasattr(pred_logger, "_output"):
+                    #             pred_logger._output = prediction_text
+
                     return idx, prediction_text
+
+                except Exception as e:
+                    raise e
 
             generations = [None] * len(inputs)
             with ThreadPoolExecutor(max_workers=batch_size) as executor:
@@ -198,13 +215,11 @@ def run_exp(
         )
         # If evaluation_logger is provided, process each input individually with log_prediction
         if evaluation_logger is not None:
+
             def process_input(idx_inp):
                 idx, inp = idx_inp
                 prompt_text = inp.get("input", "")
-                with evaluation_logger.log_prediction(
-                    inputs={"input": str(prompt_text), "index": idx},
-                    output=""
-                ) as pred_logger:
+                with evaluation_logger.log_prediction(inputs={"input": str(prompt_text), "index": idx}, output="") as pred_logger:
                     result = hallulens_inference_single(model, inp)
                     prediction_text = result.get("prediction") or ""
                     # Update output within the context
@@ -212,7 +227,7 @@ def run_exp(
                         try:
                             pred_logger.output = prediction_text
                         except (AttributeError, TypeError):
-                            if hasattr(pred_logger, '_output'):
+                            if hasattr(pred_logger, "_output"):
                                 pred_logger._output = prediction_text
                     return idx, prediction_text
 
@@ -248,13 +263,11 @@ def run_exp(
         )
         # If evaluation_logger is provided, process each input individually with log_prediction
         if evaluation_logger is not None:
+
             def process_input(idx_inp):
                 idx, inp = idx_inp
                 prompt_text = inp.get("input", "")
-                with evaluation_logger.log_prediction(
-                    inputs={"input": str(prompt_text), "index": idx},
-                    output=""
-                ) as pred_logger:
+                with evaluation_logger.log_prediction(inputs={"input": str(prompt_text), "index": idx}, output="") as pred_logger:
                     result = hallulens_inference_single(model, inp)
                     prediction_text = result.get("prediction") or ""
                     # Update output within the context
@@ -262,7 +275,7 @@ def run_exp(
                         try:
                             pred_logger.output = prediction_text
                         except (AttributeError, TypeError):
-                            if hasattr(pred_logger, '_output'):
+                            if hasattr(pred_logger, "_output"):
                                 pred_logger._output = prediction_text
                     return idx, prediction_text
 
@@ -282,13 +295,11 @@ def run_exp(
         model = load_model(name="openai_responses", **backend_kwargs)
         # If evaluation_logger is provided, process each input individually with log_prediction
         if evaluation_logger is not None:
+
             def process_input(idx_inp):
                 idx, inp = idx_inp
                 prompt_text = inp.get("input", "")
-                with evaluation_logger.log_prediction(
-                    inputs={"input": str(prompt_text), "index": idx},
-                    output=""
-                ) as pred_logger:
+                with evaluation_logger.log_prediction(inputs={"input": str(prompt_text), "index": idx}, output="") as pred_logger:
                     result = hallulens_inference_single(model, inp)
                     prediction_text = result.get("prediction") or ""
                     # Update output within the context
@@ -296,7 +307,7 @@ def run_exp(
                         try:
                             pred_logger.output = prediction_text
                         except (AttributeError, TypeError):
-                            if hasattr(pred_logger, '_output'):
+                            if hasattr(pred_logger, "_output"):
                                 pred_logger._output = prediction_text
                     return idx, prediction_text
 
