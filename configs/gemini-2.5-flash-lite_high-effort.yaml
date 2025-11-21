@@ -23,6 +23,7 @@ halluLens:
 bfcl:
   model_params:
     max_tokens: 65536
+    model_name: gemini-2.5-flash-lite-FC
 
 swebench:
   model_params:
