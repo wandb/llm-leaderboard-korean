@@ -10,7 +10,7 @@ model:
     max_tokens: 65536
     temperature: 0.3
     batch_size: 32
-    # reasoning_effort: "high"
+    reasoning_effort: "high"
   release_date: "2025-07-09"
   model_size: None
   size_category: None

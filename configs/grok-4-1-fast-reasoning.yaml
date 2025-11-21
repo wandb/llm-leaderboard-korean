@@ -1,11 +1,11 @@
 wandb:
   params:
-    run_name: "grok-4-fast-reasoning: high-effort"
+    run_name: "grok-4.1-fast-reasoning: high-effort"
 
 model:
   name: litellm
   params:
-    model_name: grok-4-fast-reasoning
+    model_name: grok-4-1-fast-reasoning
     provider: xai
     max_tokens: 65536
     temperature: 0.3
@@ -25,7 +25,7 @@ bfcl:
   model_params:
     max_tokens: 65536
     temperature: 1.0
-    model_name: grok-4-fast-reasoning-FC
+    model_name: grok-4-1-fast-reasoning-FC
 
 swebench:
   model_params:

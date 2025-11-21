@@ -19,6 +19,7 @@ halluLens:
 bfcl:
   model_params:
     max_tokens: 65536
+    model_name: gemini-2.5-flash-FC
 
 swebench:
   model_params:
@@ -47,6 +48,10 @@ ifeval_ko:
 mrcr_2_needles:
   model_params:
     max_tokens: 65536
+    batch_size: 1           # 동시성 축소
+    request_delay_sec: 60  # 고정 지연(초)
+    retry_max: 4
+    retry_base_delay: 1.5
 
 haerae_bench_v1_w_RC:
   model_params:
@@ -94,8 +99,4 @@ hle:
 
 arc_agi:
   model_params:
-<<<<<<< HEAD
     max_tokens: 65536
-=======
-    max_tokens: 65536
->>>>>>> 3c49b9cc5c16e9d33c2bc1b525c1bdbf85d7f2d4

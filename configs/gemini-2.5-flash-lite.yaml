@@ -6,10 +6,10 @@ model:
     batch_size: 32
     max_tokens: 65536
     temperature: 0.3
+    reasoning_effort: "none"
   release_date: 2025-06-17
   model_size: None
   size_category: None
-  reasoning_effort: "high"
 
 
 halluLens:
@@ -19,6 +19,7 @@ halluLens:
 bfcl:
   model_params:
     max_tokens: 65536
+    model_name: gemini-2.5-flash-lite-FC
 
 swebench:
   model_params:
@@ -47,6 +48,10 @@ ifeval_ko:
 mrcr_2_needles:
   model_params:
     max_tokens: 65536
+    batch_size: 1           # 동시성 축소
+    request_delay_sec: 60  # 고정 지연(초)
+    retry_max: 4
+    retry_base_delay: 1.5
 
 haerae_bench_v1_w_RC:
   model_params:

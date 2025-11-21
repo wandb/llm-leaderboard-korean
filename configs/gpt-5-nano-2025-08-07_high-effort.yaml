@@ -20,6 +20,7 @@ halluLens:
   model_params:
     max_tokens: 32768
     temperature: 1.0
+    model_name: gpt-5-nano-2025-08-07-FC
 
 bfcl:
   model_params:
