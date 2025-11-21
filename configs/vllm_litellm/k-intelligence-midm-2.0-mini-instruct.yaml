@@ -1,0 +1,32 @@
+wandb:
+  params:
+    run_name: "k-intelligence-midm-2.0-mini-instruct"
+
+model:
+  name: litellm
+  params:
+    model_name: hosted_vllm/K-intelligence/Midm-2.0-Mini-Instruct
+    provider: hosted_vllm
+    api_base: http://localhost:8008/v1
+    batch_size: 8  # 클라이언트가 동시에 보낼 요청 수
+    max_tokens: 8192
+    temperature: 0.1
+  vllm_params:
+    batch_size: 16  # vLLM 서버가 동시에 처리할 수 있는 요청 수 (클라이언트보다 크게 설정)
+    dtype: "auto"
+    download_dir: "/dataset/models/huggingface/hub"
+    max_model_len: 16384
+    num_gpus: 1
+    port: 8008
+    pretrained_model_name_or_path: "K-intelligence/Midm-2.0-Mini-Instruct"
+    tensor_parallel_size: 1
+    trust_remote_code: true
+  release_date: None
+  model_size: None
+  size_category: None
+
+bfcl:
+  model_params:
+    max_tokens: 8192
+    temperature: 0.1
+    model_name: K-intelligence/Midm-2.0-Mini-Instruct
