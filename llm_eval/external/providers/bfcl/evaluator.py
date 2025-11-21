@@ -45,7 +45,7 @@ def run_bfcl_from_configs(
     model_name: Optional[str] = model_block.get("name")
     model_params: Dict[str, Any] = model_block.get("params") or {}
     
-    # Update if there are bfcl specific model config
+    # NOTE: Update if there are bfcl specific model config
     bfcl_model_cfg: Dict[str, Any] = model_cfg.get("bfcl", {})
     bfcl_model_params: Dict[str, Any] = bfcl_model_cfg.get("model_params") or {}
     if bfcl_model_cfg:
