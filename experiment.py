@@ -40,10 +40,21 @@ google_configs = [
     # "gemini-2.5-flash-lite_high-effort",✅
     # "gemini-2.5-flash",✅
     # "gemini-2.5-flash_high-effort",✅
-    # "gemini-2.5-pro",✅
+    # "gemini-2.5-pro_low-effort",
     # "gemini-2.5-pro_high-effort",✅
+    "gemini-3-pro-preview_low-effort",
+    "gemini-3-pro-preview_high-effort",
 ]
 
+together_configs = [
+    # "gpt-oss-20b",
+    "gpt-oss-120b",
+    "Kimi-K2-Thinking",
+    "Kimi-K2-Instruct-0905",
+    "DeepSeek-R1",
+    "DeepSeek-V3",
+    "DeepSeek-V3.1",
+]
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()

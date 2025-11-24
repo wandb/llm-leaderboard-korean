@@ -1,15 +1,15 @@
 model:
   name: litellm  # Using Together AI API
   params:
-    model_name: openai/gpt-oss-20b
+    model_name: moonshotai/Kimi-K2-Thinking
     provider: together_ai
     batch_size: 16  # Lower for reasoning models
     max_tokens: 65536  # Model limit for GPT-5-mini (will be automatically capped)
     temperature: 1.0  # Required for reasoning models
     timeout: 600.0  # 10 minutes for reasoning chains
-  release_date: "2025-08-05"
-  model_size: 20000000000
-  size_category: "Medium (10–30B)"
+  release_date: "2025-11-06"
+  model_size: 1000000000000
+  size_category: Large (30B+)
 
 halluLens:
   model_params:
@@ -20,7 +20,7 @@ bfcl:
   model_params:
     max_tokens: 65536
     temperature: 1.0
-    model_name: gpt-oss-20b
+    model_name: Kimi-K2-Thinking-FC
 
 swebench:
   model_params:
