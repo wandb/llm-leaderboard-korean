@@ -130,6 +130,8 @@ class LiteLLMBackend(BaseModel):
             completion_kwargs["model"] = f"{self.provider}/{self.model_name}"
         elif self.provider == "friendliai":
             completion_kwargs["model"] = f"{self.provider}/{self.model_name}"
+        elif self.provider == "together_ai":
+            completion_kwargs["model"] = f"{self.provider}/{self.model_name}"
         else:
             completion_kwargs["model"] = self.model_name
         

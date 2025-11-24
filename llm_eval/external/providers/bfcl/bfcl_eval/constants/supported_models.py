@@ -17,6 +17,8 @@ SUPPORTED_MODELS = [
     "DeepSeek-R1-0528",
     "DeepSeek-R1-0528-FC",
     "DeepSeek-V3-0324-FC",
+    "gpt-oss-20b",
+    "gpt-5.1-2025-11-13-FC",
     "gpt-5.1-2025-11-13",
     "gpt-5-2025-08-07-FC",
     "gpt-5-2025-08-07",

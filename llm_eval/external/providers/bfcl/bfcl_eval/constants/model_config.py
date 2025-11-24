@@ -164,6 +164,18 @@ api_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=True,
     ),
+    "gpt-oss-20b": ModelConfig(
+        model_name="openai/gpt-oss-20b",
+        display_name="openai/gpt-oss-20b",
+        url="https://openai.com/ko-KR/index/gpt-5-1/",
+        org="OpenAI",
+        license="Proprietary",
+        model_handler=LLMEvalBFCLHandler,  # Use LLMEval adapter for Together AI
+        input_price=1.25,
+        output_price=10,
+        is_fc_model=False,  # Use prompting mode for Together AI
+        underscore_to_dot=False,
+    ),
     "gpt-5.1-2025-11-13-FC": ModelConfig(
         model_name="gpt-5.1-2025-11-13",
         display_name="gpt-5.1-2025-11-13 (FC)",
