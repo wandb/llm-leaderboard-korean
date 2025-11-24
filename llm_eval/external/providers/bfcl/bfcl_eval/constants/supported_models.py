@@ -17,6 +17,9 @@ SUPPORTED_MODELS = [
     "DeepSeek-R1-0528",
     "DeepSeek-R1-0528-FC",
     "DeepSeek-V3-0324-FC",
+    "DeepSeek-R1-FC",
+    "DeepSeek-V3-FC",
+    "DeepSeek-V3.1-FC",
     "gpt-oss-20b",
     "gpt-5.1-2025-11-13-FC",
     "gpt-5.1-2025-11-13",
@@ -99,6 +102,10 @@ SUPPORTED_MODELS = [
     "glm-4.5-air-FC",
     "kimi-k2-0711-preview-FC",
     "kimi-k2-0711-preview",
+    "Kimi-K2-Instruct-0905-FC",
+    "Kimi-K2-Instruct-0905",
+    "Kimi-K2-Thinking-FC",
+    "Kimi-K2-Thinking",
     "deepseek-ai/DeepSeek-R1",
     "google/gemma-3-1b-it",
     "google/gemma-3-4b-it",
@@ -180,4 +187,5 @@ SUPPORTED_MODELS = [
     # added
     "skt/A.X-4.0-Light",
     "skt/A.X-4.0",
+    "LGAI-EXAONE/EXAONE-4.0-32B",
 ]
