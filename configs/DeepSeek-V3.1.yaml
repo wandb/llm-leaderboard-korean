@@ -1,0 +1,18 @@
+model:
+  name: litellm  # Using Together AI API
+  params:
+    model_name: deepseek-ai/DeepSeek-V3.1
+    provider: together_ai
+    batch_size: 16  # Lower for reasoning models
+    max_tokens: 65536  # Model limit for GPT-5-mini (will be automatically capped)
+    temperature: 1.0  # Required for reasoning models
+    timeout: 600.0  # 10 minutes for reasoning chains
+  release_date: "2025-09-05"
+  model_size: 684000000000
+  size_category: Large (30B+)
+
+bfcl:
+  model_params:
+    max_tokens: 65536
+    temperature: 1.0
+    model_name: DeepSeek-V3.1-FC
