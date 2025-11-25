@@ -200,10 +200,22 @@ api_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=True,
     ),
+    "gpt-oss-120b": ModelConfig(
+        model_name="openai/gpt-oss-120b",
+        display_name="openai/gpt-oss-120b",
+        url="https://huggingface.co/openai/gpt-oss-120b",
+        org="OpenAI",
+        license="Proprietary",
+        model_handler=LLMEvalBFCLHandler,  # Use LLMEval adapter for Together AI
+        input_price=1.25,
+        output_price=10,
+        is_fc_model=False,  # Use prompting mode for Together AI
+        underscore_to_dot=False,
+    ),
     "gpt-oss-20b": ModelConfig(
         model_name="openai/gpt-oss-20b",
         display_name="openai/gpt-oss-20b",
-        url="https://openai.com/ko-KR/index/gpt-5-1/",
+        url="https://huggingface.co/openai/gpt-oss-20b",
         org="OpenAI",
         license="Proprietary",
         model_handler=LLMEvalBFCLHandler,  # Use LLMEval adapter for Together AI
@@ -1304,10 +1316,10 @@ api_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
-    "Kimi-K2-Thiking-FC": ModelConfig(
-        model_name="moonshotai/Kimi-K2-Thiking",
-        display_name="Moonshotai-Kimi-K2-Thiking (FC)",
-        url="https://huggingface.co/moonshotai/Kimi-K2-Thiking",
+    "Kimi-K2-Thinking-FC": ModelConfig(
+        model_name="moonshotai/Kimi-K2-Thinking",
+        display_name="Moonshotai-Kimi-K2-Thinking (FC)",
+        url="https://huggingface.co/moonshotai/Kimi-K2-Thinking",
         org="MoonshotAI",
         license="modified-mit",
         model_handler=KimiHandler,
@@ -1316,10 +1328,10 @@ api_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=True,
     ),
-    "Kimi-K2-Thiking": ModelConfig(
-        model_name="moonshotai/Kimi-K2-Thiking",
-        display_name="Moonshotai-Kimi-K2-Thiking (Prompt)",
-        url="https://huggingface.co/moonshotai/Kimi-K2-Thiking",
+    "Kimi-K2-Thinking": ModelConfig(
+        model_name="moonshotai/Kimi-K2-Thinking",
+        display_name="Moonshotai-Kimi-K2-Thinking (Prompt)",
+        url="https://huggingface.co/moonshotai/Kimi-K2-Thinking",
         org="MoonshotAI",
         license="modified-mit",
         model_handler=KimiHandler,
