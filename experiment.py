@@ -47,7 +47,7 @@ google_configs = [
 ]
 
 together_configs = [
-    # "gpt-oss-20b",
+    "gpt-oss-20b",
     "gpt-oss-120b",
     "Kimi-K2-Thinking",
     "Kimi-K2-Instruct-0905",
@@ -71,6 +71,8 @@ if __name__ == "__main__":
         configs = google_configs
     elif args.provider == 'lgai':
         configs = lgai_configs
+    elif args.provider == 'together':
+        configs = together_configs
     else:
         configs = lgai_configs+openai_configs+anthropic_configs+xai_configs+google_configs
     print("\n\n-----------------------------------------------------")

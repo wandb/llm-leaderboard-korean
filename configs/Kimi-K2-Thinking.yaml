@@ -20,7 +20,7 @@ bfcl:
   model_params:
     max_tokens: 65536
     temperature: 1.0
-    model_name: Kimi-K2-Thinking-FC
+    model_name: moonshotai/Kimi-K2-Thinking-FC
 
 swebench:
   model_params:
