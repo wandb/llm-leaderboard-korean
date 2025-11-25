@@ -55,6 +55,14 @@ together_configs = [
     "DeepSeek-V3",
     "DeepSeek-V3.1",
 ]
+
+vllm_configs = [
+    "gemma-3-270m-it",
+    "gemma-3-1b-it",
+    "gemma-3-4b-it",
+    "gemma-3-12b-it",
+    "gemma-3-27b-it",
+]
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
@@ -73,6 +81,8 @@ if __name__ == "__main__":
         configs = lgai_configs
     elif args.provider == 'together':
         configs = together_configs
+    elif args.provider == 'vllm':
+        configs = vllm_configs
     else:
         configs = lgai_configs+openai_configs+anthropic_configs+xai_configs+google_configs
     print("\n\n-----------------------------------------------------")

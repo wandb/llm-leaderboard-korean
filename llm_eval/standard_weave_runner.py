@@ -394,14 +394,16 @@ def run_with_standard_weave(
                 subset_value = ', '.join(subset_value) if subset_value else 'N/A'
             elif not isinstance(subset_value, str):
                 subset_value = str(subset_value)
-
+            print(model_params)
+            print(model_name)
             data = {
-                "model_name": model_params.get("model_name", model_name.split('/')[ -1]),
+                "model_name": model_params.get("model_name", model_name).split('/')[ -1],
                 "score": scores.get('accuracy', scores.get('score', 0.0)),  # accuracy 우선, 없으면 score
                 "subset": subset_value,  # subset 정보 추가 (문자열로 변환됨)
                 **{k: v for k, v in scores.items() if k not in ['accuracy', 'score', 'subset']}
             }
             df = pd.DataFrame([data])
+            df.to_csv(f"{dataset_key}_leaderboard.csv", index=False)
 
             # Log to W&B table
             WandbConfigSingleton.collect_leaderboard_table(dataset_key, df)

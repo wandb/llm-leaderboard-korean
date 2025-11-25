@@ -5,11 +5,11 @@ wandb:
 model:
   name: litellm
   params:
-    model_name: hosted_vllm/google/gemma-3-1b-it
+    model_name: google/gemma-3-1b-it
     provider: hosted_vllm
     api_base: http://localhost:8010/v1
     batch_size: 8
-    max_tokens: 4096
+    max_tokens: 16384
     temperature: 0.1
   vllm_params:
     batch_size: 16
@@ -27,6 +27,6 @@ model:
 
 bfcl:
   model_params:
-    max_tokens: 4096
+    max_tokens: 16384
     temperature: 0.1
     model_name: gemma-3-1b-it
