@@ -25,10 +25,12 @@ anthropic_configs = [
     # "claude-opus-4-20250514_high-effort",✅
     # "claude-sonnet-4-5-20250929_high-effort",✅
     # "claude-haiku-4-5-20251001_high-effort",✅
-    "claude-opus-4-1-20250805_low-effort",
+    # "claude-opus-4-1-20250805_low-effort",
     # "claude-opus-4-20250514_low-effort",✅
     # "claude-sonnet-4-5-20250929_low-effort",✅
     # "claude-haiku-4-5-20251001_low-effort",✅
+    "claude-opus-4-5-20251101_low-effort",
+    "claude-opus-4-5-20251101_high-effort",
 ]
 
 xai_configs = [
@@ -51,10 +53,21 @@ google_configs = [
     # "gemini-2.5-flash-lite_high-effort",✅
     # "gemini-2.5-flash",✅
     # "gemini-2.5-flash_high-effort",✅
-    "gemini-2.5-pro_low-effort",
+    # "gemini-2.5-pro_low-effort",
     # "gemini-2.5-pro_high-effort",✅
     "gemini-3-pro-preview_low-effort",
+    "gemini-3-pro-preview_high-effort",
     # "gemini-3-pro-preview_high-effort",✅
+]
+
+together_configs = [
+    # "gpt-oss-20b",
+    # "gpt-oss-120b",
+    # "Kimi-K2-Thinking",
+    "Kimi-K2-Instruct-0905",
+    "DeepSeek-R1",
+    "DeepSeek-V3",
+    "DeepSeek-V3.1",
 ]
 
 if __name__ == "__main__":
@@ -73,8 +86,10 @@ if __name__ == "__main__":
         configs = google_configs
     elif args.provider == 'lgai':
         configs = lgai_configs
+    elif args.provider == 'together':
+        configs = together_configs
     else:
-        configs = lgai_configs+openai_configs+anthropic_configs+xai_configs+google_configs
+        configs = lgai_configs+openai_configs+anthropic_configs+xai_configs+google_configs+together_configs
     print("\n\n-----------------------------------------------------")
     print("-----------------------------------------------------")
     print("Running evaluations for specified model configurations...")
