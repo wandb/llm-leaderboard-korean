@@ -215,7 +215,7 @@ pytz==2025.2
 PyYAML==6.0.1
 pyzmq==24.0.1
 questionary==2.1.0
-ray==2.47.1
+ray==2.52.0
 referencing==0.30.2
 regex==2024.11.6
 requests==2.31.0
