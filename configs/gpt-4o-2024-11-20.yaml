@@ -3,9 +3,14 @@ model:
   params:
     model_name: gpt-4o-2024-11-20
     provider: openai
-    max_tokens: 1024
+    max_tokens: 16384
     temperature: 0.3
     batch_size: 32
   release_date: "2024-11-20"
   model_size: None
   size_category: None
+
+bfcl:
+  model_params:
+    max_tokens: 16384
+    model_name: gpt-4o-2024-11-20-FC

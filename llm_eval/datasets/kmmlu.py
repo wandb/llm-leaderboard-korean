@@ -44,7 +44,7 @@ class KMMLUDataset(BaseDataset):
         if base_prompt_template is None:
             base_prompt_template = (
                 "다음은 객관식 문제입니다. 당신의 추론 과정을 간결하게 요약한 후, "
-                "\"따라서, 정답은: X\"라고 결론지으십시오. 여기서 X는 (A), (B), (C), (D) 중 하나입니다.\n\n"
+                "\"따라서, 정답은: X\"라고 결론지으십시오. 여기서 X는 A, B, C, D 중 하나입니다.\n\n"
                 "질문: {question}\n"
                 "A. {choice_A}\n"
                 "B. {choice_B}\n"
@@ -126,12 +126,12 @@ class KMMLUDataset(BaseDataset):
         """
         processed_list = []
         # Fixed options A~D
-        options = ["(A)", "(B)", "(C)", "(D)"]
+        options = ["A", "B", "C", "D"]
 
         # Default base prompt template
         default_template = (
             "다음은 객관식 문제입니다. 당신의 추론 과정을 간결하게 요약한 후, "
-            "\"따라서, 정답은: X\"라고 결론지으십시오. 여기서 X는 (A), (B), (C), (D) 중 하나입니다.\n\n"
+            "\"따라서, 정답은: X\"라고 결론지으십시오. 여기서 X는 A, B, C, D 중 하나입니다.\n\n"
             "질문: {question}\n"
             "A. {choice_A}\n"
             "B. {choice_B}\n"

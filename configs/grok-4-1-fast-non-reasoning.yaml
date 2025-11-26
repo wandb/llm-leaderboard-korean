@@ -1,7 +1,7 @@
 model:
   name: litellm
   params:
-    model_name: grok-4-fast-non-reasoning
+    model_name: grok-4-1-fast-non-reasoning
     provider: xai
     max_tokens: 65536
     temperature: 0.3
@@ -12,4 +12,4 @@ model:
 
 bfcl:
   model_params:
-    model_name: grok-4-fast-non-reasoning-FC
+    model_name: grok-4-1-fast-non-reasoning-FC
