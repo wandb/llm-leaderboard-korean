@@ -9,13 +9,13 @@ model:
     provider: hosted_vllm
     api_base: http://localhost:8010/v1
     batch_size: 8
-    max_tokens: 16384
+    max_tokens: 8192
     temperature: 0.1
   vllm_params:
     batch_size: 16
     dtype: "auto"
     download_dir: "/workspace/huggingface/hub"
-    # max_model_len: 16384
+    max_model_len: 65536
     num_gpus: 1
     port: 8010
     pretrained_model_name_or_path: "google/gemma-3-4b-it"
@@ -27,6 +27,6 @@ model:
 
 bfcl:
   model_params:
-    max_tokens: 16384
+    max_tokens: 8192
     temperature: 0.1
     model_name: gemma-3-4b-it
