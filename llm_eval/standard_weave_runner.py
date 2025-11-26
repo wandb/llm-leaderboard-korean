@@ -396,7 +396,7 @@ def run_with_standard_weave(
                 subset_value = str(subset_value)
 
             data = {
-                "model_name": model_params.get("model_name", model_name),
+                "model_name": model_params.get("model_name", model_name.split('/')[ -1]),
                 "score": scores.get('accuracy', scores.get('score', 0.0)),  # accuracy 우선, 없으면 score
                 "subset": subset_value,  # subset 정보 추가 (문자열로 변환됨)
                 **{k: v for k, v in scores.items() if k not in ['accuracy', 'score', 'subset']}

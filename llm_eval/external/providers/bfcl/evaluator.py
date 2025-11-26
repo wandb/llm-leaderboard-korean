@@ -44,6 +44,13 @@ def run_bfcl_from_configs(
     model_block: Dict[str, Any] = model_cfg.get("model") or {}
     model_name: Optional[str] = model_block.get("name")
     model_params: Dict[str, Any] = model_block.get("params") or {}
+    
+    # NOTE: Update if there are bfcl specific model config
+    bfcl_model_cfg: Dict[str, Any] = model_cfg.get("bfcl", {})
+    bfcl_model_params: Dict[str, Any] = bfcl_model_cfg.get("model_params") or {}
+    if bfcl_model_cfg:
+        model_params.update(bfcl_model_params)
+
     if not model_name:
         raise ValueError("model_config.yaml must contain 'model.name'")
 
@@ -213,11 +220,9 @@ def run_bfcl_from_configs(
             )
         }
 
-    # remove temporary result and score directories
-    if testmode:
-        import shutil
-        shutil.rmtree(result_dir)
-        shutil.rmtree(score_dir)
+    import shutil
+    shutil.rmtree(result_dir)
+    shutil.rmtree(score_dir)
 
     # Return aggregate result (actual scores are logged in the respective runner)
     return {
