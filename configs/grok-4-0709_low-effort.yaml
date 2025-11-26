@@ -1,96 +1,122 @@
+wandb:
+  params:
+    run_name: "grok-4-0709: low-effort"
+
 model:
   name: litellm
   params:
-    model_name: gemini-2.5-pro
-    provider: gemini
+    model_name: grok-4-0709
+    provider: xai
     batch_size: 32
     max_tokens: 65536
-    temperature: 0.3
-  release_date: 2025-06-17
+    temperature: 1.0
+    reasoning_effort: "low"
+  release_date: "2025-07-09"
   model_size: None
   size_category: None
-  reasoning_effort: "high"
 
 halluLens:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 bfcl:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
+    model_name: grok-4-0709-FC
 
 swebench:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 mt_bench:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 komoral:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 kobbq:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 squad_kor_v1:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 ifeval_ko:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 mrcr_2_needles:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 haerae_bench_v1_w_RC:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 haerae_bench_v1_wo_RC:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 korean_parallel_corpora:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 korean_hate_speech:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 kmmlu:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
     
 kmmlu_pro:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 kobalt_700_syntax:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 kobalt_700_semantic:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 aime2025:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 hrm8k:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 hle:
   model_params:
     max_tokens: 65536
+    temperature: 1.0
 
 arc_agi:
   model_params:
     max_tokens: 65536
+    temperature: 1.0

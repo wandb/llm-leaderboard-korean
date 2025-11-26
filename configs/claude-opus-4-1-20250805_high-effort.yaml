@@ -14,3 +14,9 @@ model:
   release_date: "2025-08-05"
   model_size: None
   size_category: None
+
+  bfcl:
+  model_params:
+    max_tokens: 32000
+    temperature: 1.0
+    model_name: claude-opus-4-1-20250805-FC

@@ -15,8 +15,10 @@ __pycache__/
 
 # BFCL
 llm_eval/datasets/bfcl/
-llm_eval/external/providers/bfcl/result/
 llm_eval/external/providers/bfcl/score/
+llm_eval/external/providers/bfcl/result/
+llm_eval/external/providers/bfcl/result_temp/
+llm_eval/external/providers/bfcl/score_temp/
 
 # HalluLens output folder
 output/
@@ -27,7 +29,3 @@ artifacts/
 
 # SWE-bench Verified
 logs/
-
-# BFCL
-llm_eval/external/providers/bfcl/score/*
-llm_eval/external/providers/bfcl/result/*

@@ -34,6 +34,27 @@ bfcl:
   evaluation:
     model: gpt-4o-2024-11-20
 
+mrcr_2_needles:
+  split: train
+  subset: 128k
+  params:
+    num_samples: 100
+    limit: 2
+  evaluation:
+    method: sequence_match
+    params:
+      prefix_key: random_string_to_prepend
+      require_prefix: true
+      strip_prefix: true
+  # 모델 파라미터 오버라이드: Anthropic 레이트리밋 회피용
+  model_params:
+    # LiteLLM 백엔드 파라미터 기준
+    batch_size: 1           # 동시성 축소
+    request_delay_sec: 60  # 고정 지연(초)
+    request_jitter_sec: 0.5 # 추가 지터(0~이 값 사이 균등)
+    retry_max: 4
+    retry_base_delay: 1.5
+
 haerae_bench_v1_wo_RC:
   subset: [standard_nomenclature, loan_words, rare_words, general_knowledge, history]
   params:
@@ -129,27 +150,6 @@ ifeval_ko:
   evaluation:
     method: ifeval_strict
 
-mrcr_2_needles:
-  split: train
-  subset: 128k
-  params:
-    num_samples: 100
-    limit: 2
-  evaluation:
-    method: sequence_match
-    params:
-      prefix_key: random_string_to_prepend
-      require_prefix: true
-      strip_prefix: true
-  # 모델 파라미터 오버라이드: Anthropic 레이트리밋 회피용
-  model_params:
-    # LiteLLM 백엔드 파라미터 기준
-    batch_size: 2           # 동시성 축소
-    request_delay_sec: 0.3  # 고정 지연(초)
-    request_jitter_sec: 0.5 # 추가 지터(0~이 값 사이 균등)
-    retry_max: 4
-    retry_base_delay: 1.5
-
 haerae_bench_v1_w_RC:
   subset: [reading_comprehension]
   params:
@@ -198,6 +198,11 @@ kmmlu_pro:
     method: "string_match"
     params:
       mcqa: true
+  model_params:
+    batch_size: 1
+    request_delay_sec: 60  # 고정 지연(초)
+    retry_max: 4
+    retry_base_delay: 1.5
 
 # kmmlu_hard:
 #   split: test
@@ -239,6 +244,11 @@ aime2025:
     method: "math_match"
     params:
       extract_final_answer: true # 답변에서 최종 수식/결과를 추출합니다.
+  model_params:
+    batch_size: 1
+    request_delay_sec: 60  # 고정 지연(초)
+    retry_max: 4
+    retry_base_delay: 1.5
 
 hrm8k:
   split: test
@@ -250,6 +260,11 @@ hrm8k:
     method: "math_match"
     params:
       extract_final_answer: true # 답변에서 최종 수식/결과를 추출합니다.
+  model_params:
+    batch_size: 1
+    request_delay_sec: 60  # 고정 지연(초)
+    retry_max: 4
+    retry_base_delay: 1.5
 
 hle:
   subset: ["Other", "Humanities/Social Science", "Math", "Physics", "Computer Science/AI", "Biology/Medicine", "Chemistry", "Engineering"]
@@ -259,6 +274,11 @@ hle:
     limit: 2
   evaluation:
     method: "string_match"
+  model_params:
+    batch_size: 1
+    request_delay_sec: 60  # 고정 지연(초)
+    retry_max: 4
+    retry_base_delay: 1.5
 
 arc_agi:
   split: evaluation
@@ -268,3 +288,8 @@ arc_agi:
     limit: 2
   evaluation:
     method: "grid_match"
+  model_params:
+    batch_size: 1
+    request_delay_sec: 60  # 고정 지연(초)
+    retry_max: 4
+    retry_base_delay: 1.5

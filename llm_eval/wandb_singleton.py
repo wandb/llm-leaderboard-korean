@@ -221,7 +221,7 @@ class WandbConfigSingleton:
             new_table = new_table[columns]
             new_table.set_index('model_name', inplace=True)
             new_table = new_table.rename(columns=final_score_key_dict[dataset_name]["mapper"])
-            table = pd.merge(table, new_table, left_index=True, right_index=True)
+            table = pd.merge(table, new_table, on="model_name", how="left")
         table.columns = table.columns.str.replace(r'(_[xy]$)|(\.\d+$)', '', regex=True)
         table_mean = table.T.groupby(table.columns).mean().T
 

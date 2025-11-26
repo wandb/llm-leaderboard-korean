@@ -3,9 +3,13 @@ model:
   params:
     model_name: grok-4-non-reasoning
     provider: xai
-    max_tokens: 1024
+    max_tokens: 65536
     temperature: 0.3
     batch_size: 32
   release_date: "2025-07-09"
   model_size: None
   size_category: None
+
+bfcl:
+  model_params:
+    model_name: grok-4-non-reasoning-FC

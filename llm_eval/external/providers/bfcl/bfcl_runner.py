@@ -1011,6 +1011,7 @@ def runner(model_names, test_categories, result_dir, score_dir):
                             pass
                     total_count += result.get("total_count", 0)
             overall_accuracy = (total_correct / total_count) if total_count > 0 else 0.0
+            model_name = model_name.replace("-FC", "") if model_name.endswith("-FC") else model_name
             summary_rows.append(
                 {
                     "model_name": model_name,

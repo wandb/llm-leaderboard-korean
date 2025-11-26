@@ -25,6 +25,7 @@ bfcl:
   model_params:
     max_tokens: 65536
     temperature: 1.0
+    model_name: gpt-5-2025-08-07-FC
 
 swebench:
   model_params:
