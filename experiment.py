@@ -57,11 +57,17 @@ together_configs = [
 ]
 
 vllm_configs = [
-    "gemma-3-270m-it",
-    "gemma-3-1b-it",
-    "gemma-3-4b-it",
-    "gemma-3-12b-it",
-    "gemma-3-27b-it",
+    # "gemma-3-270m-it",✅
+    # "gemma-3-1b-it",✅
+    # "gemma-3-4b-it",✅
+    # "gemma-3-12b-it",✅
+    # "gemma-3-27b-it",
+    "Qwen3-4B-Instruct-2507",
+    "Qwen3-0.6B",
+    "Qwen3-1.7B",
+    "Qwen3-4B",
+    "Qwen3-8B",
+    "Qwen3-14B",
 ]
 if __name__ == "__main__":
     import argparse

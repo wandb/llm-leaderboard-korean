@@ -1728,8 +1728,8 @@ local_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=True,
     ),
-    "Qwen/Qwen3-0.6B-FC": ModelConfig(
-        model_name="Qwen/Qwen3-0.6B",
+    "Qwen3-0.6B-FC": ModelConfig(
+        model_name="Qwen3-0.6B",
         display_name="Qwen3-0.6B (FC)",
         url="https://huggingface.co/Qwen/Qwen3-0.6B",
         org="Qwen",
@@ -1740,8 +1740,8 @@ local_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-0.6B": ModelConfig(
-        model_name="Qwen/Qwen3-0.6B",
+    "Qwen3-0.6B": ModelConfig(
+        model_name="Qwen3-0.6B",
         display_name="Qwen3-0.6B (Prompt)",
         url="https://huggingface.co/Qwen/Qwen3-0.6B",
         org="Qwen",
@@ -1752,8 +1752,8 @@ local_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-1.7B-FC": ModelConfig(
-        model_name="Qwen/Qwen3-1.7B",
+    "Qwen3-1.7B-FC": ModelConfig(
+        model_name="Qwen3-1.7B",
         display_name="Qwen3-1.7B (FC)",
         url="https://huggingface.co/Qwen/Qwen3-1.7B",
         org="Qwen",
@@ -1764,8 +1764,8 @@ local_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-1.7B": ModelConfig(
-        model_name="Qwen/Qwen3-1.7B",
+    "Qwen3-1.7B": ModelConfig(
+        model_name="Qwen3-1.7B",
         display_name="Qwen3-1.7B (Prompt)",
         url="https://huggingface.co/Qwen/Qwen3-1.7B",
         org="Qwen",
@@ -1776,8 +1776,8 @@ local_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-4B-Instruct-2507-FC": ModelConfig(
-        model_name="Qwen/Qwen3-4B-Instruct-2507",
+    "Qwen3-4B-Instruct-2507-FC": ModelConfig(
+        model_name="Qwen3-4B-Instruct-2507",
         display_name="Qwen3-4B-Instruct-2507 (FC)",
         url="https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507",
         org="Qwen",
@@ -1788,8 +1788,8 @@ local_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-4B-Instruct-2507": ModelConfig(
-        model_name="Qwen/Qwen3-4B-Instruct-2507",
+    "Qwen3-4B-Instruct-2507": ModelConfig(
+        model_name="Qwen3-4B-Instruct-2507",
         display_name="Qwen3-4B-Instruct-2507 (Prompt)",
         url="https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507",
         org="Qwen",
@@ -1800,8 +1800,8 @@ local_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-8B-FC": ModelConfig(
-        model_name="Qwen/Qwen3-8B",
+    "Qwen3-8B-FC": ModelConfig(
+        model_name="Qwen3-8B",
         display_name="Qwen3-8B (FC)",
         url="https://huggingface.co/Qwen/Qwen3-8B",
         org="Qwen",
@@ -1812,8 +1812,8 @@ local_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-8B": ModelConfig(
-        model_name="Qwen/Qwen3-8B",
+    "Qwen3-8B": ModelConfig(
+        model_name="Qwen3-8B",
         display_name="Qwen3-8B (Prompt)",
         url="https://huggingface.co/Qwen/Qwen3-8B",
         org="Qwen",
@@ -1824,8 +1824,8 @@ local_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-14B-FC": ModelConfig(
-        model_name="Qwen/Qwen3-14B",
+    "Qwen3-14B-FC": ModelConfig(
+        model_name="Qwen3-14B",
         display_name="Qwen3-14B (FC)",
         url="https://huggingface.co/Qwen/Qwen3-14B",
         org="Qwen",
@@ -1836,8 +1836,8 @@ local_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-14B": ModelConfig(
-        model_name="Qwen/Qwen3-14B",
+    "Qwen3-14B": ModelConfig(
+        model_name="Qwen3-14B",
         display_name="Qwen3-14B (Prompt)",
         url="https://huggingface.co/Qwen/Qwen3-14B",
         org="Qwen",
@@ -1848,8 +1848,8 @@ local_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-32B-FC": ModelConfig(
-        model_name="Qwen/Qwen3-32B",
+    "Qwen3-32B-FC": ModelConfig(
+        model_name="Qwen3-32B",
         display_name="Qwen3-32B (FC)",
         url="https://huggingface.co/Qwen/Qwen3-32B",
         org="Qwen",
@@ -1860,8 +1860,8 @@ local_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-32B": ModelConfig(
-        model_name="Qwen/Qwen3-32B",
+    "Qwen3-32B": ModelConfig(
+        model_name="Qwen3-32B",
         display_name="Qwen3-32B (Prompt)",
         url="https://huggingface.co/Qwen/Qwen3-32B",
         org="Qwen",
@@ -1872,8 +1872,8 @@ local_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-30B-A3B-Instruct-2507-FC": ModelConfig(
-        model_name="Qwen/Qwen3-30B-A3B-Instruct-2507",
+    "Qwen3-30B-A3B-Instruct-2507-FC": ModelConfig(
+        model_name="Qwen3-30B-A3B-Instruct-2507",
         display_name="Qwen3-30B-A3B-Instruct-2507 (FC)",
         url="https://huggingface.co/Qwen/Qwen3-30B-A3B-Instruct-2507",
         org="Qwen",
@@ -1884,8 +1884,8 @@ local_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-30B-A3B-Instruct-2507": ModelConfig(
-        model_name="Qwen/Qwen3-30B-A3B-Instruct-2507",
+    "Qwen3-30B-A3B-Instruct-2507": ModelConfig(
+        model_name="Qwen3-30B-A3B-Instruct-2507",
         display_name="Qwen3-30B-A3B-Instruct-2507 (Prompt)",
         url="https://huggingface.co/Qwen/Qwen3-30B-A3B-Instruct-2507",
         org="Qwen",
@@ -1896,8 +1896,8 @@ local_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-235B-A22B-Instruct-2507-FC": ModelConfig(
-        model_name="Qwen/Qwen3-235B-A22B-Instruct-2507",
+    "Qwen3-235B-A22B-Instruct-2507-FC": ModelConfig(
+        model_name="Qwen3-235B-A22B-Instruct-2507",
         display_name="Qwen3-235B-A22B-Instruct-2507 (FC)",
         url="https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507",
         org="Qwen",
@@ -1908,8 +1908,8 @@ local_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=False,
     ),
-    "Qwen/Qwen3-235B-A22B-Instruct-2507": ModelConfig(
-        model_name="Qwen/Qwen3-235B-A22B-Instruct-2507",
+    "Qwen3-235B-A22B-Instruct-2507": ModelConfig(
+        model_name="Qwen3-235B-A22B-Instruct-2507",
         display_name="Qwen3-235B-A22B-Instruct-2507 (Prompt)",
         url="https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507",
         org="Qwen",

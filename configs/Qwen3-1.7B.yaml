@@ -1,0 +1,32 @@
+wandb:
+  params:
+    run_name: "Qwen3-1.7B"
+
+model:
+  name: litellm
+  params:
+    model_name: Qwen/Qwen3-1.7B
+    provider: hosted_vllm
+    api_base: http://localhost:8010/v1
+    batch_size: 8
+    max_tokens: 16384
+    temperature: 0.1
+  vllm_params:
+    batch_size: 16
+    dtype: "auto"
+    download_dir: "/workspace/huggingface/hub"
+    max_model_len: 16384
+    num_gpus: 1
+    port: 8010
+    pretrained_model_name_or_path: "Qwen/Qwen3-1.7B"
+    tensor_parallel_size: 1
+    trust_remote_code: true
+  release_date: "2025-03-06"
+  model_size: 2031739904
+  size_category: "Small (<10B)"
+
+bfcl:
+  model_params:
+    max_tokens: 16384
+    temperature: 0.1
+    model_name: Qwen3-1.7B-FC
