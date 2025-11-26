@@ -1,11 +1,11 @@
 wandb:
   params:
-    run_name: "K-intelligence-Midm-2.0-Base-Instruct"
+    run_name: k-intelligence-midm-2.0-base-instruct
 
 model:
   name: litellm
   params:
-    model_name: hosted_vllm/K-intelligence/Midm-2.0-Base-Instruct
+    model_name: "K-intelligence/Midm-2.0-Base-Instruct"
     provider: hosted_vllm
     api_base: http://localhost:8007/v1
     batch_size: 8
@@ -15,7 +15,7 @@ model:
     batch_size: 16
     dtype: "auto"
     download_dir: "/dataset/models/huggingface/hub"
-    max_model_len: 16384
+    max_model_len: 32768
     num_gpus: 1
     port: 8007
     pretrained_model_name_or_path: "K-intelligence/Midm-2.0-Base-Instruct"
@@ -29,4 +29,4 @@ bfcl:
   model_params:
     max_tokens: 8192
     temperature: 0.1
-    model_name: K-intelligence/Midm-2.0-Base-Instruct
+    model_name: k-intelligence-midm-2.0-base-instruct
