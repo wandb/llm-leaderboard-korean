@@ -1,11 +1,11 @@
 wandb:
   params:
-    run_name: "skt-a.x-4.0-light"
+    run_name: skt-a.x-4.0-light
 
 model:
   name: litellm
   params:
-    model_name: hosted_vllm/skt/A.X-4.0-Light
+    model_name: "skt/A.X-4.0-Light"
     provider: hosted_vllm
     api_base: http://localhost:8006/v1
     batch_size: 8
@@ -29,4 +29,4 @@ bfcl:
   model_params:
     max_tokens: 8192
     temperature: 0.1
-    model_name: skt/A.X-4.0-Light
+    model_name: skt-a.x-4.0-light

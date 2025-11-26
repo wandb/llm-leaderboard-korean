@@ -1,11 +1,11 @@
 wandb:
   params:
-    run_name: "LGAI-EXAONE-EXAONE-4.0-32B"
+    run_name: lgai-exaone-exaone-4.0-32b
 
 model:
   name: litellm
   params:
-    model_name: hosted_vllm/LGAI-EXAONE/EXAONE-4.0-32B
+    model_name: "LGAI-EXAONE/EXAONE-4.0-32B"
     provider: hosted_vllm
     api_base: http://localhost:8003/v1
     batch_size: 8
@@ -15,7 +15,7 @@ model:
     batch_size: 16
     dtype: "auto"
     download_dir: "/dataset/models/huggingface/hub"
-    max_model_len: 16384
+    max_model_len: 131072
     num_gpus: 1
     port: 8003
     pretrained_model_name_or_path: "LGAI-EXAONE/EXAONE-4.0-32B"
@@ -29,4 +29,4 @@ bfcl:
   model_params:
     max_tokens: 8192
     temperature: 0.1
-    model_name: LGAI-EXAONE/EXAONE-4.0-32B
+    model_name: lgai-exaone-exaone-4.0-32b
