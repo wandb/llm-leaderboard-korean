@@ -1,12 +1,12 @@
 
 wandb:
   params:
-    run_name: "qwen-qwen3-14b"
+    run_name: "qwen-qwen3-8b"
 
 model:
   name: litellm
   params:
-    model_name: hosted_vllm/Qwen/Qwen3-14B
+    model_name: "Qwen/Qwen3-8B"
     provider: hosted_vllm
     api_base: http://localhost:8009/v1
     batch_size: 8
@@ -19,7 +19,7 @@ model:
     max_model_len: 16384
     num_gpus: 1
     port: 8009
-    pretrained_model_name_or_path: "Qwen/Qwen3-14B"
+    pretrained_model_name_or_path: "Qwen/Qwen3-8B"
     tensor_parallel_size: 2
     trust_remote_code: true
   release_date: None
@@ -30,4 +30,4 @@ bfcl:
   model_params:
     max_tokens: 8192
     temperature: 0.1
-    model_name: Qwen/Qwen3-14B
+    model_name: Qwen/Qwen3-8B
