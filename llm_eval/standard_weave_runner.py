@@ -403,7 +403,7 @@ def run_with_standard_weave(
                 **{k: v for k, v in scores.items() if k not in ['accuracy', 'score', 'subset']}
             }
             df = pd.DataFrame([data])
-            df.to_csv(f"{dataset_key}_leaderboard.csv", index=False)
+            # df.to_csv(f"{dataset_key}_leaderboard.csv", index=False)
 
             # Log to W&B table
             WandbConfigSingleton.collect_leaderboard_table(dataset_key, df)
