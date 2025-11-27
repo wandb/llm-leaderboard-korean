@@ -9,7 +9,7 @@ model:
     provider: hosted_vllm
     api_base: http://localhost:8010/v1
     batch_size: 8
-    max_tokens: 65536
+    max_tokens: 1024
     temperature: 0.1
   vllm_params:
     batch_size: 16
@@ -27,6 +27,6 @@ model:
 
 bfcl:
   model_params:
-    max_tokens: 65536
+    max_tokens: 1024
     temperature: 0.1
     model_name: gemma-3-27b-it
