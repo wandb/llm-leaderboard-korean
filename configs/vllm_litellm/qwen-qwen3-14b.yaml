@@ -6,7 +6,7 @@ wandb:
 model:
   name: litellm
   params:
-    model_name: hosted_vllm/Qwen/Qwen3-14B
+    model_name: "Qwen/Qwen3-14B"
     provider: hosted_vllm
     api_base: http://localhost:8009/v1
     batch_size: 8
