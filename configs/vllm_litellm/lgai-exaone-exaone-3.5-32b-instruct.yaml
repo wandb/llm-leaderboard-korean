@@ -1,13 +1,13 @@
 wandb:
   params:
-    run_name: kakaocorp-kanana-1.5-8b-instruct-2505
+    run_name: lgai-exaone-exaone-3.5-32b-instruct
 
 model:
   name: litellm
   params:
-    model_name: "kakaocorp/kanana-1.5-8b-instruct-2505"
+    model_name: "LGAI-EXAONE/EXAONE-3.5-32B-Instruct"
     provider: hosted_vllm
-    api_base: http://localhost:8016/v1
+    api_base: http://localhost:8032/v1
     batch_size: 8
     max_tokens: 8192
     temperature: 0.1
@@ -17,16 +17,16 @@ model:
     download_dir: "/dataset/models/huggingface/hub"
     max_model_len: 32768
     num_gpus: 1
-    port: 8016
-    pretrained_model_name_or_path: "kakaocorp/kanana-1.5-8b-instruct-2505"
+    port: 8032
+    pretrained_model_name_or_path: "LGAI-EXAONE/EXAONE-3.5-32B-Instruct"
     tensor_parallel_size: 1
     trust_remote_code: true
-  release_date: "2025-05-22"
-  model_size: 8000000000
-  size_category: "Small (<10B)"
+  release_date: "2024-12-09"
+  model_size: 32000000000
+  size_category: "Large (30B<)"
 
 bfcl:
   model_params:
     max_tokens: 8192
     temperature: 0.1
-    model_name: "kakaocorp/kanana-1.5-8b-instruct-2505"
+    model_name: "LGAI-EXAONE/EXAONE-3.5-32B-Instruct"

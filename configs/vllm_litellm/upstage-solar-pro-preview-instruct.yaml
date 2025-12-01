@@ -1,0 +1,32 @@
+wandb:
+  params:
+    run_name: upstage-solar-pro-preview-instruct
+
+model:
+  name: litellm
+  params:
+    model_name: "upstage/solar-pro-preview-instruct"
+    provider: hosted_vllm
+    api_base: http://localhost:8041/v1
+    batch_size: 8
+    max_tokens: 1024
+    temperature: 0.1
+  vllm_params:
+    batch_size: 16
+    dtype: "auto"
+    download_dir: "/dataset/models/huggingface/hub"
+    max_model_len: 4096
+    num_gpus: 1
+    port: 8041
+    pretrained_model_name_or_path: "upstage/solar-pro-preview-instruct"
+    tensor_parallel_size: 1
+    trust_remote_code: true
+  release_date: "2024-12-09"
+  model_size: 22000000000
+  size_category: "Medium (10B-30B)"
+
+bfcl:
+  model_params:
+    max_tokens: 1024
+    temperature: 0.1
+    model_name: "upstage/solar-pro-preview-instruct"

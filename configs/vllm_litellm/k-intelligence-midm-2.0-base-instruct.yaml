@@ -21,12 +21,12 @@ model:
     pretrained_model_name_or_path: "K-intelligence/Midm-2.0-Base-Instruct"
     tensor_parallel_size: 1
     trust_remote_code: true
-  release_date: None
-  model_size: None
-  size_category: None
+  release_date: "2025-07-04"
+  model_size: 12000000000
+  size_category: "Medium (10-30B)"
 
 bfcl:
   model_params:
     max_tokens: 8192
     temperature: 0.1
-    model_name: k-intelligence-midm-2.0-base-instruct
+    model_name: "K-intelligence/Midm-2.0-Base-Instruct"
