@@ -5,8 +5,8 @@ wandb:
 model:
   name: litellm
   params:
-    model_name: 
-    provider: "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B"
+    model_name: "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B"
+    provider: hosted_vllm
     api_base: http://localhost:8017/v1
     batch_size: 8
     max_tokens: 8192
@@ -21,12 +21,12 @@ model:
     pretrained_model_name_or_path: "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B"
     tensor_parallel_size: 1
     trust_remote_code: true
-  release_date: None
-  model_size: None
-  size_category: None
+  release_date: "2025-07-21"
+  model_size: 1500000000
+  size_category: "Small (<10B)"
 
 bfcl:
   model_params:
     max_tokens: 8192
     temperature: 0.1
-    model_name: naver-hyperclovax-hyperclovax-seed-text-instruct-1.5b
+    model_name: "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B"

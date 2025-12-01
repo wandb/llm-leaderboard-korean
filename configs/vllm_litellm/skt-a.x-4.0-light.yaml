@@ -21,12 +21,12 @@ model:
     pretrained_model_name_or_path: "skt/A.X-4.0-Light"
     tensor_parallel_size: 1
     trust_remote_code: true
-  release_date: None
-  model_size: None
-  size_category: None
+  release_date: "2025-07-03"
+  model_size: 7000000000
+  size_category: "Small (<10B)"
 
 bfcl:
   model_params:
     max_tokens: 8192
     temperature: 0.1
-    model_name: skt-a.x-4.0-light
+    model_name: "skt/A.X-4.0-Light"

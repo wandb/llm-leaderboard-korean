@@ -21,12 +21,12 @@ model:
     pretrained_model_name_or_path: "kakaocorp/kanana-1.5-2.1b-instruct-2505"
     tensor_parallel_size: 1
     trust_remote_code: true
-  release_date: None
-  model_size: None
-  size_category: None
+  release_date: "2025-05-22"
+  model_size: 2100000000
+  size_category: "Small (<10B)"
 
 bfcl:
   model_params:
     max_tokens: 8192
     temperature: 0.1
-    model_name: kakaocorp-kanana-1.5-2.1b-instruct-2505
+    model_name: "kakaocorp/kanana-1.5-2.1b-instruct-2505"
