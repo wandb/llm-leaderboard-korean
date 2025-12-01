@@ -7,7 +7,7 @@ model:
   params:
     model_name: "LGAI-EXAONE/EXAONE-4.0-32B"
     provider: hosted_vllm
-    api_base: http://localhost:8003/v1
+    api_base: http://localhost:8109/v1
     batch_size: 8
     max_tokens: 8192
     temperature: 0.1
@@ -17,7 +17,7 @@ model:
     download_dir: "/dataset/models/huggingface/hub"
     max_model_len: 131072
     num_gpus: 2
-    port: 8003
+    port: 8109
     pretrained_model_name_or_path: "LGAI-EXAONE/EXAONE-4.0-32B"
     tensor_parallel_size: 2
     trust_remote_code: true

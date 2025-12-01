@@ -7,7 +7,7 @@ model:
   params:
     model_name: "kakaocorp/kanana-1.5-8b-instruct-2505"
     provider: hosted_vllm
-    api_base: http://localhost:8016/v1
+    api_base: http://localhost:8114/v1
     batch_size: 8
     max_tokens: 8192
     temperature: 0.1
@@ -17,7 +17,7 @@ model:
     download_dir: "/dataset/models/huggingface/hub"
     max_model_len: 32768
     num_gpus: 1
-    port: 8016
+    port: 8114
     pretrained_model_name_or_path: "kakaocorp/kanana-1.5-8b-instruct-2505"
     tensor_parallel_size: 1
     trust_remote_code: true

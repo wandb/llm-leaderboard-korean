@@ -7,7 +7,7 @@ model:
   params:
     model_name: "skt/A.X-3.1"
     provider: hosted_vllm
-    api_base: http://localhost:8019/v1
+    api_base: http://localhost:8100/v1
     batch_size: 8
     max_tokens: 8192
     temperature: 0.1
@@ -17,7 +17,7 @@ model:
     download_dir: "/dataset/models/huggingface/hub"
     max_model_len: 32768
     num_gpus: 2
-    port: 8019
+    port: 8100
     pretrained_model_name_or_path: "skt/A.X-3.1"
     tensor_parallel_size: 2
     trust_remote_code: true
