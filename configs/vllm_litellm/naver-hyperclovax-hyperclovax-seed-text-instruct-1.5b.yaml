@@ -7,7 +7,7 @@ model:
   params:
     model_name: "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B"
     provider: hosted_vllm
-    api_base: http://localhost:8017/v1
+    api_base: http://localhost:8111/v1
     batch_size: 8
     max_tokens: 8192
     temperature: 0.1
@@ -17,7 +17,7 @@ model:
     download_dir: "/dataset/models/huggingface/hub"
     max_model_len: 131072
     num_gpus: 1
-    port: 8017
+    port: 8111
     pretrained_model_name_or_path: "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B"
     tensor_parallel_size: 1
     trust_remote_code: true

@@ -7,7 +7,7 @@ model:
   params:
     model_name: "upstage/SOLAR-10.7B-Instruct-v1.0"
     provider: hosted_vllm
-    api_base: http://localhost:8040/v1
+    api_base: http://localhost:8118/v1
     batch_size: 8
     max_tokens: 1024
     temperature: 0.1
@@ -17,7 +17,7 @@ model:
     download_dir: "/dataset/models/huggingface/hub"
     max_model_len: 4096
     num_gpus: 1
-    port: 8040
+    port: 8118
     pretrained_model_name_or_path: "upstage/SOLAR-10.7B-Instruct-v1.0"
     tensor_parallel_size: 1
     trust_remote_code: true

@@ -7,7 +7,7 @@ model:
   params:
     model_name: "naver-hyperclovax/HyperCLOVAX-SEED-Think-14B"
     provider: hosted_vllm
-    api_base: http://localhost:9018/v1
+    api_base: http://localhost:9112/v1
     batch_size: 8  # 클라이언트가 동시에 보낼 요청 수
     max_tokens: 8192
     temperature: 0.1
@@ -21,7 +21,7 @@ model:
     download_dir: "/dataset/models/huggingface/hub"
     max_model_len: 131072
     num_gpus: 1
-    port: 9018
+    port: 9112
     pretrained_model_name_or_path: "naver-hyperclovax/HyperCLOVAX-SEED-Think-14B"
     tensor_parallel_size: 1
     trust_remote_code: true

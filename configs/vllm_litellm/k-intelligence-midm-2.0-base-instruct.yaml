@@ -7,7 +7,7 @@ model:
   params:
     model_name: "K-intelligence/Midm-2.0-Base-Instruct"
     provider: hosted_vllm
-    api_base: http://localhost:8007/v1
+    api_base: http://localhost:8116/v1
     batch_size: 8
     max_tokens: 8192
     temperature: 0.1
@@ -17,7 +17,7 @@ model:
     download_dir: "/dataset/models/huggingface/hub"
     max_model_len: 32768
     num_gpus: 1
-    port: 8007
+    port: 8116
     pretrained_model_name_or_path: "K-intelligence/Midm-2.0-Base-Instruct"
     tensor_parallel_size: 1
     trust_remote_code: true

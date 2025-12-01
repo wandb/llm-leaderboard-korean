@@ -7,7 +7,7 @@ model:
   params:
     model_name: "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct"
     provider: hosted_vllm
-    api_base: http://localhost:8030/v1
+    api_base: http://localhost:8105/v1
     batch_size: 8
     max_tokens: 8192
     temperature: 0.1
@@ -17,7 +17,7 @@ model:
     download_dir: "/dataset/models/huggingface/hub"
     max_model_len: 32768
     num_gpus: 1
-    port: 8030
+    port: 8105
     pretrained_model_name_or_path: "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct"
     tensor_parallel_size: 1
     trust_remote_code: true
