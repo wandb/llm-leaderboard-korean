@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inspect-horangi"
+version = "0.1.0"
+description = "한국어 LLM 벤치마크 평가 프레임워크 (Inspect AI + WandB 통합)"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["korean", "llm", "benchmark", "evaluation", "inspect-ai", "wandb", "weave"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "inspect-ai>=0.3.0",
+    "inspect-wandb[weave]>=0.1.0",
+    "pandas>=2.0.0",
+    "jsonlines>=4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+openai = ["openai>=1.0.0"]
+anthropic = ["anthropic>=0.20.0"]
+google = ["google-genai>=0.1.0"]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/inspect-horangi"
+Documentation = "https://github.com/yourusername/inspect-horangi#readme"
+Repository = "https://github.com/yourusername/inspect-horangi"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["horangi*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.jsonl", "*.json", "*.csv"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
