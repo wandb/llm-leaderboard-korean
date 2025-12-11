@@ -118,3 +118,4 @@ Thumbs.db
 .env.*.local
 secrets.yaml
 
+create_benchmark/
