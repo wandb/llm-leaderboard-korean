@@ -36,6 +36,8 @@ from horangi.evals.bfcl_extended import CONFIG as bfcl_extended
 from horangi.evals.bfcl_text import CONFIG as bfcl_text
 # MT-Bench
 from horangi.evals.mtbench_ko import CONFIG as mtbench_ko
+# SWE-bench
+from horangi.evals.swebench_verified_official_80 import CONFIG as swebench_verified_official_80
 
 # 모든 벤치마크 설정
 BENCHMARKS: dict = {
@@ -66,6 +68,8 @@ BENCHMARKS: dict = {
     "bfcl_text": bfcl_text,          # Text-based (EXAONE, 오픈소스 등)
     # MT-Bench
     "mtbench_ko": mtbench_ko,        # 멀티턴 대화 평가 (LLM Judge)
+    # SWE-bench
+    "swebench_verified_official_80": swebench_verified_official_80,  # SWE-bench Verified 80
 }
 
 def get_benchmark_config(name: str) -> dict:
@@ -82,4 +86,3 @@ def list_benchmarks() -> list[str]:
 
 
 __all__ = ["BENCHMARKS", "get_benchmark_config", "list_benchmarks"]
-

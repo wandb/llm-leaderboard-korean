@@ -385,3 +385,24 @@ def mtbench_ko(
         shuffle=shuffle,
         limit=limit,
     )
+
+
+# =============================================================================
+# SWE-bench 벤치마크
+# =============================================================================
+
+@task
+def swebench_verified_official_80(
+    shuffle: bool = False,
+    limit: int | None = None,
+) -> Task:
+    """SWE-bench Verified Official 80 - 소프트웨어 버그 수정 평가
+    
+    80개의 검증된 소프트웨어 버그 수정 과제
+    서버 기반 채점 (Docker 컨테이너에서 테스트 실행)
+    """
+    return create_benchmark(
+        name="swebench_verified_official_80",
+        shuffle=shuffle,
+        limit=limit,
+    )

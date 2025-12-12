@@ -220,6 +220,7 @@ def get_scorer_by_name(scorer_name: str) -> list[Scorer]:
     """
     # 내장 scorer
     from horangi.scorers import hallulens_qa_scorer, refusal_scorer
+    from horangi.scorers.swebench_server_scorer import swebench_server_scorer
     
     builtin_scorers = {
         "choice": lambda: [choice()],
@@ -230,6 +231,8 @@ def get_scorer_by_name(scorer_name: str) -> list[Scorer]:
         # HalluLens scorers
         "hallulens_qa_scorer": lambda: [hallulens_qa_scorer()],
         "refusal_scorer": lambda: [refusal_scorer()],
+        # SWE-bench scorer
+        "swebench_server_scorer": lambda: [swebench_server_scorer()],
     }
     if scorer_name in builtin_scorers:
         return builtin_scorers[scorer_name]()
@@ -248,9 +251,13 @@ def get_scorer_by_name(scorer_name: str) -> list[Scorer]:
 def get_solver_by_name(solver_name: str) -> list[Solver]:
     """solver 이름으로 Solver 인스턴스 생성"""
     # 내장 solver
+    from horangi.solvers.swebench_patch_solver import swebench_patch_solver
+    
     builtin_solvers = {
         "multiple_choice": lambda: [multiple_choice()],
         "generate": lambda: [generate()],
+        # SWE-bench solver
+        "swebench_patch_solver": lambda: [swebench_patch_solver()],
     }
     if solver_name in builtin_solvers:
         return builtin_solvers[solver_name]()
