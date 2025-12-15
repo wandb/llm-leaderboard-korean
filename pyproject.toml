@@ -35,6 +35,9 @@ dependencies = [
     "inspect-evals>=0.3.103",
 ]
 
+[project.scripts]
+horangi = "cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
@@ -53,7 +56,7 @@ Repository = "https://github.com/yourusername/inspect-horangi"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/horangi"]
+packages = ["src/cli", "src/core", "src/benchmarks", "src/scorers", "src/solvers", "src/data"]
 
 [tool.hatch.build.targets.sdist]
 include = [

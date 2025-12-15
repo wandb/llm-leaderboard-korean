@@ -1,12 +1,9 @@
 """
-Inspect CLI에서 직접 실행 가능한 Task 정의 파일
+한국어 LLM 벤치마크 평가 프레임워크
 
 사용법:
-    # 벤치마크 실행
-    inspect eval eval_tasks.py@ko_hellaswag --model openai/gpt-4o -T limit=5
-    inspect eval eval_tasks.py@ko_aime2025 --model openai/gpt-4o -T limit=3
-    inspect eval eval_tasks.py@ifeval_ko --model openai/gpt-4o -T limit=3
-    inspect eval eval_tasks.py@ko_balt_700 --model openai/gpt-4o -T limit=3
+    uv run inspect eval horangi@ko_hellaswag --model openai/gpt-4o -T limit=5
+    uv run inspect eval horangi@swebench_verified_official_80 --model openai/gpt-4o -T limit=1
 
     # 옵션
     -T shuffle=true      # 데이터 셔플
@@ -15,8 +12,8 @@ Inspect CLI에서 직접 실행 가능한 Task 정의 파일
     -T use_korean_prompt=false  # 영어 프롬프트 사용
 
 새 벤치마크 추가:
-    1. src/horangi/evals/ 폴더에 새 파일 생성
-    2. evals/__init__.py에 CONFIG import 추가
+    1. src/benchmarks/ 폴더에 새 파일 생성
+    2. benchmarks/__init__.py에 CONFIG import 추가
     3. 이 파일에 @task 함수 추가
 
 inspect-wandb가 설치되어 있으면 자동으로 WandB/Weave에 로깅됩니다.
@@ -29,11 +26,11 @@ from pathlib import Path
 # 로케일 설정 (inspect_ai 날짜 포맷 호환)
 os.environ.setdefault("LC_TIME", "en_US.UTF-8")
 
-# 프로젝트 소스를 경로에 추가
+# src 폴더를 경로에 추가
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from inspect_ai import Task, task
-from horangi.core import create_benchmark
+from core import create_benchmark
 
 # =============================================================================
 # 벤치마크 Task 정의
@@ -406,3 +403,4 @@ def swebench_verified_official_80(
         shuffle=shuffle,
         limit=limit,
     )
+

@@ -11,16 +11,38 @@
 
 ## 📦 설치
 
+### uv 사용 (권장)
+
+[uv](https://docs.astral.sh/uv/)는 빠르고 현대적인 Python 패키지 관리자입니다.
+
+```bash
+# uv 설치 (아직 없다면)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 저장소 클론
+git clone https://github.com/your-repo/inspect_horangi.git
+cd inspect_horangi
+
+# 의존성 설치 및 가상환경 생성
+uv sync
+
+# 개발 의존성 포함 설치
+uv sync --all-extras
+```
+
+### pip 사용
+
 ```bash
 # 저장소 클론
 git clone https://github.com/your-repo/inspect_horangi.git
 cd inspect_horangi
 
-# 의존성 설치
-pip install -r requirements.txt
+# 가상환경 생성 및 활성화
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
 # 개발 모드 설치
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ### 환경 변수 설정
@@ -42,15 +64,17 @@ export OPENAI_BASE_URL=https://api.x.ai/v1       # Grok
 ## 🚀 빠른 시작
 
 ```bash
-# 벤치마크 실행
-inspect eval eval_tasks.py@ko_hellaswag --model openai/gpt-4o -T limit=10
+# 벤치마크 실행 (uv 사용)
+uv run inspect eval horangi.py@ko_hellaswag --model openai/gpt-4o -T limit=10
 
 # 전체 데이터셋
-inspect eval eval_tasks.py@kmmlu --model anthropic/claude-3-5-sonnet-20241022
+uv run inspect eval horangi.py@kmmlu --model anthropic/claude-3-5-sonnet-20241022
 
 # 여러 벤치마크 순차 실행
-inspect eval eval_tasks.py@ko_hellaswag eval_tasks.py@ko_gsm8k --model openai/gpt-4o
+uv run inspect eval horangi.py@ko_hellaswag horangi.py@ko_gsm8k --model openai/gpt-4o
 ```
+
+> **Note**: 가상환경을 활성화한 경우 `uv run` 없이 직접 `inspect eval ...` 실행 가능
 
 ## 📊 지원 벤치마크
 
@@ -69,7 +93,7 @@ inspect eval eval_tasks.py@ko_hellaswag eval_tasks.py@ko_gsm8k --model openai/gp
 | | 수학적 추론 | `ko_gsm8k`, `ko_aime2025` | 수학 문제 풀이 능력, 연산/정리/추론 정확도, 복잡한 문제 해결 과정 평가 | ✅ |
 | | 논리적 추론 | `mtbench_ko` (reasoning) | 논리적 일관성, 단계별 추론 체계성, 원인-결과 기반 문제 해결능력 측정 | ✅ |
 | | 추상적 추론 | `ko_arc_agi` | 시각적/구조적 추론을 포함한 추상적 문제 해결 평가 | ✅ |
-| **어플리케이션 개발** | 코딩 | `mtbench_ko` (coding) | 코드 생성 능력, 문제 해결 코딩 능력 평가 (LLM Judge) | ✅ |
+| **어플리케이션 개발** | 코딩 | `mtbench_ko`, `swe_bench_verified` | 코드 생성 능력, 문제 해결 코딩 능력 평가 (LLM Judge) | ✅ |
 | | 함수호출 | `bfcl_extended`, `bfcl_text` | 함수 호출의 정확성 (단일, 멀티턴, 무관계검출) | ✅ |
 
 ### 가치정렬성능 (ALT)
@@ -141,13 +165,34 @@ inspect eval eval_tasks.py@ko_hellaswag eval_tasks.py@ko_gsm8k --model openai/gp
 --model google/gemini-1.5-pro
 ```
 
+## 📦 uv 패키지 관리
+
+```bash
+# 패키지 추가
+uv add <패키지명>
+
+# 개발 의존성 추가
+uv add --dev <패키지명>
+
+# 패키지 제거
+uv remove <패키지명>
+
+# lock 파일 업데이트
+uv lock
+
+# 의존성 동기화
+uv sync
+```
+
 ## 📁 프로젝트 구조
 
 ```
 inspect_horangi/
-├── eval_tasks.py           # @task 함수 정의 (진입점)
+├── horangi.py           # @task 함수 정의 (진입점)
+├── pyproject.toml          # 프로젝트 설정 및 의존성
+├── uv.lock                 # 의존성 lock 파일
 ├── src/horangi/
-│   ├── evals/              # 벤치마크 설정 파일
+│   ├── benchmarks/         # 벤치마크 설정 파일
 │   │   ├── ko_hellaswag.py
 │   │   ├── kmmlu.py
 │   │   └── ...
@@ -161,8 +206,7 @@ inspect_horangi/
 │   │   └── ...
 │   └── solvers/            # 커스텀 Solver
 │       └── bfcl_solver.py
-├── create_benchmark/       # 데이터셋 생성 스크립트
-└── requirements.txt
+└── create_benchmark/       # 데이터셋 생성 스크립트
 ```
 
 ## ➕ 새 벤치마크 추가
@@ -171,9 +215,9 @@ inspect_horangi/
 
 ```bash
 # 간단 요약: 3단계로 추가
-1. src/horangi/evals/my_benchmark.py 생성 (CONFIG 정의)
-2. src/horangi/evals/__init__.py에 등록
-3. eval_tasks.py에 @task 함수 추가
+1. src/horangi/benchmarks/my_benchmark.py 생성 (CONFIG 정의)
+2. src/horangi/benchmarks/__init__.py에 등록
+3. horangi.py에 @task 함수 추가
 ```
 
 ## 🔌 모델 지원
@@ -193,21 +237,21 @@ inspect_horangi/
 ```bash
 # DeepSeek
 export OPENAI_BASE_URL=https://api.deepseek.com
-inspect eval eval_tasks.py@kmmlu --model openai/deepseek-chat
+uv run inspect eval horangi.py@kmmlu --model openai/deepseek-chat
 
 # Grok (xAI)
 export OPENAI_BASE_URL=https://api.x.ai/v1
-inspect eval eval_tasks.py@kmmlu --model openai/grok-beta
+uv run inspect eval horangi.py@kmmlu --model openai/grok-beta
 ```
 
 ### 로컬/자체 모델
 
 ```bash
 # vLLM
-inspect eval eval_tasks.py@kmmlu --model vllm/LGAI-EXAONE/EXAONE-3.5-32B-Instruct
+uv run inspect eval horangi.py@kmmlu --model vllm/LGAI-EXAONE/EXAONE-3.5-32B-Instruct
 
 # Ollama
-inspect eval eval_tasks.py@kmmlu --model ollama/llama3.1:70b
+uv run inspect eval horangi.py@kmmlu --model ollama/llama3.1:70b
 ```
 
 ## 📈 결과 확인
@@ -221,10 +265,10 @@ inspect eval eval_tasks.py@kmmlu --model ollama/llama3.1:70b
 
 ```bash
 # 로그 뷰어
-inspect view logs/
+uv run inspect view logs/
 
 # 특정 로그 파일
-inspect view logs/2025-01-01T00-00-00_benchmark_xxx.eval
+uv run inspect view logs/2025-01-01T00-00-00_benchmark_xxx.eval
 ```
 
 ## 📚 참고 자료

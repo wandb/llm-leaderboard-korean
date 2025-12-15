@@ -4,7 +4,7 @@
 
 ```
 src/horangi/
-├── evals/              # 벤치마크 설정 파일
+├── benchmarks/              # 벤치마크 설정 파일
 │   ├── __init__.py     # 벤치마크 등록
 │   ├── ko_hellaswag.py
 │   ├── kmmlu.py
@@ -30,10 +30,10 @@ src/horangi/
 
 ### Step 1: Config 파일 생성
 
-`evals/` 폴더에 새 파일을 만들고 `CONFIG` 딕셔너리를 정의합니다.
+`benchmarks/` 폴더에 새 파일을 만들고 `CONFIG` 딕셔너리를 정의합니다.
 
 ```python
-# evals/my_benchmark.py
+# benchmarks/my_benchmark.py
 """
 My Benchmark - 벤치마크 설명
 
@@ -66,11 +66,11 @@ CONFIG = {
 }
 ```
 
-### Step 2: `evals/__init__.py`에 등록
+### Step 2: `benchmarks/__init__.py`에 등록
 
 ```python
-# evals/__init__.py에 추가
-from horangi.evals.my_benchmark import CONFIG as my_benchmark
+# benchmarks/__init__.py에 추가
+from horangi.benchmarks.my_benchmark import CONFIG as my_benchmark
 
 BENCHMARKS: dict = {
     ...
@@ -78,10 +78,10 @@ BENCHMARKS: dict = {
 }
 ```
 
-### Step 3: `eval_tasks.py`에 Task 함수 추가
+### Step 3: `horangi.py`에 Task 함수 추가
 
 ```python
-# eval_tasks.py에 추가
+# horangi.py에 추가
 @task
 def my_benchmark(shuffle: bool = False, limit: int | None = None) -> Task:
     """My Benchmark - 설명"""
@@ -149,7 +149,7 @@ def my_benchmark(shuffle: bool = False, limit: int | None = None) -> Task:
 
 | 필드 | 설명 | 예시 |
 |------|------|------|
-| `base` | inspect_evals 상속 | `"inspect_evals.hellaswag.hellaswag"` |
+| `base` | inspect_benchmarks 상속 | `"inspect_benchmarks.hellaswag.hellaswag"` |
 | `split` | 데이터 분할 | `"train"`, `"test"` |
 | `sampling` | 샘플링 방식 | `"stratified"`, `"balanced"` |
 | `sampling_by` | 그룹화 필드 | `"category"` |
@@ -230,18 +230,18 @@ CONFIG = {
 
 새 벤치마크 추가 시 확인사항:
 
-- [ ] `evals/` 폴더에 config 파일 생성
-- [ ] `evals/__init__.py`에 import 및 BENCHMARKS 추가
-- [ ] `eval_tasks.py`에 @task 함수 추가
+- [ ] `benchmarks/` 폴더에 config 파일 생성
+- [ ] `benchmarks/__init__.py`에 import 및 BENCHMARKS 추가
+- [ ] `horangi.py`에 @task 함수 추가
 - [ ] (커스텀 scorer 필요 시) `scorers/`에 파일 생성 및 등록
 - [ ] (커스텀 solver 필요 시) `solvers/`에 파일 생성 및 등록
-- [ ] 테스트 실행: `inspect eval eval_tasks.py@my_benchmark --model openai/gpt-4o -T limit=5`
+- [ ] 테스트 실행: `inspect eval horangi.py@my_benchmark --model openai/gpt-4o -T limit=5`
 
 ---
 
 ## 🔗 참고
 
 - [Inspect AI Docs](https://inspect.ai-safety-institute.org.uk/)
-- [inspect_evals GitHub](https://github.com/UKGovernmentBEIS/inspect_evals)
+- [inspect_benchmarks GitHub](https://github.com/UKGovernmentBEIS/inspect_benchmarks)
 - [WandB Weave](https://wandb.ai/site/weave)
 

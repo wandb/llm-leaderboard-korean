@@ -14,12 +14,12 @@ import importlib
 from inspect_ai import Task
 from inspect_ai.dataset import Sample, MemoryDataset
 from inspect_ai.scorer import Scorer, choice, match, model_graded_qa
-from horangi.scorers import hle_grader
+from scorers import hle_grader
 from inspect_ai.solver import Solver, multiple_choice, generate, system_message
 
-from horangi.evals import get_benchmark_config
-from horangi.core.loaders import load_weave_data, load_jsonl_data
-from horangi.core.answer_format import ANSWER_FORMAT
+from benchmarks import get_benchmark_config
+from core.loaders import load_weave_data, load_jsonl_data
+from core.answer_format import ANSWER_FORMAT
 
 
 # =============================================================================
@@ -219,8 +219,8 @@ def get_scorer_by_name(scorer_name: str) -> list[Scorer]:
     2. 없으면 커스텀 scorer에서 찾기 (grid_match 등)
     """
     # 내장 scorer
-    from horangi.scorers import hallulens_qa_scorer, refusal_scorer
-    from horangi.scorers.swebench_server_scorer import swebench_server_scorer
+    from scorers import hallulens_qa_scorer, refusal_scorer
+    from scorers.swebench_server_scorer import swebench_server_scorer
     
     builtin_scorers = {
         "choice": lambda: [choice()],
@@ -239,7 +239,7 @@ def get_scorer_by_name(scorer_name: str) -> list[Scorer]:
     
     # 커스텀 scorer
     try:
-        from horangi import scorers as custom_scorers
+        import scorers as custom_scorers
         if hasattr(custom_scorers, scorer_name):
             return [getattr(custom_scorers, scorer_name)()]
     except ImportError:
@@ -251,7 +251,7 @@ def get_scorer_by_name(scorer_name: str) -> list[Scorer]:
 def get_solver_by_name(solver_name: str) -> list[Solver]:
     """solver 이름으로 Solver 인스턴스 생성"""
     # 내장 solver
-    from horangi.solvers.swebench_patch_solver import swebench_patch_solver
+    from solvers.swebench_patch_solver import swebench_patch_solver
     
     builtin_solvers = {
         "multiple_choice": lambda: [multiple_choice()],
@@ -264,7 +264,7 @@ def get_solver_by_name(solver_name: str) -> list[Solver]:
     
     # 커스텀 solver
     try:
-        from horangi import solvers as custom_solvers
+        import solvers as custom_solvers
         if hasattr(custom_solvers, solver_name):
             return [getattr(custom_solvers, solver_name)()]
     except ImportError:
@@ -400,4 +400,3 @@ def create_benchmark(
                 **(config.get("metadata", {})),
             },
         )
-
