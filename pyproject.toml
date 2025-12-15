@@ -38,8 +38,8 @@ dependencies = [
     "accelerate>=0.20.0",
     "spacy>=3.4.0",
     "scikit-learn>=1.1.0",
-    "wandb>=0.21.3",
-    "weave>=0.50.0",
+    "wandb>=0.23.0",
+    "weave>=0.52.17",
     "pyyaml>=6.0",
     "immutabledict>=4.0.0",
     "python-dotenv>=1.0.0",
@@ -74,6 +74,8 @@ dependencies = [
     "requests>=2.31.0",
     "datamodel-code-generator>=0.25.0",
     "faiss-cpu>=1.7.4",
+    "vllm==0.11.2",
+    "hf-transfer>=0.1.9",
 ]
 
 [project.optional-dependencies]

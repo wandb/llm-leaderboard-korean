@@ -49,6 +49,10 @@ def run_all_from_configs(
         )
     WandbConfigSingleton.initialize(run, model_name, wandb_params)
     if model_cfg.get("model").get("params").get("provider") == "hosted_vllm":
+        # Login huggingface
+        from huggingface_hub import login
+        import os
+        login(token=os.getenv("HUGGINGFACE_API_KEY"))
         from llm_eval.models.vllm_server_manager import start_vllm_server
         start_vllm_server(model_cfg.get("model").get("vllm_params"))
 

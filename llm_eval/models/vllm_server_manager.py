@@ -77,6 +77,8 @@ def start_vllm_server(vllm_config=None):
             command.extend(["--revision", str(cfg.get("revision"))])
         if cfg.get("trust_remote_code", False):
             command.append("--trust-remote-code")
+        if cfg.get("reasoning_parser"):
+            command.extend(["--reasoning-parser", str(cfg.get("reasoning_parser"))])
 
         # Run server in background using subprocess
         process = subprocess.Popen(command)

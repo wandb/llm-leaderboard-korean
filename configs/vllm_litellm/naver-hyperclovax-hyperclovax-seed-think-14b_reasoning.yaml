@@ -1,0 +1,38 @@
+wandb:
+  params:
+    run_name: naver-hyperclovax-hyperclovax-seed-think-14b_reasoning
+
+model:
+  name: litellm
+  params:
+    model_name: "naver-hyperclovax/HyperCLOVAX-SEED-Think-14B"
+    provider: hosted_vllm
+    api_base: http://localhost:9112/v1
+    batch_size: 8  # 클라이언트가 동시에 보낼 요청 수
+    max_tokens: 8192
+    temperature: 0.1
+    extra_body:
+      chat_template_kwargs:
+        force_reasoning: true
+
+  vllm_params:
+    batch_size: 16  # vLLM 서버가 동시에 처리할 수 있는 요청 수 (클라이언트보다 크게 설정)
+    dtype: "auto"
+    download_dir: "/dataset/models/huggingface/hub"
+    max_model_len: 131072
+    num_gpus: 1
+    port: 9112
+    pretrained_model_name_or_path: "naver-hyperclovax/HyperCLOVAX-SEED-Think-14B"
+    tensor_parallel_size: 1
+    trust_remote_code: true
+    reasoning_parser: hcx
+
+  release_date: "2025-07-21"
+  model_size: 14000000000
+  size_category: "Medium (10–30B)"
+
+bfcl:
+  model_params:
+    max_tokens: 8192
+    temperature: 0.1
+    model_name: "naver-hyperclovax/HyperCLOVAX-SEED-Think-14B"

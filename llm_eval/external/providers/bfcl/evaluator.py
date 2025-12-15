@@ -42,17 +42,13 @@ def run_bfcl_from_configs(
 
     # Model setup
     model_block: Dict[str, Any] = model_cfg.get("model") or {}
-    model_name: Optional[str] = model_block.get("name")
     model_params: Dict[str, Any] = model_block.get("params") or {}
-    
+
     # NOTE: Update if there are bfcl specific model config
     bfcl_model_cfg: Dict[str, Any] = model_cfg.get("bfcl", {})
     bfcl_model_params: Dict[str, Any] = bfcl_model_cfg.get("model_params") or {}
     if bfcl_model_cfg:
         model_params.update(bfcl_model_params)
-
-    if not model_name:
-        raise ValueError("model_config.yaml must contain 'model.name'")
 
     # Extract bfcl block (case-insensitive)
     ds_key = "bfcl" if "bfcl" in base_cfg else ("BFCL" if "BFCL" in base_cfg else None)
@@ -83,7 +79,7 @@ def run_bfcl_from_configs(
         logger.info("testmode enabled: overriding bfcl limit_per_test_category to 1 per test category")
 
     # Determine BFCL model name
-    bfcl_model = (model_params or {}).get("model_name") or model_name
+    bfcl_model = model_params.get("model_name").split("/")[-1]
 
     # Determine the list of test categories
     if isinstance(subset, list):
@@ -104,14 +100,13 @@ def run_bfcl_from_configs(
     result_dir.mkdir(parents=True, exist_ok=True)
     score_dir.mkdir(parents=True, exist_ok=True)
 
-
     # ---------- Model Inference ----------
     try:
         logger.info(f"[BFCL] Running model inference for {len(test_categories)} categories")
         from .bfcl_eval._llm_response_generation import main as generation_main
 
         # Read concurrency from config (default: 32 if not provided)
-        bfcl_params: Dict[str, Any] = (ds_cfg.get("params") or {})
+        bfcl_params: Dict[str, Any] = ds_cfg.get("params") or {}
         num_threads_cfg: Optional[int] = bfcl_params.get("num_threads") or ds_cfg.get("num_threads")
         num_threads = int(num_threads_cfg) if num_threads_cfg is not None else 32
 
@@ -126,6 +121,7 @@ def run_bfcl_from_configs(
         try:
             if os.environ.get("BFCL_ENABLE_WEAVE_INFERENCE", "0") == "1":
                 from weave import EvaluationLogger
+
                 model_label = bfcl_model.replace("-", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
                 evaluation_logger = EvaluationLogger(
                     dataset="bfcl",
@@ -183,7 +179,7 @@ def run_bfcl_from_configs(
                     "dataset_name": "bfcl",
                     "subset": subset,
                     "split": split,
-                    "model_backend_name": model_name,
+                    "model_backend_name": bfcl_model,
                     "status": "failed",
                     "error": f"Model inference failed: {e}",
                 },
@@ -213,16 +209,18 @@ def run_bfcl_from_configs(
                     "dataset_name": "bfcl",
                     "subset": subset,
                     "split": split,
-                    "model_backend_name": model_name,
+                    "model_backend_name": bfcl_model,
                     "status": "failed",
                     "error": f"Evaluation failed: {e}",
                 },
             )
         }
 
-    import shutil
-    shutil.rmtree(result_dir)
-    shutil.rmtree(score_dir)
+    # # Remove temporary directories
+    # import shutil
+
+    # shutil.rmtree(result_dir)
+    # shutil.rmtree(score_dir)
 
     # Return aggregate result (actual scores are logged in the respective runner)
     return {
@@ -233,7 +231,7 @@ def run_bfcl_from_configs(
                 "dataset_name": "bfcl",
                 "subset": subset,
                 "split": split,
-                "model_backend_name": model_name,
+                "model_backend_name": bfcl_model,
                 "status": "completed",
                 "note": "Executed BFCL runners (results logged by BFCL).",
             },
@@ -254,4 +252,3 @@ def get_bfcl_category_groups() -> Dict[str, List[str]]:
     Returns mapping of BFCL test category groups.
     """
     return TEST_COLLECTION_MAPPING
-

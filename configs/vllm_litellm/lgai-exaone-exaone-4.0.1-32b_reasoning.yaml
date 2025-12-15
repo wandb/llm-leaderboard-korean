@@ -1,0 +1,40 @@
+wandb:
+  params:
+    run_name: lgai-exaone-exaone-4.0.1-32b_reasoning
+
+model:
+  name: litellm
+  params:
+    model_name: "LGAI-EXAONE/EXAONE-4.0.1-32B"
+    provider: hosted_vllm
+    api_base: http://localhost:9110/v1
+    batch_size: 8
+    max_tokens: 8192
+    temperature: 0.6
+    top_p: 0.95
+    extra_body:
+      chat_template_kwargs:
+        enable_thinking: true
+        skip_think: false
+
+  vllm_params:
+    batch_size: 16
+    dtype: "auto"
+    download_dir: "/dataset/models/huggingface/hub"
+    max_model_len: 131072
+    num_gpus: 2
+    port: 9110
+    pretrained_model_name_or_path: "LGAI-EXAONE/EXAONE-4.0.1-32B"
+    tensor_parallel_size: 2
+    trust_remote_code: true
+    reasoning_parser: deepseek_r1
+
+  release_date: "2025-07-29"
+  model_size: 32003216384
+  size_category: "Large (30B<)"
+
+bfcl:
+  model_params:
+    max_tokens: 8192
+    temperature: 0.6
+    model_name: "LGAI-EXAONE/EXAONE-4.0.1-32B"

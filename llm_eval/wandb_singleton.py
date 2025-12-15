@@ -239,7 +239,7 @@ class WandbConfigSingleton:
         table_mean = table_mean.reset_index()
         # Build desired column list, but only include columns that actually exist
         # This handles cases where external benchmarks don't have GLP/ALT columns
-        desired_columns = ['model_name', 'release_date', 'size_category', 'FINAL_SCORE', '범용언어성능(GLP)_AVG', '가치정렬성능(ALT)_AVG'] + list(GLP_COLUMN_WEIGHT.keys()) + list(ALT_COLUMN_WEIGHT.keys())
+        desired_columns = ['model_name', 'release_date', 'size_category', 'model_size', 'FINAL_SCORE', '범용언어성능(GLP)_AVG', '가치정렬성능(ALT)_AVG'] + list(GLP_COLUMN_WEIGHT.keys()) + list(ALT_COLUMN_WEIGHT.keys())
         existing_columns = [col for col in desired_columns if col in table_mean.columns]
         table_mean = table_mean[existing_columns]
 

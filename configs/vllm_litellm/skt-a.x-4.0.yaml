@@ -1,0 +1,32 @@
+wandb:
+  params:
+    run_name: skt-a.x-4.0
+
+model:
+  name: litellm
+  params:
+    model_name: "skt/A.X-4.0"
+    provider: hosted_vllm
+    api_base: http://localhost:8102/v1
+    batch_size: 8
+    max_tokens: 8192
+    temperature: 0.1
+  vllm_params:
+    batch_size: 16
+    dtype: "auto"
+    download_dir: "/dataset/models/huggingface/hub"
+    max_model_len: 131072
+    num_gpus: 4
+    port: 8102
+    pretrained_model_name_or_path: "skt/A.X-4.0"
+    tensor_parallel_size: 4
+    trust_remote_code: true
+  release_date: "2025-07-03"
+  model_size: 72000000000
+  size_category: "Large (30B<)"
+
+bfcl:
+  model_params:
+    max_tokens: 8192
+    temperature: 0.1
+    model_name: "skt/A.X-4.0"
