@@ -123,6 +123,18 @@ def ifeval_ko(
     )
 
 @task
+def haerae_bench_v1(
+    shuffle: bool = False,
+    limit: int | None = None,
+) -> Task:
+    """HAERAE_BENCH_V1"""
+    return create_benchmark(
+        name="haerae_bench_v1",
+        shuffle=shuffle,
+        limit=limit,
+    )
+
+@task
 def haerae_bench_v1_rc(
     shuffle: bool = False,
     limit: int | None = None,

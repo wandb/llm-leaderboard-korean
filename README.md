@@ -19,6 +19,7 @@
 - [빠른 시작](#-빠른-시작)
 - [설정 가이드](#️-설정-가이드)
 - [vLLM으로 오픈소스 모델 평가](#️-vllm으로-오픈소스-모델-평가)
+- [SWE-bench 평가 (코드 생성)](#-swe-bench-평가-코드-생성)
 - [지원 벤치마크](#-지원-벤치마크)
 - [평가 실행](#-평가-실행)
 - [결과 확인](#-결과-확인)
@@ -309,6 +310,27 @@ uv run horangi kmmlu --config Qwen3-4B-Instruct-2507 -T limit=5
 
 # 전체 벤치마크
 uv run python run_eval.py --config Qwen3-4B-Instruct-2507 --quick
+```
+
+---
+
+## 🔧 SWE-bench 평가 (코드 생성)
+
+SWE-bench는 실제 오픈소스 프로젝트의 버그 수정 능력을 평가하는 벤치마크입니다.
+
+📖 **자세한 설정 가이드**: [docs/README_swebench.md](docs/README_swebench.md)
+
+### 빠른 시작
+
+```bash
+# 1. 서버 실행 (Docker가 있는 Linux 환경)
+uv run python src/server/swebench_server.py --host 0.0.0.0 --port 8000
+
+# 2. 클라이언트 설정 (macOS 등)
+export SWE_SERVER_URL=http://YOUR_SERVER:8000
+
+# 3. 평가 실행
+uv run horangi swebench_verified_official_80 --config gpt-4o -T limit=5
 ```
 
 ---

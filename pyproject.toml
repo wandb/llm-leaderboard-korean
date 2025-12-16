@@ -46,6 +46,11 @@ dev = [
     "pre-commit>=3.0.0",
 ]
 google = ["google-genai>=0.1.0"]
+swebench-server = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.23.0",
+    "swebench>=2.0.0,<3.0.0",  # llm-leaderboard 호환 버전
+]
 
 [project.urls]
 Homepage = "https://github.com/wandb-korea/horangi"
@@ -56,7 +61,7 @@ Repository = "https://github.com/wandb-korea/horangi"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cli", "src/core", "src/benchmarks", "src/scorers", "src/solvers", "src/data"]
+packages = ["src/cli", "src/core", "src/benchmarks", "src/scorers", "src/solvers", "src/server", "src/data"]
 
 [tool.hatch.build.targets.sdist]
 include = [
