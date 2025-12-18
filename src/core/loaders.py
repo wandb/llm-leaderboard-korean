@@ -34,7 +34,11 @@ def load_weave_data(
     parts = ref.replace("weave:///", "").split("/")
     project = f"{parts[0]}/{parts[1]}"
     
-    weave.init(project)
+    # Only init weave if no client exists (avoid conflict with existing session)
+    client = weave.get_client()
+    if client is None:
+        weave.init(project)
+    
     data = weave.ref(ref).get()
     rows = data.rows if hasattr(data, "rows") else list(data)
     

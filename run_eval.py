@@ -3,8 +3,6 @@
 import argparse
 import locale
 import os
-import re
-import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -27,6 +25,8 @@ except locale.Error:
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 import wandb
+import weave
+from inspect_ai import eval as inspect_eval
 from core.config_loader import get_config
 
 # All benchmarks list (active ones only)
@@ -142,6 +142,103 @@ def get_model_metadata(model: str) -> dict:
     }
 
 
+def get_task_function(benchmark: str):
+    """
+    Get task function from horangi.py by benchmark name
+    
+    Args:
+        benchmark: Benchmark name (e.g., "ko_hellaswag")
+    
+    Returns:
+        Task function
+    """
+    import horangi
+    if hasattr(horangi, benchmark):
+        return getattr(horangi, benchmark)
+    raise ValueError(f"Unknown benchmark: {benchmark}")
+
+
+def get_inspect_model(config_name: str) -> tuple[str, dict]:
+    """
+    Get Inspect AI model string and model_args from config
+    
+    Returns:
+        (model_string, model_args)
+        e.g., ("openai/gpt-4o", {}) or ("openai/solar-pro2", {"api_key": "...", "base_url": "..."})
+    """
+    config = get_config()
+    model_config = config.get_model(config_name)
+    
+    if not model_config:
+        raise ValueError(f"Model config not found: {config_name}")
+    
+    model_id = model_config.get("model_id", config_name)
+    api_provider = model_config.get("api_provider")
+    
+    # Determine Inspect model string
+    if api_provider:
+        model_name = model_id.split("/")[-1]
+        inspect_model = f"{api_provider}/{model_name}"
+    else:
+        inspect_model = model_id
+    
+    # Build model_args for OpenAI-compatible APIs (non-official endpoints only)
+    model_args = {}
+    base_url = model_config.get("base_url") or model_config.get("api_base")
+    
+    # Skip base_url for official OpenAI API (inspect_ai already has it as default)
+    if base_url and "api.openai.com" not in base_url:
+        model_args["base_url"] = base_url
+    
+    # Only pass api_key for non-OpenAI official APIs (OpenAI uses OPENAI_API_KEY env var)
+    api_key_env = model_config.get("api_key_env")
+    if api_key_env and api_key_env != "OPENAI_API_KEY":
+        api_key = os.environ.get(api_key_env)
+        if api_key:
+            model_args["api_key"] = api_key
+    
+    # Set INSPECT_WANDB_MODEL_NAME for Weave display
+    os.environ["INSPECT_WANDB_MODEL_NAME"] = model_id
+    
+    return inspect_model, model_args
+
+
+def get_model_generate_config(config_name: str, benchmark: str) -> dict:
+    """
+    Get generation config (temperature, max_tokens, etc.) from model config
+    
+    Returns:
+        Generation config dict
+    """
+    config = get_config()
+    model_config = config.get_model(config_name)
+    
+    if not model_config:
+        return {}
+    
+    defaults = model_config.get("defaults", {})
+    benchmark_overrides = model_config.get("benchmarks", {}).get(benchmark, {})
+    
+    # Merge defaults with benchmark-specific overrides
+    generate_config = {}
+    
+    # Map config keys to inspect_ai.eval kwargs
+    key_mapping = {
+        "temperature": "temperature",
+        "max_tokens": "max_tokens",
+        "top_p": "top_p",
+        "top_k": "top_k",
+    }
+    
+    for key, eval_key in key_mapping.items():
+        if key in benchmark_overrides:
+            generate_config[eval_key] = benchmark_overrides[key]
+        elif key in defaults:
+            generate_config[eval_key] = defaults[key]
+    
+    return generate_config
+
+
 def run_benchmark(
     benchmark: str, 
     config_name: str,
@@ -150,179 +247,112 @@ def run_benchmark(
     wandb_project: str | None = None,
 ) -> tuple[str, bool, str, dict | None]:
     """
-    Run a single benchmark
+    Run a single benchmark (in-process using inspect_ai.eval)
     
-    Automatically applies API settings from model config file (configs/models/<model>.yaml).
+    Runs in the same process as the W&B run, so Weave traces are automatically
+    linked to the run page.
     
     Returns:
         (benchmark_name, success, error_message, scores)
     """
-    cmd = ["uv", "run", "horangi", benchmark, "--config", config_name]
-    
-    # Add limit only if specified (null = all)
-    if limit is not None:
-        cmd.extend(["-T", f"limit={limit}"])
-    
-    # Load environment variables from model config
-    model_env = get_model_env(config_name)
-    
-    # Merge with current environment (model config takes precedence)
-    env = os.environ.copy()
-    env.update(model_env)
-    
-    # Set English locale to fix inspect_evals date parsing issue
-    env["LC_TIME"] = "en_US.UTF-8"
-
-    # Force W&B/Weave project for each benchmark subprocess (inspect eval)
-    # (Without this, it may log to wandb's default project like horangi-dev)
-    if wandb_entity:
-        env["WANDB_ENTITY"] = wandb_entity
-    if wandb_project:
-        env["WANDB_PROJECT"] = wandb_project
-    
     print(f"\n{'='*60}")
     print(f"🏃 Running: {benchmark}")
-    print(f"   Command: {' '.join(cmd)}")
     print(f"{'='*60}")
     
     try:
-        # Use Popen for real-time output
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,  # Merge stderr to stdout
-            text=True,
-            bufsize=1,  # Line buffering
-            env=env,
+        # Get task function
+        task_fn = get_task_function(benchmark)
+        
+        # Create task with limit
+        task = task_fn(limit=limit) if limit else task_fn()
+        
+        # Get model info
+        inspect_model, model_args = get_inspect_model(config_name)
+        
+        # Get generation config
+        generate_config = get_model_generate_config(config_name, benchmark)
+        
+        # Run evaluation using inspect_ai.eval()
+        # This runs in the same process, so Weave traces are linked to the current W&B run
+        eval_logs = inspect_eval(
+            tasks=[task],
+            model=inspect_model,
+            model_args=model_args,
+            limit=limit,
+            log_dir="./logs",
+            **generate_config,
         )
         
-        # Collect output while printing in real-time
-        output_lines = []
-        weave_eval_url: str | None = None
-        hook_noise_patterns = (
-            r"^inspect_ai v",
-            r"^- hooks enabled:",
-            r"^\s*inspect_wandb/weave_evaluation_hooks:",
-            r"^\s*inspect_wandb/wandb_models_hooks:",
-        )
-        for line in process.stdout:
-            # Capture Weave Eval URL (show only once after benchmark completes)
-            m = re.search(r"🔗\s*Weave Eval:\s*(https?://\S+)", line)
-            if m:
-                weave_eval_url = m.group(1)
-            
-            # Filter unnecessary noise logs/intermediate URL lines
-            suppress = False
-            if m:
-                suppress = True
-            else:
-                for pat in hook_noise_patterns:
-                    if re.search(pat, line):
-                        suppress = True
-                        break
-            
-            if not suppress:
-                print(line, end="", flush=True)  # Real-time output
-            output_lines.append(line)
+        if not eval_logs:
+            return benchmark, False, "No evaluation logs returned", None
         
-        process.wait(timeout=1800)  # 30 minute timeout
-        full_output = "".join(output_lines)
+        eval_log = eval_logs[0]
         
-        success = process.returncode == 0
+        # Check success
+        success = eval_log.status == "success"
+        error_msg = "" if success else f"Status: {eval_log.status}"
         
-        # Print Weave Eval URL after benchmark completes
-        if weave_eval_url:
-            print(f"\n🔗 Weave Eval: {weave_eval_url}")
+        # Parse scores from eval_log
+        scores = parse_scores_from_eval_log(eval_log, benchmark)
         
-        # Try to parse scores
-        scores = None
-        if success:
-            scores = parse_scores_from_output(full_output, benchmark)
-        
-        return benchmark, success, "" if success else f"Exit code: {process.returncode}", scores
+        return benchmark, success, error_msg, scores
     
-    except subprocess.TimeoutExpired:
-        process.kill()
-        return benchmark, False, "Timeout (30m)", None
     except Exception as e:
-        if 'process' in locals():
-            process.kill()
+        import traceback
+        traceback.print_exc()
         return benchmark, False, str(e), None
 
 
-def parse_scores_from_output(output: str, benchmark: str) -> dict | None:
+def parse_scores_from_eval_log(eval_log, benchmark: str) -> dict | None:
     """
-    Parse scores from Inspect AI output
-    
-    Inspect AI output format example:
-        accuracy  0.600
-        stderr    0.245
-        
-        or
-        
-        mean    0.640
-        writing_score  0.640
+    Parse scores from EvalLog object
     
     Returns:
         {"score": main_score, "details": {metric_name: value, ...}}
     """
+    if not eval_log.results or not eval_log.results.scores:
+        return None
+    
     all_metrics = {}
     
-    # Parse all "name  number" patterns (line start, underscore/alphanumeric names)
-    # Exclude stderr
-    pattern = r"^([a-zA-Z][a-zA-Z0-9_]*)\s+([\d.-]+)\s*$"
-    for match in re.finditer(pattern, output, re.MULTILINE):
-        metric_name = match.group(1)
-        # Exclude meta info like stderr, samples, tokens
-        if metric_name.lower() in ["stderr", "samples", "tokens", "total"]:
-            continue
-        try:
-            all_metrics[metric_name] = float(match.group(2))
-        except ValueError:
-            pass
+    # Extract metrics from all scorers
+    for score in eval_log.results.scores:
+        scorer_name = score.name
+        if score.metrics:
+            for metric_name, metric in score.metrics.items():
+                # Use scorer_name/metric_name format for clarity
+                full_name = f"{metric_name}" if scorer_name == metric_name else f"{scorer_name}_{metric_name}"
+                if hasattr(metric, 'value') and metric.value is not None:
+                    all_metrics[full_name] = metric.value
     
     if not all_metrics:
         return None
     
-    # Select main score
+    # Select main score (same logic as before)
     main_score = None
     
-    # IFEval: use final_acc or prompt_strict_acc
     if benchmark == "ifeval_ko":
         main_score = all_metrics.get("final_acc") or all_metrics.get("prompt_strict_acc")
-    
-    # KoBBQ: use kobbq_avg
     elif benchmark == "kobbq":
         main_score = all_metrics.get("kobbq_avg")
-    
-    # HLE: use hle_accuracy
     elif benchmark == "ko_hle":
         main_score = all_metrics.get("hle_accuracy") or all_metrics.get("accuracy")
-    
-    # HalluLens: use correct_rate or refusal_rate
     elif "hallulens" in benchmark:
         main_score = all_metrics.get("correct_rate") or all_metrics.get("refusal_rate")
-    
-    # MT-Bench: use mean (10-point scale → 0-1 scale)
     elif benchmark == "ko_mtbench":
         if "mean" in all_metrics:
             main_score = all_metrics["mean"] / 10.0
-    
-    # BFCL: use accuracy
     elif benchmark == "bfcl":
         main_score = all_metrics.get("accuracy")
-    
-    # SQuAD: f1 > exact priority
     elif benchmark == "squad_kor_v1":
-        main_score = all_metrics.get("mean")  # f1.mean
+        main_score = all_metrics.get("mean")
     
-    # General metric priority
     if main_score is None:
         for metric in ["accuracy", "mean", "macro_f1", "f1", "resolved"]:
             if metric in all_metrics:
                 main_score = all_metrics[metric]
                 if metric == "mean" and benchmark == "ko_mtbench":
-                    main_score = main_score / 10.0  # mtbench scale
+                    main_score = main_score / 10.0
                 break
     
     return {
@@ -417,6 +447,10 @@ Examples:
         },
     )
     print(f"✅ W&B run started: {wandb_run.url}")
+    
+    # Initialize Weave in the same process - this links all Weave traces to the W&B run
+    weave.init(f"{entity}/{project}")
+    print(f"✅ Weave initialized: {entity}/{project}")
     
     
     print(f"\n🐯 Horangi Benchmark Runner")
