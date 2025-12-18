@@ -1,55 +1,68 @@
 # =============================================================================
-# 모델 설정 템플릿
+# Model Configuration Template
 # 
-# 새 모델 추가 시 이 파일을 복사하여 사용하세요.
-# 파일명: <model-name>.yaml (예: gpt-4o.yaml, llama-3.yaml)
+# Copy this file when adding a new model.
+# Filename: <model-name>.yaml (e.g., gpt-4o.yaml, llama-3.yaml)
 # =============================================================================
 
-# 모델 식별자 (표시용)
-# 형식: provider/model-name (예: upstage/solar-pro2, openai/gpt-4o)
+# Model identifier
+# Format: provider/model-name (e.g., openai/gpt-4o, upstage/solar-pro2)
 model_id: provider/model-name
 
-# API Provider (선택사항)
-# OpenAI 호환 API 사용 시 "openai" 지정
-# → inspect eval에는 "openai/<model-name>"으로 전달됨
+# API Provider (optional)
+# For OpenAI-compatible APIs (vLLM, Upstage, etc.), set to "openai"
+# This prepends "openai/" to the model name for inspect eval
 # api_provider: openai
 
-# 모델 메타데이터 (선택사항, 문서화 및 분석용)
+# Model metadata (optional, for documentation and analysis)
 metadata:
-  provider: Provider Name  # 제공사 (OpenAI, Anthropic, Google 등)
-  name: Model Display Name  # 표시 이름
-  release_date: "YYYY-MM-DD"  # 출시일
-  description: "모델 설명"
-  context_window: 128000  # 컨텍스트 윈도우 크기 (토큰)
-  max_output_tokens: 4096  # 최대 출력 토큰
+  provider: Provider Name       # Provider (OpenAI, Anthropic, Upstage, etc.)
+  name: Model Display Name      # Display name
+  release_date: "YYYY-MM-DD"    # Release date
+  description: "Model description"
+  context_window: 128000        # Context window size (tokens)
+  max_output_tokens: 4096       # Maximum output tokens
 
-# API 설정
-# base_url: https://api.example.com/v1  # 커스텀 API URL (OpenAI 호환 API 등)
-api_key_env: API_KEY_ENV_NAME  # API 키를 읽을 환경변수 이름
+# =============================================================================
+# API Settings
+# =============================================================================
 
-# 💡 OpenAI 호환 API 사용 시 (Solar, Grok 등):
-#    - model_id를 openai/모델명 형식으로 지정
-#    - api_key_env에 실제 API 키가 저장된 환경변수 지정
-#    - base_url에 API 엔드포인트 지정
-#    → CLI가 자동으로 OPENAI_API_KEY, OPENAI_BASE_URL에 매핑합니다
+# Custom API URL (for OpenAI-compatible APIs)
+# Examples:
+#   - vLLM server: http://YOUR_SERVER_IP:8000/v1
+#   - Upstage: https://api.upstage.ai/v1
+#   - RunPod: https://xxx.proxy.runpod.net/v1
+# base_url: https://api.example.com/v1
 
-# 기본 파라미터 (base_config의 defaults와 병합됨)
-# 여기서 지정한 값이 base_config의 값을 override
+# Environment variable name for API key
+# The CLI will read the API key from this environment variable
+api_key_env: YOUR_API_KEY_ENV
+
+# =============================================================================
+# Default Parameters
+# =============================================================================
+# These values override base_config.yaml defaults
+
 defaults:
-  temperature: 0.0  # 생성 온도 (0.0 = deterministic)
-  max_tokens: 4096  # 최대 생성 토큰 수
-  # top_p: 1.0  # Top-p 샘플링 (선택사항)
+  temperature: 0.0    # Generation temperature (0.0 = deterministic)
+  max_tokens: 4096    # Maximum generation tokens
 
-# 벤치마크별 오버라이드 설정 (선택사항)
-# 특정 벤치마크에서만 다른 설정을 사용할 때
+# =============================================================================
+# Benchmark-specific Overrides (optional)
+# =============================================================================
+# Use different settings for specific benchmarks
+
 benchmarks:
-  # BFCL: Function Calling 벤치마크
-  # - use_native_tools: true → Native Tool Calling (OpenAI, Claude, Gemini 등)
-  # - use_native_tools: false → Text-based (EXAONE, 일부 오픈소스 등)
+  # BFCL: Function Calling benchmark
+  # - use_native_tools: true  → Native Tool Calling (OpenAI, Claude, Gemini, etc.)
+  # - use_native_tools: false → Text-based (recommended for open-source models)
   bfcl:
     use_native_tools: true
   
-  # SWE-bench: 긴 출력이 필요한 경우
+  # MT-Bench: May need higher temperature for creative responses
+  # ko_mtbench:
+  #   temperature: 0.7
+  
+  # SWE-bench: May need longer output
   # swebench_verified_official_80:
   #   max_tokens: 16384
-
