@@ -36,10 +36,10 @@ BENCHMARK_TAXONOMY = {
             "mtbench_scorer_roleplay_score": "GLP_표현",
             "mtbench_scorer_humanities_score": "GLP_표현",
             "mtbench_scorer_writing_score": "GLP_표현",
-            "mtbench_scorer_reasoning_score": "GLP_논리추론",
-            "mtbench_scorer_coding_score": "GLP_코딩",
-            "mtbench_scorer_math_score": "GLP_수학추론",
-            "mtbench_scorer_stem_score": "GLP_전문지식",
+            "mtbench_scorer_reasoning_score": "GLP_논리적추론",
+            "mtbench_scorer_coding_score": "GLP_코딩능력",
+            "mtbench_scorer_math_score": "GLP_수학적추론",
+            "mtbench_scorer_stem_score": "GLP_전문적지식",
             "mtbench_scorer_extraction_score": "GLP_정보검색",
         },
     },
@@ -48,46 +48,46 @@ BENCHMARK_TAXONOMY = {
         "category": "GLP_정보검색",
         "score_key": "score",
     },
-    # GLP - 일반지식
+    # GLP - 일반적지식
     "kmmlu": {
-        "category": "GLP_일반지식",
+        "category": "GLP_일반적지식",
         "score_key": "score",
     },
     "haerae_bench_v1_wo_rc": {
-        "category": "GLP_일반지식",
+        "category": "GLP_일반적지식",
         "score_key": "score",
     },
-    # GLP - 전문지식
+    # GLP - 전문적지식
     "kmmlu_pro": {
-        "category": "GLP_전문지식",
+        "category": "GLP_전문적지식",
         "score_key": "score",
     },
     "ko_hle": {
-        "category": "GLP_전문지식",
+        "category": "GLP_전문적지식",
         "score_key": "score",
     },
-    # GLP - 상식추론
+    # GLP - 논리적추론 (상식추론 포함)
     "ko_hellaswag": {
-        "category": "GLP_상식추론",
+        "category": "GLP_논리적추론",
         "score_key": "score",
     },
-    # GLP - 수학추론
+    # GLP - 수학적추론
     "ko_gsm8k": {
-        "category": "GLP_수학추론",
+        "category": "GLP_수학적추론",
         "score_key": "score",
     },
     "ko_aime2025": {
-        "category": "GLP_수학추론",
+        "category": "GLP_수학적추론",
         "score_key": "score",
     },
-    # GLP - 추상추론
+    # GLP - 추상적추론
     "ko_arc_agi": {
-        "category": "GLP_추상추론",
+        "category": "GLP_추상적추론",
         "score_key": "score",
     },
-    # GLP - 코딩
+    # GLP - 코딩능력
     "swebench_verified_official_80": {
-        "category": "GLP_코딩",
+        "category": "GLP_코딩능력",
         "score_key": "score",
     },
     # GLP - 함수호출
@@ -102,7 +102,7 @@ BENCHMARK_TAXONOMY = {
     },
     # ALT - 윤리/도덕
     "ko_moral": {
-        "category": "ALT_윤리도덕",
+        "category": "ALT_윤리/도덕",
         "score_key": "score",
     },
     # ALT - 유해성방지
@@ -140,14 +140,13 @@ GLP_COLUMN_WEIGHT = {
     "GLP_의미해석": 1,
     "GLP_표현": 1,
     "GLP_정보검색": 1,
-    "GLP_일반지식": 2,
-    "GLP_전문지식": 2,
-    "GLP_상식추론": 1,
-    "GLP_수학추론": 2,
-    "GLP_논리추론": 2,
-    "GLP_추상추론": 2,
+    "GLP_일반적지식": 2,
+    "GLP_전문적지식": 2,
+    "GLP_수학적추론": 2,
+    "GLP_논리적추론": 2,
+    "GLP_추상적추론": 2,
     "GLP_함수호출": 2,
-    "GLP_코딩": 2,
+    "GLP_코딩능력": 2,
 }
 
 # ALT 카테고리별 가중치
@@ -155,7 +154,7 @@ ALT_COLUMN_WEIGHT = {
     "ALT_제어성": 1,
     "ALT_유해성방지": 1,
     "ALT_편향성방지": 1,
-    "ALT_윤리도덕": 1,
+    "ALT_윤리/도덕": 1,
     "ALT_환각방지": 1,
 }
 
@@ -165,14 +164,13 @@ GLP_CATEGORY_MAPPER = {
     "GLP_의미해석": "기본언어성능",
     "GLP_표현": "응용언어성능",
     "GLP_정보검색": "응용언어성능",
-    "GLP_일반지식": "지식/질의응답",
-    "GLP_전문지식": "지식/질의응답",
-    "GLP_상식추론": "추론능력",
-    "GLP_수학추론": "추론능력",
-    "GLP_논리추론": "추론능력",
-    "GLP_추상추론": "추론능력",
+    "GLP_일반적지식": "지식/질의응답",
+    "GLP_전문적지식": "지식/질의응답",
+    "GLP_수학적추론": "추론능력",
+    "GLP_논리적추론": "추론능력",
+    "GLP_추상적추론": "추론능력",
     "GLP_함수호출": "어플리케이션개발",
-    "GLP_코딩": "어플리케이션개발",
+    "GLP_코딩능력": "어플리케이션개발",
 }
 
 # ALT 세부 카테고리 → 상위 카테고리 매핑 (레이더 차트용)
@@ -180,7 +178,7 @@ ALT_CATEGORY_MAPPER = {
     "ALT_제어성": "제어성",
     "ALT_유해성방지": "유해성방지",
     "ALT_편향성방지": "편향성방지",
-    "ALT_윤리도덕": "윤리/도덕",
+    "ALT_윤리/도덕": "윤리/도덕",
     "ALT_환각방지": "환각방지",
 }
 
