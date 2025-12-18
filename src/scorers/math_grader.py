@@ -113,18 +113,42 @@ def math_grader(tolerance: float = 1e-6) -> Scorer:
         response = state.output.completion if state.output else ""
         target_text = (target.text if target else "").strip()
         
+        # 입력 문제 (input)
+        input_text = state.input_text if hasattr(state, 'input_text') else ""
+        if not input_text and state.messages:
+            # 첫 번째 user 메시지에서 입력 추출
+            for msg in state.messages:
+                if msg.role == "user":
+                    input_text = msg.text if hasattr(msg, 'text') else str(msg.content)
+                    break
+        
         # 1. 응답에서 답 추출 (우선순위: boxed > fallback > last number)
+        extraction_method = None
         extracted = _extract_boxed_answer(response)
+        if extracted is not None:
+            extraction_method = "boxed"
+        
         if extracted is None:
             extracted = _extract_fallback_answer(response)
+            if extracted is not None:
+                extraction_method = "fallback"
+        
         if extracted is None:
             extracted = _extract_last_number(response)
+            if extracted is not None:
+                extraction_method = "last_number"
         
         if extracted is None:
             return Score(
                 value=INCORRECT,
                 answer=None,
                 explanation="응답에서 답을 찾을 수 없음",
+                metadata={
+                    "target": target_text,
+                    "extracted": None,
+                    "extraction_method": None,
+                    "model_response": response[:500] if response else None,  # 처음 500자
+                },
             )
         
         # 2. 정답과 비교
@@ -137,7 +161,15 @@ def math_grader(tolerance: float = 1e-6) -> Scorer:
             return Score(
                 value=CORRECT if is_correct else INCORRECT,
                 answer=extracted,
-                explanation=f"정답: {target_num}, 응답: {response_num}, 일치: {is_correct}",
+                explanation=f"정답: {target_num}, 추출된 답: {response_num}, 일치: {'✓' if is_correct else '✗'}",
+                metadata={
+                    "target": target_text,
+                    "target_parsed": target_num,
+                    "extracted": extracted,
+                    "extracted_parsed": response_num,
+                    "extraction_method": extraction_method,
+                    "is_correct": is_correct,
+                },
             )
         
         # 문자열 비교 (객관식 등)
@@ -145,7 +177,13 @@ def math_grader(tolerance: float = 1e-6) -> Scorer:
         return Score(
             value=CORRECT if is_correct else INCORRECT,
             answer=extracted,
-            explanation=f"정답: {target_text}, 응답: {extracted}, 일치: {is_correct}",
+            explanation=f"정답: {target_text}, 추출된 답: {extracted}, 일치: {'✓' if is_correct else '✗'}",
+            metadata={
+                "target": target_text,
+                "extracted": extracted,
+                "extraction_method": extraction_method,
+                "is_correct": is_correct,
+            },
         )
     
     return score
