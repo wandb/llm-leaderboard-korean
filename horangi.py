@@ -221,19 +221,6 @@ def ko_arc_agi(
 
 
 @task
-def ko_gsm8k(
-    shuffle: bool = False,
-    limit: int | None = None,
-) -> Task:
-    """KoGSM8K"""
-    return create_benchmark(
-        name="ko_gsm8k",
-        shuffle=shuffle,
-        limit=limit,
-    )
-
-
-@task
 def korean_hate_speech(
     shuffle: bool = False,
     limit: int | None = None,
@@ -452,6 +439,27 @@ def swebench_verified_official_80(
     """
     return create_benchmark(
         name="swebench_verified_official_80",
+        shuffle=shuffle,
+        limit=limit,
+    )
+
+
+# =============================================================================
+# HRM8K Benchmark
+# =============================================================================
+
+@task
+def hrm8k(
+    shuffle: bool = False,
+    limit: int | None = None,
+) -> Task:
+    """HRM8K - Korean Math Reasoning Benchmark
+    
+    8000+ math problems from GSM8K, KSM, MATH, MMMLU, OMNI_MATH
+    Korean-translated and curated by HAERAE-HUB
+    """
+    return create_benchmark(
+        name="hrm8k",
         shuffle=shuffle,
         limit=limit,
     )

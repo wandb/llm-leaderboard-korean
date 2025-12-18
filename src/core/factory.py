@@ -14,7 +14,7 @@ import importlib
 from inspect_ai import Task
 from inspect_ai.dataset import Sample, MemoryDataset
 from inspect_ai.scorer import Scorer, choice, match, model_graded_qa
-from scorers import hle_grader
+from scorers import hle_grader, math_grader
 from inspect_ai.solver import Solver, multiple_choice, generate, system_message
 
 from benchmarks import get_benchmark_config
@@ -233,6 +233,8 @@ def get_scorer_by_name(scorer_name: str) -> list[Scorer]:
         "refusal_scorer": lambda: [refusal_scorer()],
         # SWE-bench scorer
         "swebench_server_scorer": lambda: [swebench_server_scorer()],
+        # Math scorer
+        "math_grader": lambda: [math_grader()],
     }
     if scorer_name in builtin_scorers:
         return builtin_scorers[scorer_name]()

@@ -72,7 +72,7 @@ BENCHMARK_TAXONOMY = {
         "score_key": "score",
     },
     # GLP - 수학적추론
-    "ko_gsm8k": {
+    "hrm8k": {
         "category": "GLP_수학적추론",
         "score_key": "score",
     },

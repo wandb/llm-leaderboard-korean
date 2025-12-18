@@ -46,7 +46,7 @@ ALL_BENCHMARKS = [
     "ko_truthful_qa",
     "ko_moral",
     "ko_arc_agi",
-    "ko_gsm8k",
+    "hrm8k",  # HRM8K: 한국어 수학 추론 (GSM8K, KSM, MATH, MMMLU, OMNI_MATH 통합)
     "korean_hate_speech",
     "kobbq",
     "ko_hle",

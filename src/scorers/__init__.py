@@ -13,6 +13,7 @@ from scorers.hallulens_qa_scorer import hallulens_qa_scorer
 from scorers.refusal_scorer import refusal_scorer
 from scorers.bfcl_scorer import bfcl_scorer
 from scorers.mtbench_scorer import mtbench_scorer
+from scorers.math_grader import math_grader
 
 __all__ = [
     "grid_match",
@@ -23,4 +24,5 @@ __all__ = [
     "refusal_scorer",
     "bfcl_scorer",
     "mtbench_scorer",
+    "math_grader",
 ]

@@ -24,7 +24,6 @@ from benchmarks.squad_kor_v1 import CONFIG as squad_kor_v1
 from benchmarks.ko_truthful_qa import CONFIG as ko_truthful_qa
 from benchmarks.ko_moral import CONFIG as ko_moral
 from benchmarks.ko_arc_agi import CONFIG as ko_arc_agi
-from benchmarks.ko_gsm8k import CONFIG as ko_gsm8k
 from benchmarks.korean_hate_speech import CONFIG as korean_hate_speech
 from benchmarks.kobbq import CONFIG as kobbq
 from benchmarks.ko_hle import CONFIG as ko_hle
@@ -42,6 +41,8 @@ from benchmarks.bfcl_text import CONFIG as bfcl_text  # backward compatibility
 from benchmarks.ko_mtbench import CONFIG as ko_mtbench
 # SWE-bench
 from benchmarks.swebench_verified_official_80 import CONFIG as swebench_verified_official_80
+# HRM8K
+from benchmarks.hrm8k import CONFIG as hrm8k
 
 # Benchmark descriptions
 BENCHMARK_DESCRIPTIONS: dict[str, str] = {
@@ -61,7 +62,6 @@ BENCHMARK_DESCRIPTIONS: dict[str, str] = {
     # Reasoning
     "ko_moral": "Moral judgment",
     "ko_arc_agi": "ARC-AGI reasoning (grid)",
-    "ko_gsm8k": "Elementary math problems",
     # Bias/Safety
     "korean_hate_speech": "Hate speech detection",
     "kobbq": "Bias judgment (BBQ)",
@@ -80,6 +80,8 @@ BENCHMARK_DESCRIPTIONS: dict[str, str] = {
     "ko_mtbench": "Multi-turn conversation evaluation",
     # Coding
     "swebench_verified_official_80": "SWE-bench bug fix (80 tasks)",
+    # Math Reasoning
+    "hrm8k": "Korean math reasoning (HRM8K)",
 }
 
 # All benchmark configurations
@@ -99,7 +101,6 @@ BENCHMARKS: dict = {
     "ko_truthful_qa": ko_truthful_qa,
     "ko_moral": ko_moral,
     "ko_arc_agi": ko_arc_agi,
-    "ko_gsm8k": ko_gsm8k,
     "korean_hate_speech": korean_hate_speech,
     "kobbq": kobbq,
     "ko_hle": ko_hle,
@@ -117,6 +118,8 @@ BENCHMARKS: dict = {
     "ko_mtbench": ko_mtbench,
     # SWE-bench
     "swebench_verified_official_80": swebench_verified_official_80,
+    # HRM8K
+    "hrm8k": hrm8k,
 }
 
 def get_benchmark_config(name: str) -> dict:

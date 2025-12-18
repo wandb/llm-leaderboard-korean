@@ -71,7 +71,7 @@ Evaluates general language model capabilities including language understanding, 
 | **Expert Knowledge** | `kmmlu_pro` | Advanced expertise in medicine, law, engineering, etc. | 100 | [LGAI-EXAONE/KMMLU-Pro](https://huggingface.co/datasets/LGAI-EXAONE/KMMLU-Pro) |
 | | `ko_hle` | Korean expert-level difficult problems | 100 | [cais/hle](https://huggingface.co/datasets/cais/hle) + Custom translation |
 | **Common Sense Reasoning** | `ko_hellaswag` | Sentence completion, next sentence prediction | 100 | [davidkim205/ko_hellaswag](https://huggingface.co/datasets/davidkim205/ko_hellaswag) |
-| **Mathematical Reasoning** | `ko_gsm8k` | Math problem solving | 100 | [HAERAE-HUB/HRM8K](https://huggingface.co/datasets/HAERAE-HUB/HRM8K) |
+| **Mathematical Reasoning** | `hrm8k` | Korean math reasoning (GSM8K, KSM, MATH, MMMLU, OMNI_MATH combined) | 100 | [HAERAE-HUB/HRM8K](https://huggingface.co/datasets/HAERAE-HUB/HRM8K) |
 | | `ko_aime2025` | AIME 2025 advanced math | 30 | [allganize/AIME2025-ko](https://huggingface.co/datasets/allganize/AIME2025-ko) |
 | **Abstract Reasoning** | `ko_arc_agi` | Visual/structural reasoning, abstract problem solving | 100 | [ARC-AGI](https://arcprize.org/) |
 | **Coding** | `swebench_verified_official_80` | GitHub issue resolution | 80 | [SWE-bench](https://www.swebench.com/) |
@@ -111,7 +111,7 @@ Datasets are uploaded to the `horangi/horangi4` project:
 | KoTruthfulQA_mini | `weave:///horangi/horangi4/object/KoTruthfulQA_mini:latest` |
 | KoMoral_mini | `weave:///horangi/horangi4/object/KoMoral_mini:latest` |
 | KoARC_AGI_mini | `weave:///horangi/horangi4/object/KoARC_AGI_mini:latest` |
-| KoGSM8K_mini | `weave:///horangi/horangi4/object/KoGSM8K_mini:latest` |
+| HRM8K_mini | `weave:///horangi/horangi4/object/HRM8K_mini:latest` |
 | KoreanHateSpeech_mini | `weave:///horangi/horangi4/object/KoreanHateSpeech_mini:latest` |
 | KoBBQ_mini | `weave:///horangi/horangi4/object/KoBBQ_mini:latest` |
 | KoHLE_mini | `weave:///horangi/horangi4/object/KoHLE_mini:latest` |

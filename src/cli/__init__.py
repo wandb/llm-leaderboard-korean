@@ -278,7 +278,7 @@ def main():
         categories = {
             "General": ["ko_hellaswag", "ko_aime2025", "ifeval_ko", "ko_balt_700"],
             "Knowledge": ["haerae_bench_v1_rc", "haerae_bench_v1_wo_rc", "kmmlu", "kmmlu_pro", "squad_kor_v1", "ko_truthful_qa"],
-            "Reasoning": ["ko_moral", "ko_arc_agi", "ko_gsm8k"],
+            "Reasoning": ["ko_moral", "ko_arc_agi", "hrm8k"],
             "Bias/Safety": ["korean_hate_speech", "kobbq", "ko_hle"],
             "Hallucination (HalluLens)": ["ko_hallulens_wikiqa", "ko_hallulens_longwiki", "ko_hallulens_generated", "ko_hallulens_mixed", "ko_hallulens_nonexistent"],
             "Function Calling": ["bfcl"],

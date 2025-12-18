@@ -36,7 +36,7 @@ Models are compared on two axes: General Language Performance (GLP) and Alignmen
 📊 General Language Performance (GLP):
 - Syntax/Semantics: ko_balt_700, haerae_bench_v1
 - General/Expert Knowledge: kmmlu, kmmlu_pro, ko_hle
-- Common Sense/Math/Abstract Reasoning: ko_hellaswag, ko_gsm8k, ko_aime2025, ko_arc_agi
+- Common Sense/Math/Abstract Reasoning: ko_hellaswag, hrm8k, ko_aime2025, ko_arc_agi
 - Information Retrieval: squad_kor_v1
 - Expression: ko_mtbench
 - Coding: swebench_verified_official_80
@@ -104,8 +104,8 @@ def build_columns_from_benchmarks(
         "korean_hate_speech": ("choice", "true_fraction"),
         
         # model_graded_qa scorer
-        "ko_aime2025": ("model_graded_qa", "true_fraction"),
-        "ko_gsm8k": ("model_graded_qa", "true_fraction"),
+        "ko_aime2025": ("math_grader", "accuracy"),
+        "hrm8k": ("math_grader", "accuracy"),
         
         # Special scorers
         "ifeval_ko": ("instruction_following", "prompt_level_strict.true_fraction"),
@@ -200,7 +200,7 @@ def create_weave_leaderboard(
         "ko_truthful_qa",
         "ko_moral",
         "ko_arc_agi",
-        "ko_gsm8k",
+        "hrm8k",
         "korean_hate_speech",
         "kobbq",
         "ko_hle",
