@@ -1,11 +1,11 @@
 """
-KoMT-Bench - 한국어 멀티턴 대화 평가 벤치마크
+KoMT-Bench - Korean Multi-turn Conversation Evaluation Benchmark
 
-원본: https://huggingface.co/datasets/LGAI-EXAONE/KoMT-Bench (LG AI Research)
+Source: https://huggingface.co/datasets/LGAI-EXAONE/KoMT-Bench (LG AI Research)
 
-8개 카테고리 (writing, roleplay, reasoning, math, coding, extraction, stem, humanities)
-각 카테고리당 10개 질문, 총 80개
-2턴 대화 형식으로 LLM Judge가 1-10점 평가
+8 categories (writing, roleplay, reasoning, math, coding, extraction, stem, humanities)
+10 questions per category, 80 total
+2-turn conversation format evaluated by LLM Judge on 1-10 scale
 """
 
 from core.benchmark_config import BenchmarkConfig
@@ -15,11 +15,11 @@ CONFIG = BenchmarkConfig(
     data_source="weave:///horangi/horangi4/object/KoMTBench_mini:GY9L798k1ezXyTlk7ILVZtAK0c3ii1ysPM7y1ahmCag",
     field_mapping={
         "id": "id",
-        "input": "turn1",  # 첫 번째 질문이 input
-        # target은 없음 - LLM Judge가 평가
+        "input": "turn1",  # First question is input
+        # No target - evaluated by LLM Judge
     },
     answer_format="identity",
     solver="mtbench_solver",
     scorer="mtbench_scorer",
-    # system_message는 solver에서 처리하지 않음 (질문만 전달)
+    # system_message is not handled in solver (only question is passed)
 )

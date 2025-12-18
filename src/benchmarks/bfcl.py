@@ -1,25 +1,25 @@
 """
-BFCL - Berkeley Function Calling Leaderboard 벤치마크 (통합 버전)
+BFCL - Berkeley Function Calling Leaderboard Benchmark (Integrated Version)
 
-모델의 tool calling 지원 여부에 따라 자동으로 적절한 solver를 선택합니다.
-- Native Tool Calling (기본): tool calling 지원 모델 (OpenAI, Claude, Gemini 등)
-- Text-based: tool calling 미지원 모델 (EXAONE, 일부 오픈소스 등)
+Automatically selects appropriate solver based on model's tool calling support.
+- Native Tool Calling (default): Models that support tool calling (OpenAI, Claude, Gemini, etc.)
+- Text-based: Models without tool calling support (EXAONE, some open-source models, etc.)
 
-모델 설정 (configs/models/<model>.yaml):
+Model configuration (configs/models/<model>.yaml):
     benchmarks:
       bfcl:
-        use_native_tools: true  # 또는 false
+        use_native_tools: true  # or false
 
-지원 split (150개 샘플):
-- simple: 단일 함수 호출 (30개)
-- multiple: 여러 함수 중 선택 (30개)
-- exec_simple: 실행 가능한 단순 호출 (30개)
-- exec_multiple: 실행 가능한 다중 호출 (30개)
-- irrelevance: 관련 없는 함수 거부 (30개)
+Supported splits (150 samples):
+- simple: Single function call (30)
+- multiple: Choose from multiple functions (30)
+- exec_simple: Executable simple call (30)
+- exec_multiple: Executable multiple call (30)
+- irrelevance: Reject irrelevant function (30)
 
-제외:
-- parallel*: 병렬 호출
-- multi_turn*: 멀티턴 대화
+Excluded:
+- parallel*: Parallel calls
+- multi_turn*: Multi-turn conversation
 """
 
 from core.benchmark_config import BenchmarkConfig
@@ -30,21 +30,20 @@ CONFIG = BenchmarkConfig(
     field_mapping={
         "id": "id",
         "input": "input",
-        # target은 없음 - metadata의 ground_truth 사용
+        # No target - uses ground_truth from metadata
     },
     answer_format="identity",
-    # solver는 동적으로 결정됨 (use_native_tools 설정에 따라)
-    # 기본값: bfcl_solver (native tool calling)
+    # solver is determined dynamically (based on use_native_tools setting)
+    # default: bfcl_solver (native tool calling)
     solver="bfcl_solver",
     scorer="bfcl_scorer",
-    # balanced sampling으로 각 카테고리에서 균등하게 추출
+    # Balanced sampling to extract evenly from each category
     sampling="balanced",
     sampling_by="category",
-    # 메타데이터: 이 벤치마크가 동적 solver 선택을 지원함을 표시
+    # Metadata: indicates this benchmark supports dynamic solver selection
     metadata={
         "supports_dynamic_solver": True,
         "native_solver": "bfcl_solver",
         "text_solver": "bfcl_text_solver",
     },
 )
-

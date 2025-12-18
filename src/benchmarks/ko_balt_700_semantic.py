@@ -1,7 +1,7 @@
 """
-KoBALT-700 - 한국어 MCQA 벤치마크
+KoBALT-700 Semantic - Korean MCQA Benchmark
 
-독립 벤치마크 (base 없음) - solver/scorer 직접 지정
+Independent benchmark (no base) - solver/scorer directly specified
 """
 
 from core.benchmark_config import BenchmarkConfig
@@ -15,7 +15,7 @@ CONFIG = BenchmarkConfig(
         "target": "answer",
         "choices": "options",
     },
-    answer_format="letter",  # 데이터의 answer가 이미 문자(A, B, C, ...)임
+    answer_format="letter",  # Data's answer is already a letter (A, B, C, ...)
     solver="multiple_choice",
     scorer="choice",
     system_message="주어진 질문에 가장 적절한 답을 선택하세요.",

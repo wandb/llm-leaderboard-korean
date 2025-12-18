@@ -1,11 +1,11 @@
 """
-벤치마크 팩토리
+Benchmark Factory
 
-config를 기반으로 Inspect AI Task를 생성합니다.
+Creates Inspect AI Tasks based on config.
 
-핵심 아이디어: 
-- inspect_evals의 원본 Task를 가져와서 dataset만 override
-- 원본의 solver, scorer, 기타 설정은 그대로 사용
+Core idea: 
+- Get original Task from inspect_evals and override only the dataset
+- Keep original solver, scorer, and other settings as-is
 """
 
 from typing import Any
@@ -28,32 +28,32 @@ from core.answer_format import ANSWER_FORMAT
 
 def _stratified_sample(rows: list[dict], group_by: str, limit: int) -> list[dict]:
     """
-    Stratified Sampling: 원본 비율 유지
+    Stratified Sampling: Maintain original proportions
     
     Args:
-        rows: 전체 데이터
-        group_by: 그룹화할 필드명 (예: "category")
-        limit: 총 샘플 수
+        rows: Full data
+        group_by: Field name for grouping (e.g., "category")
+        limit: Total sample count
     
     Returns:
-        원본 비율을 유지하며 샘플링된 데이터
+        Data sampled while maintaining original proportions
     """
     from collections import defaultdict
     import random
     
     random.seed(42)
     
-    # 카테고리별로 그룹화
+    # Group by category
     groups: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
         key = row.get(group_by, "unknown")
         groups[key].append(row)
     
-    # 각 카테고리 내에서 셔플
+    # Shuffle within each category
     for category_rows in groups.values():
         random.shuffle(category_rows)
     
-    # 비율에 따른 샘플 수 계산
+    # Calculate sample count by proportion
     total = len(rows)
     samples_per_category = {}
     remaining = limit
@@ -64,14 +64,14 @@ def _stratified_sample(rows: list[dict], group_by: str, limit: int) -> list[dict
         samples_per_category[category] = max(1, n_samples)
         remaining -= samples_per_category[category]
     
-    # 나머지를 큰 카테고리부터 분배
+    # Distribute remaining to larger categories first
     for category in sorted(groups.keys(), key=lambda c: len(groups[c]), reverse=True):
         if remaining <= 0:
             break
         samples_per_category[category] += 1
         remaining -= 1
     
-    # 샘플링
+    # Sample
     result = []
     for category, category_rows in groups.items():
         n_samples = samples_per_category[category]
@@ -83,37 +83,37 @@ def _stratified_sample(rows: list[dict], group_by: str, limit: int) -> list[dict
 
 def _balanced_sample(rows: list[dict], group_by: str, limit: int) -> list[dict]:
     """
-    Balanced Sampling: 각 카테고리에서 동일 수 샘플링
+    Balanced Sampling: Sample equal counts from each category
     
     Args:
-        rows: 전체 데이터
-        group_by: 그룹화할 필드명 (예: "category")
-        limit: 총 샘플 수
+        rows: Full data
+        group_by: Field name for grouping (e.g., "category")
+        limit: Total sample count
     
     Returns:
-        각 카테고리에서 균등하게 샘플링된 데이터
+        Data with equal samples from each category
     """
     from collections import defaultdict
     import random
     
     random.seed(42)
     
-    # 카테고리별로 그룹화
+    # Group by category
     groups: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
         key = row.get(group_by, "unknown")
         groups[key].append(row)
     
-    # 각 카테고리 내에서 셔플
+    # Shuffle within each category
     for category_rows in groups.values():
         random.shuffle(category_rows)
     
-    # 균등 분배: limit / 카테고리 수
+    # Equal distribution: limit / number of categories
     n_categories = len(groups)
     base_per_category = limit // n_categories
     extra = limit % n_categories
     
-    # 샘플링
+    # Sample
     result = []
     for i, (category, category_rows) in enumerate(sorted(groups.items())):
         n_samples = base_per_category + (1 if i < extra else 0)
@@ -124,16 +124,16 @@ def _balanced_sample(rows: list[dict], group_by: str, limit: int) -> list[dict]:
 
 
 # =============================================================================
-# 원본 Task 로딩
+# Original Task Loading
 # =============================================================================
 
 def get_base_task(base_module: str) -> Task:
     """
-    inspect_evals에서 원본 Task를 가져옵니다.
+    Get original Task from inspect_evals.
     
     Args:
-        base_module: 모듈 경로 (예: "inspect_evals.ifeval.ifeval")
-                     task 함수명 = 모듈명의 마지막 부분 ("ifeval")
+        base_module: Module path (e.g., "inspect_evals.ifeval.ifeval")
+                     task function name = last part of module name ("ifeval")
     """
     module = importlib.import_module(base_module)
     func_name = base_module.rsplit(".", 1)[1]
@@ -142,17 +142,17 @@ def get_base_task(base_module: str) -> Task:
 
 def get_record_to_sample(base_module: str):
     """
-    원본 벤치마크의 record_to_sample 함수를 가져옵니다.
+    Get record_to_sample function from original benchmark.
     
     Args:
-        base_module: 모듈 경로 (예: "inspect_evals.ifeval.ifeval")
+        base_module: Module path (e.g., "inspect_evals.ifeval.ifeval")
     """
     module = importlib.import_module(base_module)
     return getattr(module, "record_to_sample", None)
 
 
 # =============================================================================
-# Sample 변환 (base가 없는 벤치마크용)
+# Sample Conversion (for benchmarks without base)
 # =============================================================================
 
 def create_sample(
@@ -160,7 +160,7 @@ def create_sample(
     field_mapping: dict[str, Any],
     answer_format: str = "index_0",
 ) -> Sample:
-    """config의 field_mapping을 기반으로 Sample 생성"""
+    """Create Sample based on config's field_mapping"""
     transform = ANSWER_FORMAT.get(answer_format, ANSWER_FORMAT["index_0"])
     
     def get_field(record: dict, field_spec: Any) -> Any:
@@ -176,17 +176,17 @@ def create_sample(
     target_val = get_field(record, field_mapping.get("target"))
     choices = get_field(record, field_mapping.get("choices"))
     
-    # target 변환 (text format은 choices 필요)
+    # Convert target (text format needs choices)
     if target_val is not None:
         if answer_format == "text":
             target = transform(target_val, choices)
         else:
             target = transform(target_val)
     else:
-        # target이 없는 경우 빈 문자열 (refusal 태스크 등)
+        # No target = empty string (for refusal tasks, etc.)
         target = ""
     
-    # 메타데이터
+    # Metadata
     mapped_fields = set()
     for v in field_mapping.values():
         if isinstance(v, list):
@@ -208,17 +208,17 @@ def create_sample(
 
 
 # =============================================================================
-# Scorer/Solver (base가 없는 벤치마크용)
+# Scorer/Solver (for benchmarks without base)
 # =============================================================================
 
 def get_scorer_by_name(scorer_name: str) -> list[Scorer]:
     """
-    scorer 이름으로 Scorer 인스턴스 생성
+    Create Scorer instance from scorer name
     
-    1. 내장 scorer 먼저 확인 (choice, match 등)
-    2. 없으면 커스텀 scorer에서 찾기 (grid_match 등)
+    1. Check built-in scorers first (choice, match, etc.)
+    2. Then look in custom scorers (grid_match, etc.)
     """
-    # 내장 scorer
+    # Built-in scorers
     from scorers import hallulens_qa_scorer, refusal_scorer
     from scorers.swebench_server_scorer import swebench_server_scorer
     
@@ -237,7 +237,7 @@ def get_scorer_by_name(scorer_name: str) -> list[Scorer]:
     if scorer_name in builtin_scorers:
         return builtin_scorers[scorer_name]()
     
-    # 커스텀 scorer
+    # Custom scorers
     try:
         import scorers as custom_scorers
         if hasattr(custom_scorers, scorer_name):
@@ -249,8 +249,8 @@ def get_scorer_by_name(scorer_name: str) -> list[Scorer]:
 
 
 def get_solver_by_name(solver_name: str) -> list[Solver]:
-    """solver 이름으로 Solver 인스턴스 생성"""
-    # 내장 solver
+    """Create Solver instance from solver name"""
+    # Built-in solvers
     from solvers.swebench_patch_solver import swebench_patch_solver
     
     builtin_solvers = {
@@ -262,7 +262,7 @@ def get_solver_by_name(solver_name: str) -> list[Solver]:
     if solver_name in builtin_solvers:
         return builtin_solvers[solver_name]()
     
-    # 커스텀 solver
+    # Custom solvers
     try:
         import solvers as custom_solvers
         if hasattr(custom_solvers, solver_name):
@@ -274,7 +274,7 @@ def get_solver_by_name(solver_name: str) -> list[Solver]:
 
 
 # =============================================================================
-# 벤치마크 생성
+# Benchmark Creation
 # =============================================================================
 
 def create_benchmark(
@@ -287,23 +287,23 @@ def create_benchmark(
     **kwargs,
 ) -> Task:
     """
-    config 기반으로 벤치마크 Task 생성
+    Create benchmark Task based on config
     
-    base가 있으면: 원본 Task를 가져와서 dataset만 override
-    base가 없으면: config의 solver/scorer로 새 Task 생성
+    If base exists: Get original Task and override only dataset
+    If no base: Create new Task with config's solver/scorer
     
     Args:
-        name: 벤치마크 이름
-        shuffle: 데이터 셔플 여부
-        limit: 샘플 수 제한
-        split: 데이터 분할
-        use_korean_prompt: 한국어 프롬프트 사용 여부
-        use_native_tools: tool calling 사용 여부 (BFCL 등에서 사용)
-                         None이면 기본값 (native) 사용
+        name: Benchmark name
+        shuffle: Whether to shuffle data
+        limit: Sample count limit
+        split: Data split
+        use_korean_prompt: Whether to use Korean prompts
+        use_native_tools: Whether to use tool calling (used for BFCL, etc.)
+                         None uses default (native)
     """
     config = get_benchmark_config(name)
     
-    # 동적 solver 선택 (BFCL 등)
+    # Dynamic solver selection (BFCL, etc.)
     if use_native_tools is not None and config.get("metadata", {}).get("supports_dynamic_solver"):
         if use_native_tools:
             config["solver"] = config.get("metadata", {}).get("native_solver", config.get("solver"))
@@ -312,7 +312,7 @@ def create_benchmark(
     base_path = config.get("base", "")
     
     # =========================================================================
-    # 1. 데이터 로드
+    # 1. Load data
     # =========================================================================
     data_type = config["data_type"]
     data_source = config["data_source"]
@@ -323,13 +323,13 @@ def create_benchmark(
     else:
         rows = load_jsonl_data(data_source)
     
-    # Sampling (limit 적용 전)
-    # sampling: "stratified" (비율 유지) | "balanced" (균등) | None (앞에서 자르기)
-    # sampling_by: 그룹화할 필드명 (예: "category")
+    # Sampling (before limit is applied)
+    # sampling: "stratified" (maintain ratio) | "balanced" (equal) | None (slice from start)
+    # sampling_by: Field name for grouping (e.g., "category")
     sampling = config.get("sampling")
     sampling_by = config.get("sampling_by")
     
-    # limit이 문자열 "None"으로 전달될 수 있으므로 처리
+    # Handle limit passed as string "None"
     if isinstance(limit, str):
         limit = None if limit.lower() == "none" else int(limit)
     
@@ -343,7 +343,7 @@ def create_benchmark(
     elif limit:
         rows = rows[:limit]
     
-    # 누락된 필드에 기본값 추가
+    # Add default values for missing fields
     default_fields = config.get("default_fields", {})
     if default_fields:
         for row in rows:
@@ -352,7 +352,7 @@ def create_benchmark(
                     row[field] = default_value
     
     # =========================================================================
-    # 2. base가 있으면: 원본 Task의 dataset만 override
+    # 2. If base exists: Override only original Task's dataset
     # =========================================================================
     if base_path:
         original_task = get_base_task(base_path)
@@ -387,7 +387,7 @@ def create_benchmark(
         )
     
     # =========================================================================
-    # 3. base가 없으면: config의 solver/scorer로 새 Task 생성
+    # 3. If no base: Create new Task with config's solver/scorer
     # =========================================================================
     else:
         field_mapping = config.get("field_mapping", {})

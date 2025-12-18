@@ -1,19 +1,19 @@
 """
-KoHalluLens MixedEntity - 실제/가상 혼합 엔티티 평가
+KoHalluLens MixedEntity - Real/Fictional Mixed Entity Evaluation
 
-평가 방식:
-- 실제 엔티티 + 가상 엔티티가 혼합된 질문
-- 가상 엔티티: "모르겠다" 거부 = 정답
-- 실제 엔티티: 정보 제공 = 정답 (별도 평가 필요할 수 있음)
+Evaluation method:
+- Questions with mixed real and fictional entities
+- Fictional entity: "I don't know" refusal = correct
+- Real entity: Providing information = correct (may need separate evaluation)
 
-주의: 이 데이터셋은 실제/가상 구분이 없을 수 있어
-      모든 엔티티를 가상으로 간주하여 거부 평가
+Note: This dataset may not distinguish between real/fictional,
+      so all entities are treated as fictional for refusal evaluation
 
-필드:
-- prompt: 엔티티에 대한 질문
-- name: 엔티티 이름
-- type_: 엔티티 유형
-- place: 장소
+Fields:
+- prompt: Question about entity
+- name: Entity name
+- type_: Entity type
+- place: Location
 """
 
 from core.benchmark_config import BenchmarkConfig
@@ -24,7 +24,7 @@ CONFIG = BenchmarkConfig(
     field_mapping={
         "id": "id",
         "input": "prompt",
-        # target 없음 - 거부가 정답
+        # No target - refusal is the correct answer
     },
     answer_format="identity",
     solver="generate",

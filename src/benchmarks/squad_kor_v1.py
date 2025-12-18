@@ -1,4 +1,4 @@
-"""Squad-Kor-V1 - 한국어 독해 QA"""
+"""Squad-Kor-V1 - Korean Reading Comprehension QA"""
 
 from core.benchmark_config import BenchmarkConfig
 

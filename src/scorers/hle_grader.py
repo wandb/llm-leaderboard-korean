@@ -1,11 +1,11 @@
 """
-HLE Grader - Humanity's Last Exam 스타일 LLM 기반 채점기
+HLE Grader - Humanity's Last Exam style LLM-based scorer
 
-특징:
-- judge 모델을 별도로 지정 가능 (기본: 평가 모델과 동일)
-- answer_type에 따라 다른 채점 방식:
-  - exactMatch: LLM이 의미적 동일성 판단
-  - multipleChoice: 정확 매칭
+Features:
+- Judge model can be specified separately (default: same as evaluation model)
+- Different scoring methods based on answer_type:
+  - exactMatch: LLM determines semantic equivalence
+  - multipleChoice: Exact matching
 """
 
 import re
@@ -25,39 +25,39 @@ from inspect_ai.scorer import (
 from inspect_ai.solver import TaskState
 
 
-JUDGE_PROMPT = """아래의 정확하고 명확한 [정답]을 바탕으로 다음 [답변]이 [질문]에 대한 올바른지 여부를 판단하십시오.
+JUDGE_PROMPT = """Based on the precise and clear [correct answer] below, determine whether the following [response] is correct for the [question].
 
-[질문]: {question}
+[Question]: {question}
 
-[응답]: {answer}
+[Response]: {answer}
 
-[정답]: {criterion}
+[Correct Answer]: {criterion}
 
-[정답]과 [답변] 사이에 의미 있는 차이가 있는지에만 집중하여 판단하십시오. 
-문제의 배경에 대한 언급이나 문제 풀이 시도, [정답]과 다른 답을 주장하는 것은 삼가고, 오직 두 답이 일치하는지 여부에만 집중하십시오. 
-[답변]이 [정답]을 바탕으로 왜 맞는지 또는 틀린지 한두 문장으로 설명하십시오. 
-마지막으로, 정답일 경우 'GRADE: C', 오답일 경우 'GRADE: I' 형식으로 답을 작성하십시오.
+Focus only on whether there is a meaningful difference between the [correct answer] and [response].
+Do not mention background information about the problem or attempts to solve it, and do not argue for an answer different from the [correct answer]. Focus only on whether the two answers match.
+Explain in one or two sentences why the [response] is correct or incorrect based on the [correct answer].
+Finally, write 'GRADE: C' if correct, or 'GRADE: I' if incorrect.
 
 """
 
-JUDGE_PROMPT2 = """다음 [응답]이 [정답]과 일치하는지 판단하세요.
+JUDGE_PROMPT2 = """Determine if the following [response] matches the [correct answer].
 
-[질문]: {question}
+[Question]: {question}
 
-[응답]: {answer}
+[Response]: {answer}
 
-[정답]: {criterion}
+[Correct Answer]: {criterion}
 
-[지시사항]:
-- [정답]과 [응답] 사이에 의미적 차이가 있는지만 판단하세요.
-- 표현 방식이 다르더라도 의미가 같으면 정답입니다 (예: "참" = "True" = "맞다").
-- 판단 이유를 한두 문장으로 설명하세요.
-- 마지막에 'GRADE: C' (정답) 또는 'GRADE: I' (오답)으로 답하세요.
+[Instructions]:
+- Only determine if there is a semantic difference between [correct answer] and [response].
+- It is correct if the meaning is the same even if the expression is different (e.g., "true" = "True" = "correct").
+- Explain the reason for your judgment in one or two sentences.
+- End with 'GRADE: C' (correct) or 'GRADE: I' (incorrect).
 """
 
 
 def _is_correct(value) -> bool:
-    """score.value가 정답인지 판단 (숫자/문자열 모두 지원)"""
+    """Determine if score.value is correct (supports both number/string)"""
     if value == CORRECT or value == "C":
         return True
     if isinstance(value, (int, float)) and value == 1:
@@ -67,7 +67,7 @@ def _is_correct(value) -> bool:
 
 @metric
 def hle_accuracy() -> Metric:
-    """HLE 정확도 (answer_type별 구분 없이 전체)"""
+    """HLE accuracy (overall, without answer_type distinction)"""
     def metric_fn(scores: list[SampleScore]) -> float:
         if not scores:
             return 0.0
@@ -78,7 +78,7 @@ def hle_accuracy() -> Metric:
 
 @metric
 def hle_exact_match_accuracy() -> Metric:
-    """exactMatch 타입만의 정확도"""
+    """Accuracy for exactMatch type only"""
     def metric_fn(scores: list[SampleScore]) -> float:
         exact_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("answer_type") == "exactMatch"]
         if not exact_scores:
@@ -90,7 +90,7 @@ def hle_exact_match_accuracy() -> Metric:
 
 @metric
 def hle_multiple_choice_accuracy() -> Metric:
-    """multipleChoice 타입만의 정확도"""
+    """Accuracy for multipleChoice type only"""
     def metric_fn(scores: list[SampleScore]) -> float:
         mc_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("answer_type") == "multipleChoice"]
         if not mc_scores:
@@ -101,21 +101,21 @@ def hle_multiple_choice_accuracy() -> Metric:
 
 
 def _extract_answer(response: str, answer_type: str) -> str:
-    """모델 응답에서 답변 추출"""
+    """Extract answer from model response"""
     if answer_type == "multipleChoice":
-        # "Answer: B" 또는 "(B)" 형식 찾기
+        # Find "Answer: B" or "(B)" format
         match = re.search(r"Answer:\s*([A-Za-z])", response, re.IGNORECASE)
         if match:
             return match.group(1).upper()
         match = re.search(r"\(([A-Za-z])\)", response)
         if match:
             return match.group(1).upper()
-        # 단일 알파벳 찾기
+        # Find single alphabet
         match = re.search(r"\b([A-Za-z])\b", response)
         if match:
             return match.group(1).upper()
     else:
-        # exactMatch: "Exact Answer: ..." 형식 찾기
+        # exactMatch: Find "Exact Answer: ..." format
         match = re.search(r"Exact Answer:\s*(.+?)(?:\n|$)", response, re.IGNORECASE)
         if match:
             return match.group(1).strip()
@@ -123,24 +123,24 @@ def _extract_answer(response: str, answer_type: str) -> str:
 
 
 @scorer(metrics=[
-    accuracy(),  # 기본 accuracy 추가
+    accuracy(),  # Add default accuracy
     hle_accuracy(),
     hle_exact_match_accuracy(),
     hle_multiple_choice_accuracy(),
 ])
 def hle_grader(judge_model: str | None = None) -> Scorer:
     """
-    HLE 스타일 채점기.
+    HLE style scorer.
     
     Args:
-        judge_model: 채점용 모델 (None이면 평가 모델과 동일)
-                     예: "openai/gpt-4o-mini"
+        judge_model: Model for scoring (None uses same model as evaluation)
+                     e.g., "openai/gpt-4o-mini"
     
-    채점 방식:
-    - multipleChoice: 정확 매칭 (A, B, C 등)
-    - exactMatch: LLM이 의미적 동일성 판단
+    Scoring method:
+    - multipleChoice: Exact match (A, B, C, etc.)
+    - exactMatch: LLM determines semantic equivalence
     """
-    # LLM grader 생성
+    # Create LLM grader
     llm_grader = model_graded_qa(
         template=JUDGE_PROMPT,
         model=judge_model,
@@ -154,7 +154,7 @@ def hle_grader(judge_model: str | None = None) -> Scorer:
         response = state.output.completion if state.output else ""
         extracted_answer = _extract_answer(response, answer_type)
         
-        # 원본 HLE와 동일하게 모든 문제를 LLM 채점
+        # Same as original HLE: LLM scores all questions
         base_score = await llm_grader(state, target)
         
         return Score(
@@ -168,4 +168,3 @@ def hle_grader(judge_model: str | None = None) -> Scorer:
         )
     
     return score
-

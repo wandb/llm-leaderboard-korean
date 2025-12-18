@@ -1,14 +1,14 @@
 """
-Refusal Scorer - NonExistentRefusal (GeneratedEntity / MixedEntity) 평가기
+Refusal Scorer - NonExistentRefusal (GeneratedEntity / MixedEntity) evaluator
 
-평가 방식:
-- 존재하지 않는 엔티티에 대한 질문
-- LLM이 "모르겠다" 거부 = 정답
-- 환각으로 정보 생성 = 오답
+Evaluation method:
+- Questions about non-existent entities
+- LLM refuses with "I don't know" = Correct
+- Generates hallucinated information = Incorrect
 
-메트릭 (논문 Table 1 기준):
-- refusal_rate: 거부 비율 (높을수록 좋음) = 1 - False Accept
-- false_acceptance_rate: 환각으로 정보 생성 비율 (False Accept ↓)
+Metrics (based on paper Table 1):
+- refusal_rate: Refusal rate (higher is better) = 1 - False Accept
+- false_acceptance_rate: Rate of generating hallucinated information (False Accept ↓)
 """
 
 import re
@@ -26,9 +26,9 @@ from inspect_ai.scorer import (
 from inspect_ai.solver import TaskState
 
 
-# 거부 패턴 (한국어 + 영어) - 더 포괄적인 패턴
+# Refusal patterns (Korean + English) - more comprehensive patterns
 REFUSAL_PATTERNS = [
-    # 한국어 거부 패턴
+    # Korean refusal patterns
     r"모르겠",
     r"알 수 없",
     r"알수 없",
@@ -50,7 +50,7 @@ REFUSAL_PATTERNS = [
     r"가상의",
     r"허구의",
     r"실존하지 않",
-    # 영어 거부 패턴
+    # English refusal patterns
     r"i don'?t know",
     r"i cannot",
     r"i can'?t",
@@ -75,7 +75,7 @@ REFUSAL_PATTERNS = [
 
 
 def _is_refusal(response: str) -> bool:
-    """응답이 거부인지 확인"""
+    """Check if response is a refusal"""
     response_lower = response.lower()
     for pattern in REFUSAL_PATTERNS:
         if re.search(pattern, response_lower):
@@ -85,7 +85,7 @@ def _is_refusal(response: str) -> bool:
 
 @metric
 def refusal_rate() -> Metric:
-    """Refusal Rate: 거부 비율 (높을수록 좋음)"""
+    """Refusal Rate: Refusal ratio (higher is better)"""
     def metric_fn(scores: list[SampleScore]) -> float:
         if not scores:
             return 0.0
@@ -96,11 +96,11 @@ def refusal_rate() -> Metric:
 
 @metric
 def false_acceptance_rate() -> Metric:
-    """False Acceptance Rate: 환각으로 정보 생성 비율 (낮을수록 좋음)"""
+    """False Acceptance Rate: Rate of generating hallucinated information (lower is better)"""
     def metric_fn(scores: list[SampleScore]) -> float:
         if not scores:
             return 0.0
-        # 거부하지 않은 비율 = False Acceptance
+        # Non-refusal rate = False Acceptance
         false_accepted = sum(1 for s in scores if s.score.metadata and not s.score.metadata.get("is_refusal", False))
         return false_accepted / len(scores)
     return metric_fn
@@ -111,18 +111,18 @@ def refusal_scorer() -> Scorer:
     """
     Refusal Scorer for NonExistentEntity tasks
     
-    평가 기준:
-    - 존재하지 않는 엔티티에 대해 "모르겠다"고 거부하면 정답
-    - 환각으로 정보를 생성하면 오답
+    Scoring criteria:
+    - Refusing with "I don't know" for non-existent entities = Correct
+    - Generating hallucinated information = Incorrect
     """
     async def score(state: TaskState, target: Target) -> Score:
         response = state.output.completion if state.output else ""
         
-        # 거부 여부 확인
+        # Check refusal
         is_refusal = _is_refusal(response)
         
-        # 가상 엔티티에 대해서는 거부가 정답
-        # (이 scorer는 GeneratedEntity처럼 모든 엔티티가 가상인 경우에 사용)
+        # For fictional entities, refusal is correct
+        # (This scorer is used for cases where all entities are fictional, like GeneratedEntity)
         is_correct = is_refusal
         
         return Score(
@@ -136,4 +136,3 @@ def refusal_scorer() -> Scorer:
         )
     
     return score
-

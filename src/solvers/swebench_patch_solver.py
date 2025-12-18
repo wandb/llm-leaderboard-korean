@@ -79,16 +79,16 @@ CRITICAL: When generating the patch, you MUST include proper line numbers in the
 
 
 def _extract_target_files_from_test_patch(test_patch: str) -> list[str]:
-    """test_patch에서 테스트 파일 경로 추출 (수정해야 할 모듈 힌트로 사용)"""
+    """Extract test file paths from test_patch (used as hints for modules to modify)"""
     if not test_patch:
         return []
-    # diff --git a/path/to/file.py b/path/to/file.py 패턴
+    # Pattern: diff --git a/path/to/file.py b/path/to/file.py
     files = re.findall(r'diff --git a/(\S+)', test_patch)
     return list(set(files))
 
 
 def _extract_fail_to_pass_info(fail_to_pass: str | list) -> str:
-    """FAIL_TO_PASS에서 테스트 정보 추출"""
+    """Extract test info from FAIL_TO_PASS"""
     if not fail_to_pass:
         return ""
     if isinstance(fail_to_pass, str):
@@ -98,7 +98,7 @@ def _extract_fail_to_pass_info(fail_to_pass: str | list) -> str:
         except:
             return fail_to_pass
     if isinstance(fail_to_pass, list):
-        return "\n".join(f"- {t}" for t in fail_to_pass[:5])  # 최대 5개
+        return "\n".join(f"- {t}" for t in fail_to_pass[:5])  # Max 5 items
     return str(fail_to_pass)
 
 
@@ -123,9 +123,9 @@ def swebench_patch_solver() -> Solver:
         version = metadata.get("version", "")
         test_patch = metadata.get("test_patch", "") or ""
         fail_to_pass = metadata.get("FAIL_TO_PASS", "") or ""
-        code = metadata.get("code", "") or ""  # 실제 코드 파일 내용
+        code = metadata.get("code", "") or ""  # Actual code file content
 
-        # 테스트 파일에서 관련 모듈 경로 힌트 추출
+        # Extract related module path hints from test files
         test_files = _extract_target_files_from_test_patch(test_patch)
         fail_info = _extract_fail_to_pass_info(fail_to_pass)
 
@@ -135,11 +135,11 @@ def swebench_patch_solver() -> Solver:
         # Issue section
         user_prompt += f"<issue>\n{problem}\n</issue>\n\n"
 
-        # CODE SECTION - 핵심! 실제 코드 파일 내용
+        # CODE SECTION - Key! Actual code file content
         if code.strip():
             user_prompt += f"<code>\n{code}\n</code>\n\n"
         else:
-            # code가 없으면 기존 힌트들 사용
+            # If code is not available, use existing hints
             # Repository info
             if repo:
                 user_prompt += f"<repository>\n{repo}"
@@ -182,4 +182,3 @@ def swebench_patch_solver() -> Solver:
         return await generate(state)
 
     return solve
-

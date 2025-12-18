@@ -1,16 +1,16 @@
 """
-KoHalluLens NonExistentEntities - 가상 엔티티 거부 평가 (통합)
+KoHalluLens NonExistentEntities - Fictional Entity Refusal Evaluation (Integrated)
 
-평가 방식:
-- 존재하지 않는 가상 엔티티에 대한 질문
-- LLM이 "모르겠다" 거부 = 정답
-- 환각으로 정보 생성 = 오답
+Evaluation method:
+- Questions about non-existent fictional entities
+- LLM saying "I don't know" refusal = correct
+- Generating information through hallucination = incorrect
 
-필드:
-- prompt: 가상 엔티티에 대한 질문
-- name: 가상 엔티티 이름
-- type_: 엔티티 유형
-- place: 장소
+Fields:
+- prompt: Question about fictional entity
+- name: Fictional entity name
+- type_: Entity type
+- place: Location
 """
 
 from core.benchmark_config import BenchmarkConfig
@@ -21,7 +21,7 @@ CONFIG = BenchmarkConfig(
     field_mapping={
         "id": "id",
         "input": "prompt",
-        # target 없음 - 거부가 정답
+        # No target - refusal is the correct answer
     },
     answer_format="identity",
     solver="generate",

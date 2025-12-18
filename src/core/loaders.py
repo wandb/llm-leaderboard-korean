@@ -1,5 +1,5 @@
 """
-데이터 로딩 함수들
+Data loading functions
 """
 
 from pathlib import Path
@@ -7,17 +7,17 @@ from typing import Any
 
 import weave
 
-# 데이터 디렉토리
+# Data directory
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
 def _to_native(obj: Any) -> Any:
-    """Weave 타입을 Python native 타입으로 재귀적 변환"""
+    """Recursively convert Weave types to Python native types"""
     if hasattr(obj, 'keys'):
         # WeaveDict or dict-like
         return {k: _to_native(v) for k, v in obj.items()}
     elif isinstance(obj, str):
-        # 문자열은 그대로
+        # Strings stay as-is
         return obj
     elif hasattr(obj, '__iter__'):
         # WeaveList or list-like
@@ -30,7 +30,7 @@ def load_weave_data(
     ref: str,
     split: str | None = None,
 ) -> list[dict]:
-    """Weave에서 데이터 로드 (Python native 타입으로 변환)"""
+    """Load data from Weave (converted to Python native types)"""
     parts = ref.replace("weave:///", "").split("/")
     project = f"{parts[0]}/{parts[1]}"
     
@@ -41,12 +41,12 @@ def load_weave_data(
     if split:
         rows = [r for r in rows if r.get("split") == split]
     
-    # Weave 타입을 Python native로 변환
+    # Convert Weave types to Python native
     return [_to_native(r) for r in rows]
 
 
 def load_jsonl_data(path: str) -> list[dict]:
-    """로컬 JSONL 파일에서 데이터 로드"""
+    """Load data from local JSONL file"""
     import json
     
     file_path = DATA_DIR / path if not Path(path).is_absolute() else Path(path)
@@ -57,4 +57,3 @@ def load_jsonl_data(path: str) -> list[dict]:
             if line.strip():
                 rows.append(json.loads(line))
     return rows
-

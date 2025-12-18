@@ -1,4 +1,4 @@
-"""KoHellaSwag - 한국어 HellaSwag 벤치마크"""
+"""KoHellaSwag - Korean HellaSwag Benchmark"""
 
 from core.benchmark_config import BenchmarkConfig
 

@@ -11,25 +11,25 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# .env 파일 로드
+# Load .env file
 load_dotenv(Path(__file__).parent / ".env")
 
-# inspect_evals의 날짜 파싱 문제 해결을 위해 영어 로케일 설정
+# Set English locale to fix inspect_evals date parsing issue
 try:
     locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
 except locale.Error:
     try:
         locale.setlocale(locale.LC_TIME, "C")
     except locale.Error:
-        pass  # 로케일 설정 실패해도 계속 진행
+        pass  # Continue even if locale setting fails
 
-# src 폴더를 경로에 추가
+# Add src folder to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 import wandb
 from core.config_loader import get_config
 
-# 모든 벤치마크 목록 (활성화된 것만)
+# All benchmarks list (active ones only)
 ALL_BENCHMARKS = [
     "ko_hellaswag",
     "ko_aime2025",
@@ -58,7 +58,7 @@ ALL_BENCHMARKS = [
     "swebench_verified_official_80",
 ]
 
-# 빠른 테스트용 벤치마크 (가벼운 것들만)
+# Quick test benchmarks (lightweight ones only)
 QUICK_BENCHMARKS = [
     "ko_hellaswag",
     "kmmlu",
@@ -71,14 +71,14 @@ QUICK_BENCHMARKS = [
 
 def get_model_env(config_name: str) -> dict[str, str]:
     """
-    모델 설정 파일에서 API 환경변수 생성
+    Generate API environment variables from model config file
     
-    configs/models/<config_name>.yaml 파일에서:
-    - base_url → OPENAI_BASE_URL (또는 provider별 환경변수)
-    - api_key_env → 해당 환경변수에서 API 키 읽기
+    From configs/models/<config_name>.yaml:
+    - base_url → OPENAI_BASE_URL (or provider-specific environment variable)
+    - api_key_env → Read API key from that environment variable
     
     Returns:
-        환경변수 딕셔너리
+        Environment variable dictionary
     """
     config = get_config()
     model_config = config.get_model(config_name)
@@ -88,26 +88,26 @@ def get_model_env(config_name: str) -> dict[str, str]:
     
     env = {}
     
-    # Provider 확인 (model_id 기준: openai/solar-pro2 → openai)
+    # Check provider (based on model_id: openai/solar-pro2 → openai)
     model_id = model_config.get("model_id") or config_name
     provider = model_id.split("/")[0] if "/" in model_id else "openai"
     provider_upper = provider.upper()
     
-    # Base URL 설정
+    # Set base URL
     base_url = model_config.get("base_url") or model_config.get("api_base")
     if base_url:
-        # OpenAI 호환 API는 OPENAI_BASE_URL 사용
+        # OpenAI-compatible APIs use OPENAI_BASE_URL
         if provider in ["openai", "together", "groq", "fireworks"]:
             env["OPENAI_BASE_URL"] = base_url
         else:
             env[f"{provider_upper}_BASE_URL"] = base_url
     
-    # API 키 설정
+    # Set API key
     api_key_env = model_config.get("api_key_env")
     if api_key_env:
         api_key = os.environ.get(api_key_env)
         if api_key:
-            # OpenAI 호환 API
+            # OpenAI-compatible APIs
             if provider in ["openai", "together", "groq", "fireworks"]:
                 env["OPENAI_API_KEY"] = api_key
             else:
@@ -118,7 +118,7 @@ def get_model_env(config_name: str) -> dict[str, str]:
 
 def get_model_metadata(model: str) -> dict:
     """
-    모델 설정 파일에서 메타데이터 로드
+    Load metadata from model config file
     
     Returns:
         {
@@ -150,31 +150,31 @@ def run_benchmark(
     wandb_project: str | None = None,
 ) -> tuple[str, bool, str, dict | None]:
     """
-    단일 벤치마크 실행
+    Run a single benchmark
     
-    모델 설정 파일(configs/models/<model>.yaml)의 API 설정을 자동으로 적용합니다.
+    Automatically applies API settings from model config file (configs/models/<model>.yaml).
     
     Returns:
         (benchmark_name, success, error_message, scores)
     """
     cmd = ["uv", "run", "horangi", benchmark, "--config", config_name]
     
-    # limit이 지정된 경우에만 추가 (null = 전체)
+    # Add limit only if specified (null = all)
     if limit is not None:
         cmd.extend(["-T", f"limit={limit}"])
     
-    # 모델 설정에서 환경변수 로드
+    # Load environment variables from model config
     model_env = get_model_env(config_name)
     
-    # 현재 환경변수와 병합 (모델 설정이 우선)
+    # Merge with current environment (model config takes precedence)
     env = os.environ.copy()
     env.update(model_env)
     
-    # inspect_evals의 날짜 파싱 문제 해결을 위해 영어 로케일 설정
+    # Set English locale to fix inspect_evals date parsing issue
     env["LC_TIME"] = "en_US.UTF-8"
 
-    # 각 벤치마크 subprocess(inspect eval)가 기록할 W&B/Weave 프로젝트 강제 지정
-    # (지정하지 않으면 wandb의 기본 project(예: horangi-dev)로 기록될 수 있음)
+    # Force W&B/Weave project for each benchmark subprocess (inspect eval)
+    # (Without this, it may log to wandb's default project like horangi-dev)
     if wandb_entity:
         env["WANDB_ENTITY"] = wandb_entity
     if wandb_project:
@@ -186,17 +186,17 @@ def run_benchmark(
     print(f"{'='*60}")
     
     try:
-        # 실시간 출력을 위해 Popen 사용
+        # Use Popen for real-time output
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,  # stderr를 stdout에 병합
+            stderr=subprocess.STDOUT,  # Merge stderr to stdout
             text=True,
-            bufsize=1,  # 라인 버퍼링
+            bufsize=1,  # Line buffering
             env=env,
         )
         
-        # 실시간으로 출력하면서 결과 수집
+        # Collect output while printing in real-time
         output_lines = []
         weave_eval_url: str | None = None
         hook_noise_patterns = (
@@ -206,12 +206,12 @@ def run_benchmark(
             r"^\s*inspect_wandb/wandb_models_hooks:",
         )
         for line in process.stdout:
-            # Weave Eval URL은 벤치마크 종료 후에 한 번만 보여주기 위해 캡처만 함
+            # Capture Weave Eval URL (show only once after benchmark completes)
             m = re.search(r"🔗\s*Weave Eval:\s*(https?://\S+)", line)
             if m:
                 weave_eval_url = m.group(1)
             
-            # 불필요한 잡음 로그/중간 URL 라인 필터링
+            # Filter unnecessary noise logs/intermediate URL lines
             suppress = False
             if m:
                 suppress = True
@@ -222,19 +222,19 @@ def run_benchmark(
                         break
             
             if not suppress:
-                print(line, end="", flush=True)  # 실시간 출력
+                print(line, end="", flush=True)  # Real-time output
             output_lines.append(line)
         
-        process.wait(timeout=1800)  # 30분 타임아웃
+        process.wait(timeout=1800)  # 30 minute timeout
         full_output = "".join(output_lines)
         
         success = process.returncode == 0
         
-        # 벤치마크 종료 후 Weave Eval URL 출력
+        # Print Weave Eval URL after benchmark completes
         if weave_eval_url:
             print(f"\n🔗 Weave Eval: {weave_eval_url}")
         
-        # 점수 파싱 시도
+        # Try to parse scores
         scores = None
         if success:
             scores = parse_scores_from_output(full_output, benchmark)
@@ -252,28 +252,28 @@ def run_benchmark(
 
 def parse_scores_from_output(output: str, benchmark: str) -> dict | None:
     """
-    Inspect AI 출력에서 점수 파싱
+    Parse scores from Inspect AI output
     
-    Inspect AI 출력 형식 예시:
+    Inspect AI output format example:
         accuracy  0.600
         stderr    0.245
         
-        또는
+        or
         
         mean    0.640
         writing_score  0.640
     
     Returns:
-        {"score": 주요점수, "details": {메트릭명: 값, ...}}
+        {"score": main_score, "details": {metric_name: value, ...}}
     """
     all_metrics = {}
     
-    # 모든 "이름  숫자" 패턴 파싱 (줄 시작, 밑줄/영문/숫자 이름)
-    # stderr는 제외
+    # Parse all "name  number" patterns (line start, underscore/alphanumeric names)
+    # Exclude stderr
     pattern = r"^([a-zA-Z][a-zA-Z0-9_]*)\s+([\d.-]+)\s*$"
     for match in re.finditer(pattern, output, re.MULTILINE):
         metric_name = match.group(1)
-        # stderr, samples, tokens 등 메타 정보 제외
+        # Exclude meta info like stderr, samples, tokens
         if metric_name.lower() in ["stderr", "samples", "tokens", "total"]:
             continue
         try:
@@ -284,45 +284,45 @@ def parse_scores_from_output(output: str, benchmark: str) -> dict | None:
     if not all_metrics:
         return None
     
-    # 주요 점수 선택
+    # Select main score
     main_score = None
     
-    # IFEval: final_acc 또는 prompt_strict_acc 사용
+    # IFEval: use final_acc or prompt_strict_acc
     if benchmark == "ifeval_ko":
         main_score = all_metrics.get("final_acc") or all_metrics.get("prompt_strict_acc")
     
-    # KoBBQ: kobbq_avg 사용
+    # KoBBQ: use kobbq_avg
     elif benchmark == "kobbq":
         main_score = all_metrics.get("kobbq_avg")
     
-    # HLE: hle_accuracy 사용
+    # HLE: use hle_accuracy
     elif benchmark == "ko_hle":
         main_score = all_metrics.get("hle_accuracy") or all_metrics.get("accuracy")
     
-    # HalluLens: correct_rate 또는 refusal_rate 사용
+    # HalluLens: use correct_rate or refusal_rate
     elif "hallulens" in benchmark:
         main_score = all_metrics.get("correct_rate") or all_metrics.get("refusal_rate")
     
-    # MT-Bench: mean 사용 (10점 만점 → 0-1 스케일)
+    # MT-Bench: use mean (10-point scale → 0-1 scale)
     elif benchmark == "ko_mtbench":
         if "mean" in all_metrics:
             main_score = all_metrics["mean"] / 10.0
     
-    # BFCL: accuracy 사용
+    # BFCL: use accuracy
     elif benchmark == "bfcl":
         main_score = all_metrics.get("accuracy")
     
-    # SQuAD: f1 > exact 우선순위
+    # SQuAD: f1 > exact priority
     elif benchmark == "squad_kor_v1":
         main_score = all_metrics.get("mean")  # f1.mean
     
-    # 일반적인 메트릭 우선순위
+    # General metric priority
     if main_score is None:
         for metric in ["accuracy", "mean", "macro_f1", "f1", "resolved"]:
             if metric in all_metrics:
                 main_score = all_metrics[metric]
                 if metric == "mean" and benchmark == "ko_mtbench":
-                    main_score = main_score / 10.0  # mtbench 스케일
+                    main_score = main_score / 10.0  # mtbench scale
                 break
     
     return {
@@ -336,19 +336,19 @@ def main():
         description="Run benchmarks and create leaderboard",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-예제:
-    # 기본 실행 (entity/project는 configs/base_config.yaml에서 로드)
+Examples:
+    # Default run (entity/project loaded from configs/base_config.yaml)
     uv run python run_eval.py --config gpt-4o
 
-    # 빠른 테스트 (가벼운 벤치마크만)
+    # Quick test (lightweight benchmarks only)
     uv run python run_eval.py --config gpt-4o --quick
     
-    # 특정 벤치마크만 실행
+    # Run specific benchmarks only
     uv run python run_eval.py --config gpt-4o --only ko_hellaswag,kmmlu
 """
     )
     
-    # 기본 옵션
+    # Basic options
     parser.add_argument(
         "--config",
         type=str,
@@ -364,25 +364,25 @@ def main():
     
     args = parser.parse_args()
     
-    # 환경변수에서 W&B 설정 로드 (.env 파일은 이미 로드됨)
+    # Load W&B settings from environment variables (.env file already loaded)
     entity = os.environ.get("WANDB_ENTITY", "")
     project = os.environ.get("WANDB_PROJECT", "")
     
     if not entity or not project:
-        print("❌ W&B 로깅을 위해 WANDB_ENTITY와 WANDB_PROJECT 환경변수가 필요합니다.")
-        print("   .env 파일에 다음을 추가하세요:")
+        print("❌ WANDB_ENTITY and WANDB_PROJECT environment variables are required for W&B logging.")
+        print("   Add the following to your .env file:")
         print("     WANDB_ENTITY=your-entity")
         print("     WANDB_PROJECT=your-project")
         sys.exit(1)
     
     config = get_config()
     
-    # 벤치마크 필터링
+    # Filter benchmarks
     if args.quick:
         benchmarks = QUICK_BENCHMARKS
     elif args.only:
         benchmarks = [b.strip() for b in args.only.split(",") if b.strip()]
-        # 유효성 검사
+        # Validate
         invalid = [b for b in benchmarks if b not in ALL_BENCHMARKS]
         if invalid:
             print(f"❌ Unknown benchmarks: {invalid}")
@@ -391,16 +391,16 @@ def main():
     else:
         benchmarks = ALL_BENCHMARKS
     
-    # 모델 설정 로드 (configs/models/<name>.yaml)
+    # Load model config (configs/models/<name>.yaml)
     model_cfg = config.get_model(args.config)
     if not model_cfg:
-        print(f"❌ 모델 설정을 찾을 수 없습니다: {args.config}")
-        print("   configs/models/ 디렉토리에 YAML 파일이 있는지 확인하세요.")
+        print(f"❌ Model configuration not found: {args.config}")
+        print("   Check if YAML file exists in configs/models/ directory.")
         sys.exit(1)
 
     model_id = model_cfg.get("model_id") or args.config
 
-    # 표시용 모델 이름 (openai/solar-pro2 → solar-pro2)
+    # Display model name (openai/solar-pro2 → solar-pro2)
     model_name = model_id.split("/")[-1] if "/" in model_id else model_id
     
     wandb_run = wandb.init(
@@ -416,7 +416,7 @@ def main():
             "benchmarks": benchmarks,
         },
     )
-    print(f"✅ W&B run 시작: {wandb_run.url}")
+    print(f"✅ W&B run started: {wandb_run.url}")
     
     
     print(f"\n🐯 Horangi Benchmark Runner")
@@ -429,7 +429,7 @@ def main():
     print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*60}")
     
-    # 실행 결과 추적
+    # Track execution results
     results = []
     benchmark_scores = {}
     
@@ -447,7 +447,7 @@ def main():
         if scores:
             benchmark_scores[name] = scores
     
-    # 결과 요약
+    # Results summary
     print(f"\n\n{'='*60}")
     print(f"📊 Results Summary")
     print(f"{'='*60}")
@@ -466,18 +466,18 @@ def main():
         for name, _, error in failed:
             print(f"   - {name}: {error}")
     
-    # 카테고리별 상세 결과 테이블 출력
+    # Print detailed results table by category
     print(f"\n{'='*60}")
     print(f"📋 Detailed Results by Category")
     print(f"{'='*60}")
     
     for benchmark_name, score_info in benchmark_scores.items():
         details = score_info.get("details", {})
-        if len(details) > 1:  # 상세 결과가 있는 경우만
+        if len(details) > 1:  # Only if there are detailed results
             print(f"\n📌 {benchmark_name}")
             print(f"   {'─'*40}")
             
-            # 주요 메트릭과 카테고리별 메트릭 구분
+            # Separate main metrics and category metrics
             main_metrics = []
             category_metrics = []
             
@@ -487,21 +487,21 @@ def main():
                 else:
                     main_metrics.append((metric, value))
             
-            # 주요 메트릭 출력
+            # Print main metrics
             for metric, value in main_metrics:
                 print(f"   {metric:<30} {value:.4f}")
             
-            # 카테고리별 메트릭 출력 (테이블 형식)
+            # Print category metrics (table format)
             if category_metrics:
                 print(f"   {'─'*40}")
                 for metric, value in category_metrics:
                     print(f"   {metric:<30} {value:.4f}")
     
-    # Weave Leaderboard 생성 (성공한 벤치마크가 있으면)
+    # Create Weave Leaderboard (if there are successful benchmarks)
     if benchmark_scores and entity and project:
         try:
             from core.weave_leaderboard import create_weave_leaderboard
-            # 성공한 벤치마크 목록만 전달
+            # Pass only successful benchmark list
             successful_benchmarks = list(benchmark_scores.keys())
             leaderboard_url = create_weave_leaderboard(
                 entity=entity,
@@ -511,20 +511,20 @@ def main():
             if leaderboard_url:
                 print(f"\n🏆 Leaderboard URL: {leaderboard_url}")
         except Exception as e:
-            print(f"⚠️ Weave Leaderboard 생성 실패: {e}")
+            print(f"⚠️ Weave Leaderboard creation failed: {e}")
     
-    # W&B run 종료
+    # End W&B run
     if wandb_run is not None:
-        print(f"\n📊 W&B run 종료 중...")
+        print(f"\n📊 Ending W&B run...")
         wandb_run.finish()
-        print(f"✅ W&B run 완료!")
+        print(f"✅ W&B run completed!")
     
     print(f"\n{'='*60}")
     print(f"End time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*60}")
     
-    # 실패가 있어도 리더보드가 생성되었으면 exit code 0
-    # (일부 벤치마크 실패해도 결과는 저장됨)
+    # Exit code 0 even if some failures, as long as leaderboard was created
+    # (partial benchmark failures still have results saved)
     sys.exit(0)
 
 

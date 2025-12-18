@@ -1,4 +1,4 @@
-"""KoAIME2025 - 한국어 AIME 2025 수학 벤치마크"""
+"""KoAIME2025 - Korean AIME 2025 Math Benchmark"""
 
 from core.benchmark_config import BenchmarkConfig
 

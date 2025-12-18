@@ -1,14 +1,14 @@
 """
-KoHLE Standalone - 한국어 Humanity's Last Exam 벤치마크 (독립 버전)
+KoHLE Standalone - Korean Humanity's Last Exam Benchmark (Independent Version)
 
-inspect_evals.hle를 상속하지 않고 독립적으로 구현.
-커스텀 hle_grader 사용 (judge 모델 별도 지정 가능).
+Implemented independently without inheriting from inspect_evals.hle.
+Uses custom hle_grader (can specify separate judge model).
 """
 
 from core.benchmark_config import BenchmarkConfig
 
 CONFIG = BenchmarkConfig(
-    # base 없음 - 독립 벤치마크
+    # No base - independent benchmark
     data_type="weave",
     data_source="weave:///horangi/horangi4/object/KoHLE_mini:UrNXEnhaUHDoqButTAy204OEEevet6Pa1iSRYfnnnPY",
     field_mapping={
@@ -16,7 +16,7 @@ CONFIG = BenchmarkConfig(
         "input": "question",
         "target": "answer",
     },
-    answer_format="identity",  # 답변 그대로 사용
+    answer_format="identity",  # Use answer as-is
     solver="generate",
     scorer="hle_grader",
     system_message="""답변은 다음 형식으로 작성해 주십시오.

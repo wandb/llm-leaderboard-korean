@@ -1,15 +1,15 @@
 """
 SWE-bench Server Scorer
 
-Docker 기반 공식 하네스 대신, 채점용 서버 API를 호출하여 해결(resolved) 여부를 채점합니다.
+Scores resolved status by calling scoring server API instead of Docker-based official harness.
 
-참고:
-- 서버 구현 예시: https://raw.githubusercontent.com/wandb/llm-leaderboard/main/scripts/server/swebench_server.py
-- evaluator 구현 예시: https://raw.githubusercontent.com/wandb/llm-leaderboard/main/scripts/evaluator/swe_bench.py
+References:
+- Server implementation example: https://raw.githubusercontent.com/wandb/llm-leaderboard/main/scripts/server/swebench_server.py
+- Evaluator implementation example: https://raw.githubusercontent.com/wandb/llm-leaderboard/main/scripts/evaluator/swe_bench.py
 
-환경변수:
-- SWE_SERVER_URL: 예) https://api.nejumi-swebench.org
-- SWE_API_KEY: (옵션) 서버가 X-API-Key를 요구하는 경우
+Environment variables:
+- SWE_SERVER_URL: e.g., https://api.nejumi-swebench.org
+- SWE_API_KEY: (optional) if server requires X-API-Key
 """
 
 from __future__ import annotations
@@ -40,10 +40,10 @@ logger = logging.getLogger(__name__)
 
 
 def _strip_code_fences(text: str) -> str:
-    """코드펜스(```)를 제거하고 내부 내용만 반환."""
+    """Remove code fences (```) and return inner content."""
     if not text:
         return ""
-    # ```diff ... ``` or ```patch ... ``` or ```...``` 제거 (가능하면 내부만)
+    # Remove ```diff ... ``` or ```patch ... ``` or ```...``` (extract inner content if possible)
     m = re.search(r"```(?:diff|patch)?\s*([\s\S]*?)\s*```", text, re.IGNORECASE)
     if m:
         return m.group(1).strip()
@@ -52,26 +52,26 @@ def _strip_code_fences(text: str) -> str:
 
 def _extract_patch(text: str) -> str:
     """
-    모델 출력에서 patch 텍스트만 최대한 안전하게 추출.
+    Safely extract only the patch text from model output.
     
-    설명 텍스트가 섞여 있어도 diff 부분만 추출합니다.
+    Extracts only the diff portion even if description text is mixed in.
     """
     cleaned = _strip_code_fences(text)
     if not cleaned:
         return ""
 
-    # 케이스 1: diff --git 헤더가 있는 경우
+    # Case 1: diff --git header exists
     idx = cleaned.find("diff --git")
     if idx != -1:
         patch_text = cleaned[idx:]
-        # diff 이후의 설명 텍스트 제거 (빈 줄 2개 이후는 설명으로 간주)
+        # Remove description text after diff (consider empty lines as separator)
         parts = re.split(r'\n\n(?=[A-Z])', patch_text, maxsplit=1)
         patch_text = parts[0]
-        # 패치가 끝나는 지점 찾기 (diff/---/+++/@@ 패턴이 끝나는 곳)
+        # Find where patch ends (where diff/---/+++/@@ patterns end)
         lines = patch_text.split('\n')
         valid_lines = []
         for line in lines:
-            # 패치 라인 패턴
+            # Patch line patterns
             if (line.startswith('diff --git') or 
                 line.startswith('---') or 
                 line.startswith('+++') or 
@@ -81,23 +81,23 @@ def _extract_patch(text: str) -> str:
                 line.startswith(' ') or
                 line == ''):
                 valid_lines.append(line)
-            elif valid_lines:  # 패치가 시작된 후 패턴 밖의 라인이면 종료
-                # 컨텍스트 라인일 수 있으므로 간단한 체크
+            elif valid_lines:  # If outside pattern after patch started, stop
+                # Could be context line, so simple check
                 if not any(valid_lines[-1].startswith(p) for p in ['diff', '---', '+++', '@@', ' ', '+', '-']):
                     break
                 valid_lines.append(line)
         return '\n'.join(valid_lines).strip() + '\n'
 
-    # 케이스 2: --- 헤더로 시작하는 unified diff
+    # Case 2: unified diff starting with --- header
     m = re.search(r"(^---\s+[ab]?/?.+$)", cleaned, re.MULTILINE)
     if m:
         idx = m.start()
         patch_text = cleaned[idx:]
-        # diff 이후의 설명 텍스트 제거
+        # Remove description text after diff
         parts = re.split(r'\n\n(?=[A-Z])', patch_text, maxsplit=1)
         return parts[0].strip() + '\n'
 
-    # 케이스 3: 그냥 전체를 patch로 취급 (마지막 fallback)
+    # Case 3: Treat entire content as patch (last fallback)
     return cleaned.strip() + ('\n' if not cleaned.endswith('\n') else '')
 
 
@@ -109,9 +109,9 @@ def _http_json(
     timeout: int = 60,
 ) -> dict:
     """
-    HTTP 요청 helper (SSL 인증서 검증 우회 + 재시도 로직 포함)
+    HTTP request helper (SSL verification bypass + retry logic)
     
-    참고: https://github.com/wandb/llm-leaderboard/blob/main/scripts/evaluator/swe_bench.py
+    Reference: https://github.com/wandb/llm-leaderboard/blob/main/scripts/evaluator/swe_bench.py
     """
     data = None
     req_headers = dict(headers) if headers else {}
@@ -119,12 +119,12 @@ def _http_json(
         data = json.dumps(body).encode("utf-8")
         req_headers["Content-Type"] = "application/json"
 
-    # SSL 인증서 검증 우회 (개발 환경용)
+    # Bypass SSL certificate verification (for development)
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
 
-    # POST는 side-effect가 있어서 재시도 안 함
+    # No retry for POST (has side-effects)
     max_attempts = 1 if method.upper() == "POST" else 3
     attempt = 0
     backoff_sec = 2.0
@@ -138,7 +138,7 @@ def _http_json(
                 raw = resp.read().decode("utf-8")
                 return json.loads(raw) if raw else {}
         except (TimeoutError, URLError, HTTPError) as e:
-            # 복구 불가능한 HTTP 에러는 바로 raise
+            # Raise immediately for unrecoverable HTTP errors
             if isinstance(e, HTTPError) and e.code not in [524, 502, 503, 504]:
                 raise
             last_err = e
@@ -168,7 +168,7 @@ def _run_job_sync(
     tag: str,
     model_name_or_path: str,
 ) -> dict[str, Any]:
-    # API 키가 있을 때만 헤더에 추가 (없으면 빈 dict)
+    # Add header only if API key exists (empty dict otherwise)
     headers: Optional[dict[str, str]] = {"X-API-Key": api_key} if api_key else None
 
     # 1) create job
@@ -251,7 +251,7 @@ def swebench_server_scorer(
                 },
             )
 
-        # 네트워크 I/O는 스레드로 오프로드
+        # Offload network I/O to thread
         try:
             result = await asyncio.to_thread(
                 _run_job_sync,
@@ -308,4 +308,3 @@ def swebench_server_scorer(
         )
 
     return score
-

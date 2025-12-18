@@ -1,10 +1,10 @@
 """
-MT-Bench Scorer - LLM Judge 기반 평가
+MT-Bench Scorer - LLM Judge based evaluation
 
-각 턴별로 LLM Judge가 1-10점 평가를 수행합니다.
-최종 점수는 두 턴의 평균입니다.
+LLM Judge scores 1-10 for each turn.
+Final score is the average of both turns.
 
-한국어 점수 파싱: 평가: [[N]] 또는 [[N]] 형식
+Korean score parsing: 평가: [[N]] or [[N]] format
 """
 
 import re
@@ -23,20 +23,20 @@ from inspect_ai.model import get_model, ChatMessageSystem, ChatMessageUser, Gene
 
 
 def _extract_score(text: str) -> float | None:
-    """응답에서 점수 추출 (1-10)
+    """Extract score from response (1-10)
     
-    한국어 MT-Bench 형식:
+    Korean MT-Bench format:
     - 평가: [[N]]
     - [[N]]
     """
-    # 한국어 형식: 평가: [[N]]
+    # Korean format: 평가: [[N]]
     m = re.search(r"평가\s*:\s*\[\[(\d+(?:\.\d+)?)\]\]", text)
     if m:
         score = float(m.group(1))
         if 1 <= score <= 10:
             return score
     
-    # 기본 형식: [[N]]
+    # Default format: [[N]]
     m = re.search(r"\[\[(\d+(?:\.\d+)?)\]\]", text)
     if m:
         score = float(m.group(1))
@@ -52,7 +52,7 @@ def _build_single_turn_prompt(
     answer: str,
     ref_answer: str = "",
 ) -> str:
-    """Single turn judge 프롬프트 생성"""
+    """Build single turn judge prompt"""
     prompt = template
     prompt = prompt.replace("{question}", question)
     prompt = prompt.replace("{answer}", answer)
@@ -69,7 +69,7 @@ def _build_multi_turn_prompt(
     ref_answer_1: str = "",
     ref_answer_2: str = "",
 ) -> str:
-    """Multi turn judge 프롬프트 생성"""
+    """Build multi turn judge prompt"""
     prompt = template
     prompt = prompt.replace("{question_1}", question_1)
     prompt = prompt.replace("{answer_1}", answer_1)
@@ -81,12 +81,12 @@ def _build_multi_turn_prompt(
 
 
 # =============================================================================
-# 카테고리별 메트릭
+# Category-specific metrics
 # =============================================================================
 
 @metric
 def writing_score() -> Metric:
-    """Writing 카테고리 평균 점수"""
+    """Writing category average score"""
     def metric_fn(scores: list[SampleScore]) -> float:
         category_scores = [
             s.score.metadata.get("avg_score", 0.0) / 10.0
@@ -99,7 +99,7 @@ def writing_score() -> Metric:
 
 @metric
 def roleplay_score() -> Metric:
-    """Roleplay 카테고리 평균 점수"""
+    """Roleplay category average score"""
     def metric_fn(scores: list[SampleScore]) -> float:
         category_scores = [
             s.score.metadata.get("avg_score", 0.0) / 10.0
@@ -112,7 +112,7 @@ def roleplay_score() -> Metric:
 
 @metric
 def reasoning_score() -> Metric:
-    """Reasoning 카테고리 평균 점수"""
+    """Reasoning category average score"""
     def metric_fn(scores: list[SampleScore]) -> float:
         category_scores = [
             s.score.metadata.get("avg_score", 0.0) / 10.0
@@ -125,7 +125,7 @@ def reasoning_score() -> Metric:
 
 @metric
 def math_score() -> Metric:
-    """Math 카테고리 평균 점수"""
+    """Math category average score"""
     def metric_fn(scores: list[SampleScore]) -> float:
         category_scores = [
             s.score.metadata.get("avg_score", 0.0) / 10.0
@@ -138,7 +138,7 @@ def math_score() -> Metric:
 
 @metric
 def coding_score() -> Metric:
-    """Coding 카테고리 평균 점수"""
+    """Coding category average score"""
     def metric_fn(scores: list[SampleScore]) -> float:
         category_scores = [
             s.score.metadata.get("avg_score", 0.0) / 10.0
@@ -151,7 +151,7 @@ def coding_score() -> Metric:
 
 @metric
 def extraction_score() -> Metric:
-    """Extraction 카테고리 평균 점수"""
+    """Extraction category average score"""
     def metric_fn(scores: list[SampleScore]) -> float:
         category_scores = [
             s.score.metadata.get("avg_score", 0.0) / 10.0
@@ -164,7 +164,7 @@ def extraction_score() -> Metric:
 
 @metric
 def stem_score() -> Metric:
-    """STEM 카테고리 평균 점수"""
+    """STEM category average score"""
     def metric_fn(scores: list[SampleScore]) -> float:
         category_scores = [
             s.score.metadata.get("avg_score", 0.0) / 10.0
@@ -177,7 +177,7 @@ def stem_score() -> Metric:
 
 @metric
 def humanities_score() -> Metric:
-    """Humanities 카테고리 평균 점수"""
+    """Humanities category average score"""
     def metric_fn(scores: list[SampleScore]) -> float:
         category_scores = [
             s.score.metadata.get("avg_score", 0.0) / 10.0
@@ -210,17 +210,17 @@ def mtbench_scorer(
     MT-Bench LLM Judge Scorer
     
     Args:
-        judge_model: 평가에 사용할 LLM 모델
+        judge_model: LLM model for evaluation
     
-    평가 기준:
-    - Turn 1: 첫 번째 응답의 품질 (1-10점)
-    - Turn 2: 두 번째 응답의 품질 (1-10점)
-    - 최종 점수: 두 턴의 평균 (0-1 정규화)
+    Scoring criteria:
+    - Turn 1: First response quality (1-10 points)
+    - Turn 2: Second response quality (1-10 points)
+    - Final score: Average of both turns (0-1 normalized)
     """
     async def score(state: TaskState, target: Target) -> Score:
         metadata = state.metadata or {}
         
-        # 필요한 데이터 추출
+        # Extract required data
         turn1 = metadata.get("turn1", "")
         turn2 = metadata.get("turn2", "")
         response_turn1 = metadata.get("response_turn1", "")
@@ -229,23 +229,23 @@ def mtbench_scorer(
         reference_turn2 = metadata.get("reference_turn2", "")
         category = metadata.get("category", "general")
         
-        # Judge 프롬프트 정보
+        # Judge prompt info
         judge_single = metadata.get("judge_prompt_single", {})
         judge_multi = metadata.get("judge_prompt_multi", {})
         
-        system_prompt_single = judge_single.get("system_prompt", "당신은 유익한 조수입니다.")
+        system_prompt_single = judge_single.get("system_prompt", "You are a helpful assistant.")
         system_prompt_multi = judge_multi.get("system_prompt", system_prompt_single)
         prompt_template_single = judge_single.get("prompt_template", "")
         prompt_template_multi = judge_multi.get("prompt_template", "")
         
-        # Judge 모델 초기화
+        # Initialize judge model
         judge = get_model(
             judge_model,
             config=GenerateConfig(temperature=0.0, max_tokens=1024),
         )
         
-        # Turn 2만 평가 (Multi-turn 맥락에서 최종 평가)
-        # Turn 2 프롬프트에 Turn 1 대화 맥락이 포함됨
+        # Evaluate Turn 2 only (final evaluation in multi-turn context)
+        # Turn 2 prompt includes Turn 1 conversation context
         turn2_score = None
         judge_text = ""
         
@@ -267,15 +267,15 @@ def mtbench_scorer(
             judge_text = judge_response.completion
             turn2_score = _extract_score(judge_text)
         
-        # 결과 처리
+        # Process result
         if turn2_score:
             final_score = turn2_score
             explanation = f"Turn2: {turn2_score}/10"
         else:
             final_score = 0.0
-            explanation = "Turn2: 점수 추출 실패"
+            explanation = "Turn2: Score extraction failed"
         
-        normalized_score = final_score / 10.0  # 0-1 정규화
+        normalized_score = final_score / 10.0  # 0-1 normalization
         
         return Score(
             value=normalized_score,

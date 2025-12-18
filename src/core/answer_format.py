@@ -1,16 +1,16 @@
 """
-데이터 변환 함수들
+Data transformation functions
 """
 
 from typing import Any, Callable
 
 def identity(answer_value: Any) -> Any:
-    """변환 없이 그대로 반환"""
+    """Return as-is without transformation"""
     return answer_value
 
 
 def to_string(answer_value: Any) -> str:
-    """문자열로 변환"""
+    """Convert to string"""
     return str(answer_value)
 
 def index_0(answer_value: Any) -> str:
@@ -48,4 +48,3 @@ ANSWER_FORMAT: dict[str, Callable] = {
     "to_string": to_string,
     "unknown": unknown,
 }
-

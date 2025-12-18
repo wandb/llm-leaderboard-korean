@@ -1,16 +1,16 @@
 """
-KoHalluLens LongWiki - 한국어 긴 위키피디아 문서 기반 QA 환각 평가
+KoHalluLens LongWiki - Korean Long Wikipedia Document Based QA Hallucination Evaluation
 
-평가 방식:
-- LLM에게 reference 없이 prompt만 제공 (여러 질문 포함)
-- LLM 답변을 reference + answer와 비교하여 정확성 평가
-- LLM 평가자 (GPT-4o-mini)로 Correct/Hallucinated/Refused 분류
+Evaluation method:
+- Provide prompt only to LLM without reference (contains multiple questions)
+- Compare LLM answer with reference + answer to evaluate accuracy
+- LLM evaluator (GPT-4o-mini) classifies as Correct/Hallucinated/Refused
 
-필드:
-- prompt: 여러 질문 (번호 형식)
-- answer: 여러 답변 (번호 형식)
-- reference: 위키피디아 원문 (한국어 번역됨)
-- reference_en: 원본 영어 위키피디아
+Fields:
+- prompt: Multiple questions (numbered format)
+- answer: Multiple answers (numbered format)
+- reference: Wikipedia original text (translated to Korean)
+- reference_en: Original English Wikipedia
 """
 
 from core.benchmark_config import BenchmarkConfig

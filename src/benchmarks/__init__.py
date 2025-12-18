@@ -1,12 +1,12 @@
 """
-한국어 LLM 평가 벤치마크 정의
+Korean LLM Evaluation Benchmark Definitions
 
-각 벤치마크는 개별 파일로 관리됩니다.
-새 벤치마크를 추가하려면:
-1. 이 폴더에 새 파일 생성 (예: ko_new.py)
-2. CONFIG 딕셔너리 정의
-3. 이 파일의 BENCHMARKS에 추가
-4. horangi.py에 @task 함수 추가
+Each benchmark is managed in an individual file.
+To add a new benchmark:
+1. Create a new file in this folder (e.g., ko_new.py)
+2. Define CONFIG dictionary
+3. Add to BENCHMARKS in this file
+4. Add @task function to horangi.py
 """
 
 from benchmarks.ko_hellaswag import CONFIG as ko_hellaswag
@@ -28,61 +28,61 @@ from benchmarks.ko_gsm8k import CONFIG as ko_gsm8k
 from benchmarks.korean_hate_speech import CONFIG as korean_hate_speech
 from benchmarks.kobbq import CONFIG as kobbq
 from benchmarks.ko_hle import CONFIG as ko_hle
-# HalluLens 벤치마크
+# HalluLens benchmarks
 from benchmarks.ko_hallulens_wikiqa import CONFIG as ko_hallulens_wikiqa
 from benchmarks.ko_hallulens_longwiki import CONFIG as ko_hallulens_longwiki
 from benchmarks.ko_hallulens_generated import CONFIG as ko_hallulens_generated
 from benchmarks.ko_hallulens_mixed import CONFIG as ko_hallulens_mixed
 from benchmarks.ko_hallulens_nonexistent import CONFIG as ko_hallulens_nonexistent
-# BFCL 벤치마크
+# BFCL benchmarks
 from benchmarks.bfcl import CONFIG as bfcl
-from benchmarks.bfcl_extended import CONFIG as bfcl_extended  # 하위 호환성
-from benchmarks.bfcl_text import CONFIG as bfcl_text  # 하위 호환성
+from benchmarks.bfcl_extended import CONFIG as bfcl_extended  # backward compatibility
+from benchmarks.bfcl_text import CONFIG as bfcl_text  # backward compatibility
 # MT-Bench
 from benchmarks.ko_mtbench import CONFIG as ko_mtbench
 # SWE-bench
 from benchmarks.swebench_verified_official_80 import CONFIG as swebench_verified_official_80
 
-# 벤치마크 설명
+# Benchmark descriptions
 BENCHMARK_DESCRIPTIONS: dict[str, str] = {
-    # 일반
-    "ko_hellaswag": "상식 추론 (문장 완성)",
-    "ko_aime2025": "AIME 2025 수학 문제",
-    "ifeval_ko": "지시 따르기 평가",
-    "ko_balt_700": "언어 이해 및 추론",
-    # 지식
+    # General
+    "ko_hellaswag": "Common sense reasoning (sentence completion)",
+    "ko_aime2025": "AIME 2025 math problems",
+    "ifeval_ko": "Instruction following evaluation",
+    "ko_balt_700": "Language understanding and reasoning",
+    # Knowledge
     "haerae_bench_v1": "HAERAE v1",
-    "haerae_bench_v1_rc": "HAERAE v1 (독해 포함)",
-    "haerae_bench_v1_wo_rc": "HAERAE v1 (독해 제외)",
-    "kmmlu": "한국어 MMLU",
-    "kmmlu_pro": "한국어 MMLU Pro (고난도)",
-    "squad_kor_v1": "한국어 독해 QA",
-    "ko_truthful_qa": "사실성 평가",
-    # 추론
-    "ko_moral": "도덕적 판단",
-    "ko_arc_agi": "ARC-AGI 추론 (그리드)",
-    "ko_gsm8k": "초등 수학 문제",
-    # 편향/안전
-    "korean_hate_speech": "혐오 발언 탐지",
-    "kobbq": "편향성 판단 (BBQ)",
+    "haerae_bench_v1_rc": "HAERAE v1 (with reading comprehension)",
+    "haerae_bench_v1_wo_rc": "HAERAE v1 (without reading comprehension)",
+    "kmmlu": "Korean MMLU",
+    "kmmlu_pro": "Korean MMLU Pro (advanced)",
+    "squad_kor_v1": "Korean reading comprehension QA",
+    "ko_truthful_qa": "Truthfulness evaluation",
+    # Reasoning
+    "ko_moral": "Moral judgment",
+    "ko_arc_agi": "ARC-AGI reasoning (grid)",
+    "ko_gsm8k": "Elementary math problems",
+    # Bias/Safety
+    "korean_hate_speech": "Hate speech detection",
+    "kobbq": "Bias judgment (BBQ)",
     "ko_hle": "Humanity's Last Exam",
-    # HalluLens (환각)
-    "ko_hallulens_wikiqa": "위키 QA 환각 평가",
-    "ko_hallulens_longwiki": "긴 문서 QA 환각 평가",
-    "ko_hallulens_generated": "가상 엔티티 거부 (생성)",
-    "ko_hallulens_mixed": "가상 엔티티 거부 (혼합)",
-    "ko_hallulens_nonexistent": "가상 엔티티 거부 (통합)",
+    # HalluLens (Hallucination)
+    "ko_hallulens_wikiqa": "Wiki QA hallucination evaluation",
+    "ko_hallulens_longwiki": "Long document QA hallucination evaluation",
+    "ko_hallulens_generated": "Generated entity refusal (generated)",
+    "ko_hallulens_mixed": "Generated entity refusal (mixed)",
+    "ko_hallulens_nonexistent": "Generated entity refusal (combined)",
     # Function Calling
-    "bfcl": "함수 호출 (통합, 모델 설정에 따라 자동 선택)",
-    "bfcl_extended": "함수 호출 (Native Tool) [deprecated]",
-    "bfcl_text": "함수 호출 (Text-based) [deprecated]",
-    # 대화
-    "ko_mtbench": "멀티턴 대화 평가",
-    # 코딩
-    "swebench_verified_official_80": "SWE-bench 버그 수정 (80개)",
+    "bfcl": "Function calling (unified, auto-select based on model config)",
+    "bfcl_extended": "Function calling (Native Tool) [deprecated]",
+    "bfcl_text": "Function calling (Text-based) [deprecated]",
+    # Conversation
+    "ko_mtbench": "Multi-turn conversation evaluation",
+    # Coding
+    "swebench_verified_official_80": "SWE-bench bug fix (80 tasks)",
 }
 
-# 모든 벤치마크 설정
+# All benchmark configurations
 BENCHMARKS: dict = {
     "ko_hellaswag": ko_hellaswag,
     "ko_aime2025": ko_aime2025,
@@ -103,16 +103,16 @@ BENCHMARKS: dict = {
     "korean_hate_speech": korean_hate_speech,
     "kobbq": kobbq,
     "ko_hle": ko_hle,
-    # HalluLens 벤치마크
+    # HalluLens benchmarks
     "ko_hallulens_wikiqa": ko_hallulens_wikiqa,
     "ko_hallulens_longwiki": ko_hallulens_longwiki,
     "ko_hallulens_generated": ko_hallulens_generated,
     "ko_hallulens_mixed": ko_hallulens_mixed,
     "ko_hallulens_nonexistent": ko_hallulens_nonexistent,
-    # BFCL 벤치마크
+    # BFCL benchmarks
     "bfcl": bfcl,
-    "bfcl_extended": bfcl_extended,  # 하위 호환성
-    "bfcl_text": bfcl_text,  # 하위 호환성
+    "bfcl_extended": bfcl_extended,  # backward compatibility
+    "bfcl_text": bfcl_text,  # backward compatibility
     # MT-Bench
     "ko_mtbench": ko_mtbench,
     # SWE-bench
@@ -120,28 +120,28 @@ BENCHMARKS: dict = {
 }
 
 def get_benchmark_config(name: str) -> dict:
-    """벤치마크 설정 가져오기 (dict 반환)"""
+    """Get benchmark configuration (returns dict)"""
     if name not in BENCHMARKS:
         available = ", ".join(BENCHMARKS.keys())
         raise ValueError(f"Unknown benchmark: {name}. Available: {available}")
     
     config = BENCHMARKS[name]
     
-    # BenchmarkConfig dataclass인 경우 dict로 변환
+    # Convert BenchmarkConfig dataclass to dict if needed
     if hasattr(config, "to_dict"):
         return config.to_dict()
     
-    # 이미 dict인 경우 그대로 반환
+    # Return dict as-is
     return config
 
 
 def list_benchmarks() -> list[str]:
-    """사용 가능한 벤치마크 목록"""
+    """List available benchmarks"""
     return list(BENCHMARKS.keys())
 
 
 def list_benchmarks_with_descriptions() -> list[tuple[str, str]]:
-    """벤치마크 목록과 설명 반환"""
+    """Return benchmark list with descriptions"""
     return [
         (name, BENCHMARK_DESCRIPTIONS.get(name, ""))
         for name in BENCHMARKS.keys()

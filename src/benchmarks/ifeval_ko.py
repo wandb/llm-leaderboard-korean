@@ -1,4 +1,4 @@
-"""IFEval-Ko - 한국어 IFEval 벤치마크"""
+"""IFEval-Ko - Korean IFEval Benchmark"""
 
 from core.benchmark_config import BenchmarkConfig
 

@@ -1,11 +1,11 @@
 """
-Weave Leaderboard 자동 생성 모듈
+Weave Leaderboard Auto-generation Module
 
-Inspect AI 평가 결과에서 Weave Leaderboard를 자동으로 생성합니다.
-이 리더보드는 Weave UI에서 모델 간 성능 비교를 가능하게 합니다.
+Automatically generates Weave Leaderboard from Inspect AI evaluation results.
+This leaderboard enables model performance comparison in the Weave UI.
 
-사용법:
-    # run_eval.py에서 자동 호출됨
+Usage:
+    # Automatically called from run_eval.py
     from core.weave_leaderboard import create_weave_leaderboard
     
     create_weave_leaderboard(
@@ -15,7 +15,7 @@ Inspect AI 평가 결과에서 Weave Leaderboard를 자동으로 생성합니다
     )
 
 Note:
-    - Weave UI의 Leaderboard 기능을 사용합니다.
+    - Uses Weave UI's Leaderboard feature.
 """
 
 from __future__ import annotations
@@ -25,37 +25,37 @@ from weave.flow import leaderboard
 from weave.trace import urls as weave_urls
 
 
-# 리더보드 설정
+# Leaderboard configuration
 LEADERBOARD_REF = "Korean-LLM-Leaderboard"
 LEADERBOARD_NAME = "Korean LLM Leaderboard"
-LEADERBOARD_DESCRIPTION = """한국어 LLM 벤치마크 모델 성능 비교 리더보드
+LEADERBOARD_DESCRIPTION = """Korean LLM Benchmark Model Performance Comparison Leaderboard
 
-이 리더보드는 Inspect AI 평가 결과에서 자동으로 생성되었습니다.
-범용언어성능(GLP)과 가치정렬성능(ALT) 두 축으로 모델들의 성능을 비교합니다.
+This leaderboard is automatically generated from Inspect AI evaluation results.
+Models are compared on two axes: General Language Performance (GLP) and Alignment Performance (ALT).
 
-📊 범용언어성능 (GLP - General Language Performance):
-- 구문/의미해석: ko_balt_700, haerae_bench_v1
-- 일반/전문지식: kmmlu, kmmlu_pro, ko_hle
-- 상식/수학/추상추론: ko_hellaswag, ko_gsm8k, ko_aime2025, ko_arc_agi
-- 정보검색: squad_kor_v1
-- 표현: ko_mtbench
-- 코딩: swebench_verified_official_80
-- 함수호출: bfcl
+📊 General Language Performance (GLP):
+- Syntax/Semantics: ko_balt_700, haerae_bench_v1
+- General/Expert Knowledge: kmmlu, kmmlu_pro, ko_hle
+- Common Sense/Math/Abstract Reasoning: ko_hellaswag, ko_gsm8k, ko_aime2025, ko_arc_agi
+- Information Retrieval: squad_kor_v1
+- Expression: ko_mtbench
+- Coding: swebench_verified_official_80
+- Function Calling: bfcl
 
-🛡️ 가치정렬성능 (ALT - Alignment Performance):
-- 제어성: ifeval_ko
-- 윤리/도덕: ko_moral
-- 유해성/편향성 방지: korean_hate_speech, kobbq
-- 환각방지: ko_truthful_qa, ko_hallulens_wikiqa, ko_hallulens_nonexistent
+🛡️ Alignment Performance (ALT):
+- Controllability: ifeval_ko
+- Ethics/Morality: ko_moral
+- Toxicity/Bias Prevention: korean_hate_speech, kobbq
+- Hallucination Prevention: ko_truthful_qa, ko_hallulens_wikiqa, ko_hallulens_nonexistent
 """
 
 
 def get_evaluation_ref(entity: str, project: str, benchmark: str) -> str | None:
     """
-    벤치마크에 해당하는 evaluation 객체의 실제 ref를 가져옵니다.
+    Get the actual ref of the evaluation object for a benchmark.
     
-    :latest 태그는 Leaderboard에서 작동하지 않으므로,
-    실제 digest가 포함된 ref를 반환합니다.
+    :latest tag doesn't work in Leaderboard,
+    so returns ref with actual digest.
     """
     from weave.trace.ref_util import get_ref
     
@@ -77,23 +77,23 @@ def build_columns_from_benchmarks(
     project: str,
 ) -> list[leaderboard.LeaderboardColumn]:
     """
-    벤치마크 이름 목록에서 LeaderboardColumn 생성
+    Create LeaderboardColumns from benchmark name list
     
-    각 벤치마크의 evaluation ref를 동적으로 가져와 컬럼을 생성합니다.
+    Dynamically fetches evaluation ref for each benchmark to create columns.
     
     Args:
-        benchmarks: 벤치마크 이름 리스트
+        benchmarks: List of benchmark names
         entity: Weave entity
-        project: Weave 프로젝트 이름
+        project: Weave project name
     
     Returns:
-        LeaderboardColumn 리스트
+        List of LeaderboardColumn
     """
-    # 벤치마크별 주요 메트릭 매핑
-    # (scorer_name, summary_metric_path) 형태
-    # output 구조: {"scorer_name": {"metric": value, ...}, ...}
+    # Benchmark-specific metric mapping
+    # Format: (scorer_name, summary_metric_path)
+    # output structure: {"scorer_name": {"metric": value, ...}, ...}
     BENCHMARK_METRICS = {
-        # 기본 choice scorer
+        # Default choice scorer
         "ko_hellaswag": ("choice", "true_fraction"),
         "ko_balt_700": ("choice", "true_fraction"),
         "haerae_bench_v1": ("choice", "true_fraction"),
@@ -107,7 +107,7 @@ def build_columns_from_benchmarks(
         "ko_aime2025": ("model_graded_qa", "true_fraction"),
         "ko_gsm8k": ("model_graded_qa", "true_fraction"),
         
-        # 특수 scorer
+        # Special scorers
         "ifeval_ko": ("instruction_following", "prompt_level_strict.true_fraction"),
         "ko_arc_agi": ("grid_match", "true_fraction"),
         "squad_kor_v1": ("f1", "mean"),
@@ -135,14 +135,14 @@ def build_columns_from_benchmarks(
     columns = []
     
     for benchmark in benchmarks:
-        # 실제 evaluation ref 가져오기 (digest 포함)
+        # Get actual evaluation ref (with digest)
         eval_ref = get_evaluation_ref(entity, project, benchmark)
         
         if not eval_ref:
-            print(f"   ⚠️ {benchmark}-evaluation 객체를 찾을 수 없음")
+            print(f"   ⚠️ {benchmark}-evaluation object not found")
             continue
         
-        # 해당 벤치마크의 메트릭 가져오기
+        # Get metric for this benchmark
         scorer_name, metric_path = BENCHMARK_METRICS.get(
             benchmark, ("output", "true_fraction")
         )
@@ -168,26 +168,26 @@ def create_weave_leaderboard(
     description: str = LEADERBOARD_DESCRIPTION,
 ) -> str | None:
     """
-    Weave Leaderboard 생성/업데이트
+    Create/Update Weave Leaderboard
     
-    벤치마크 목록을 받아서 Weave Leaderboard를 생성합니다.
-    기존 리더보드가 있으면 새 컬럼을 병합합니다.
+    Creates a Weave Leaderboard from benchmark list.
+    Merges new columns with existing leaderboard if it exists.
     
     Args:
-        entity: Weave entity (팀 또는 사용자 이름)
-        project: Weave 프로젝트 이름
-        benchmarks: 벤치마크 이름 리스트 (없으면 기본 목록 사용)
-        name: 리더보드 이름
-        description: 리더보드 설명
+        entity: Weave entity (team or username)
+        project: Weave project name
+        benchmarks: List of benchmark names (uses default list if None)
+        name: Leaderboard name
+        description: Leaderboard description
     
     Returns:
-        리더보드 URL (성공 시) 또는 None (실패 시)
+        Leaderboard URL (on success) or None (on failure)
     """
     print(f"\n{'='*60}")
-    print(f"🏆 Weave Leaderboard 생성")
+    print(f"🏆 Weave Leaderboard Creation")
     print(f"{'='*60}")
     
-    # 기본 벤치마크 목록
+    # Default benchmark list
     DEFAULT_BENCHMARKS = [
         "ko_hellaswag",
         "ko_aime2025",
@@ -213,39 +213,39 @@ def create_weave_leaderboard(
     
     benchmarks = benchmarks or DEFAULT_BENCHMARKS
     
-    # Weave 초기화
+    # Initialize Weave
     client = weave.get_client()
     if client is None:
         weave.init(f"{entity}/{project}")
         client = weave.get_client()
     
     if client is None:
-        print("❌ Weave 클라이언트 초기화 실패")
+        print("❌ Failed to initialize Weave client")
         return None
     
     try:
-        # 1. LeaderboardColumn 생성
-        print(f"📊 {len(benchmarks)}개 벤치마크에서 LeaderboardColumn 생성 중...")
+        # 1. Create LeaderboardColumns
+        print(f"📊 Creating LeaderboardColumns from {len(benchmarks)} benchmarks...")
         new_columns = build_columns_from_benchmarks(benchmarks, entity, project)
         
         if not new_columns:
-            print("⚠️ 생성할 컬럼이 없습니다.")
+            print("⚠️ No columns to create.")
             return None
         
-        print(f"   새 컬럼: {len(new_columns)}개")
+        print(f"   New columns: {len(new_columns)}")
         
-        # 3. 기존 리더보드 가져오기 (있다면)
+        # 3. Get existing leaderboard (if exists)
         existing_columns: list[leaderboard.LeaderboardColumn] = []
         try:
             existing = weave.ref(LEADERBOARD_REF).get()
             cols = getattr(existing, "columns", None)
             if cols:
                 existing_columns = list(cols)
-                print(f"   기존 컬럼: {len(existing_columns)}개")
+                print(f"   Existing columns: {len(existing_columns)}")
         except Exception:
-            print("   기존 리더보드 없음 - 새로 생성")
+            print("   No existing leaderboard - creating new")
         
-        # 4. 컬럼 병합 (중복 제거)
+        # 4. Merge columns (remove duplicates)
         merged_columns = list(
             {
                 (
@@ -258,9 +258,9 @@ def create_weave_leaderboard(
             }.values()
         )
         
-        print(f"\n📈 총 {len(merged_columns)}개 컬럼으로 리더보드 생성")
+        print(f"\n📈 Creating leaderboard with {len(merged_columns)} total columns")
         
-        # 5. 리더보드 생성 및 발행
+        # 5. Create and publish leaderboard
         spec = leaderboard.Leaderboard(
             name=name,
             description=description,
@@ -274,13 +274,13 @@ def create_weave_leaderboard(
             ref.name,
         )
         
-        print(f"\n✅ Weave Leaderboard 생성 완료!")
+        print(f"\n✅ Weave Leaderboard created!")
         print(f"🔗 URL: {url}")
         
         return url
         
     except Exception as e:
-        print(f"❌ Leaderboard 생성 실패: {e}")
+        print(f"❌ Leaderboard creation failed: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -291,28 +291,28 @@ def create_weave_leaderboard_from_active_loggers(
     description: str = LEADERBOARD_DESCRIPTION,
 ) -> str | None:
     """
-    활성화된 EvaluationLogger에서 Weave Leaderboard 생성
+    Create Weave Leaderboard from active EvaluationLoggers
     
-    이 함수는 같은 프로세스 내에서 evaluation이 실행된 경우에만 작동합니다.
-    subprocess로 실행된 경우에는 create_weave_leaderboard()를 사용하세요.
+    This function only works when evaluation is run in the same process.
+    For subprocess execution, use create_weave_leaderboard().
     
     Args:
-        name: 리더보드 이름
-        description: 리더보드 설명
+        name: Leaderboard name
+        description: Leaderboard description
     
     Returns:
-        리더보드 URL (성공 시) 또는 None (실패 시)
+        Leaderboard URL (on success) or None (on failure)
     """
     from weave.evaluation.eval_imperative import _active_evaluation_loggers
     from weave.trace.ref_util import get_ref
     
     client = weave.get_client()
     if client is None:
-        print("❌ Weave 클라이언트가 초기화되지 않았습니다.")
+        print("❌ Weave client is not initialized.")
         return None
     
     try:
-        # 활성 logger에서 컬럼 빌드
+        # Build columns from active loggers
         new_columns: list[leaderboard.LeaderboardColumn] = []
         
         for eval_logger in _active_evaluation_loggers:
@@ -339,10 +339,10 @@ def create_weave_leaderboard_from_active_loggers(
                     )
         
         if not new_columns:
-            print("⚠️ 활성 evaluation logger가 없습니다.")
+            print("⚠️ No active evaluation loggers.")
             return None
         
-        # 기존 리더보드와 병합
+        # Merge with existing leaderboard
         existing_columns: list[leaderboard.LeaderboardColumn] = []
         try:
             existing = weave.ref(LEADERBOARD_REF).get()
@@ -364,7 +364,7 @@ def create_weave_leaderboard_from_active_loggers(
             }.values()
         )
         
-        # 리더보드 발행
+        # Publish leaderboard
         spec = leaderboard.Leaderboard(
             name=name,
             description=description,
@@ -378,13 +378,13 @@ def create_weave_leaderboard_from_active_loggers(
             ref.name,
         )
         
-        print(f"✅ Weave Leaderboard 생성 완료!")
+        print(f"✅ Weave Leaderboard created!")
         print(f"🔗 URL: {url}")
         
         return url
         
     except Exception as e:
-        print(f"❌ Leaderboard 생성 실패: {e}")
+        print(f"❌ Leaderboard creation failed: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -393,11 +393,11 @@ def create_weave_leaderboard_from_active_loggers(
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="Weave Leaderboard 생성")
+    parser = argparse.ArgumentParser(description="Create Weave Leaderboard")
     parser.add_argument("--entity", "-e", required=True, help="Weave entity")
     parser.add_argument("--project", "-p", required=True, help="Weave project")
-    parser.add_argument("--benchmarks", "-b", nargs="+", help="벤치마크 목록 (기본: 전체)")
-    parser.add_argument("--name", default=LEADERBOARD_NAME, help="리더보드 이름")
+    parser.add_argument("--benchmarks", "-b", nargs="+", help="Benchmark list (default: all)")
+    parser.add_argument("--name", default=LEADERBOARD_NAME, help="Leaderboard name")
     
     args = parser.parse_args()
     
@@ -407,4 +407,3 @@ if __name__ == "__main__":
         benchmarks=args.benchmarks,
         name=args.name,
     )
-

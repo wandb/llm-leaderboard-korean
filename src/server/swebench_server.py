@@ -16,10 +16,10 @@ Notes:
 - Requires Docker daemon access on this host
 
 Usage:
-    # 서버 시작
+    # Start server
     uv run python src/server/swebench_server.py
 
-    # 백그라운드 실행
+    # Run in background
     nohup uv run python src/server/swebench_server.py \
         >/tmp/swebench_server.out 2>&1 & disown
 
@@ -305,8 +305,8 @@ except Exception:
 
 
 async def worker_loop():
-    """並列実行用のワーカー。
-    注意: 評価処理は同期関数なので、イベントループをブロックしないようスレッドにオフロードする。
+    """Worker for parallel execution.
+    Note: Evaluation processing is a synchronous function, so offload to thread to avoid blocking the event loop.
     """
     while True:
         job_id = await JOB_QUEUE.get()
@@ -316,7 +316,7 @@ async def worker_loop():
             continue
         job.status = "running"
         try:
-            # ブロッキングな評価処理をスレッドにオフロード
+            # Offload blocking evaluation processing to thread
             res = await asyncio.to_thread(_run_single_evaluation, job)
             job.result = res
             job.status = "finished"

@@ -1,9 +1,9 @@
 """
 KoBBQ
 
-한국어 편향성 판단 벤치마크
+Korean Bias Detection Benchmark
 
-자체 스코어러로 평가합니다.
+Evaluated with custom scorer.
 """
 
 from core.benchmark_config import BenchmarkConfig
@@ -17,7 +17,7 @@ CONFIG = BenchmarkConfig(
         "target": "answer",
         "choices": "options",
     },
-    answer_format="text",  # 텍스트 정답 → 레터(A, B, C) 변환
+    answer_format="text",  # Text answer → Letter (A, B, C) conversion
     solver="multiple_choice",
     scorer="kobbq_scorer",
     system_message="주어진 질문에 가장 적절한 답을 선택하세요.",

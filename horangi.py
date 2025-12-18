@@ -1,39 +1,39 @@
 """
-한국어 LLM 벤치마크 평가 프레임워크
+Korean LLM Benchmark Evaluation Framework
 
-사용법:
+Usage:
     uv run inspect eval horangi@ko_hellaswag --model openai/gpt-4o -T limit=5
     uv run inspect eval horangi@swebench_verified_official_80 --model openai/gpt-4o -T limit=1
 
-    # 옵션
-    -T shuffle=true      # 데이터 셔플
-    -T limit=10          # 샘플 수 제한
-    -T split=train       # 데이터 분할 (weave 타입)
-    -T use_korean_prompt=false  # 영어 프롬프트 사용
+    # Options
+    -T shuffle=true      # Shuffle data
+    -T limit=10          # Limit sample count
+    -T split=train       # Data split (weave type)
+    -T use_korean_prompt=false  # Use English prompt
 
-새 벤치마크 추가:
-    1. src/benchmarks/ 폴더에 새 파일 생성
-    2. benchmarks/__init__.py에 CONFIG import 추가
-    3. 이 파일에 @task 함수 추가
+Adding new benchmarks:
+    1. Create a new file in src/benchmarks/ folder
+    2. Add CONFIG import to benchmarks/__init__.py
+    3. Add @task function to this file
 
-inspect-wandb가 설치되어 있으면 자동으로 WandB/Weave에 로깅됩니다.
+If inspect-wandb is installed, logging to WandB/Weave is automatic.
 """
 
 import os
 import sys
 from pathlib import Path
 
-# 로케일 설정 (inspect_ai 날짜 포맷 호환)
+# Set locale (for inspect_ai date format compatibility)
 os.environ.setdefault("LC_TIME", "en_US.UTF-8")
 
-# src 폴더를 경로에 추가
+# Add src folder to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from inspect_ai import Task, task
 from core import create_benchmark
 
 # =============================================================================
-# 벤치마크 Task 정의
+# Benchmark Task Definitions
 # =============================================================================
 
 @task
@@ -262,7 +262,7 @@ def kobbq(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """KoBBQ - 한국어 편향성 판단 벤치마크"""
+    """KoBBQ - Korean Bias Benchmark for QA"""
     return create_benchmark(
         name="kobbq",
         shuffle=shuffle,
@@ -275,7 +275,7 @@ def ko_hle(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """KoHLE - 한국어 Humanity's Last Exam (상속 버전)"""
+    """KoHLE - Korean Humanity's Last Exam (inherited version)"""
     return create_benchmark(
         name="ko_hle",
         shuffle=shuffle,
@@ -288,7 +288,7 @@ def ko_hle_standalone(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """KoHLE Standalone - 한국어 HLE (독립 버전, 커스텀 scorer)"""
+    """KoHLE Standalone - Korean HLE (standalone version, custom scorer)"""
     return create_benchmark(
         name="ko_hle_standalone",
         shuffle=shuffle,
@@ -297,7 +297,7 @@ def ko_hle_standalone(
 
 
 # =============================================================================
-# HalluLens 벤치마크
+# HalluLens Benchmarks
 # =============================================================================
 
 @task
@@ -305,7 +305,7 @@ def ko_hallulens_wikiqa(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """KoHalluLens PreciseWikiQA - 위키피디아 기반 QA 환각 평가"""
+    """KoHalluLens PreciseWikiQA - Wikipedia-based QA hallucination evaluation"""
     return create_benchmark(
         name="ko_hallulens_wikiqa",
         shuffle=shuffle,
@@ -318,7 +318,7 @@ def ko_hallulens_longwiki(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """KoHalluLens LongWiki - 긴 위키피디아 문서 기반 QA 환각 평가"""
+    """KoHalluLens LongWiki - Long Wikipedia document QA hallucination evaluation"""
     return create_benchmark(
         name="ko_hallulens_longwiki",
         shuffle=shuffle,
@@ -331,7 +331,7 @@ def ko_hallulens_generated(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """KoHalluLens GeneratedEntity - 가상 엔티티 거부 평가"""
+    """KoHalluLens GeneratedEntity - Non-existent entity refusal evaluation"""
     return create_benchmark(
         name="ko_hallulens_generated",
         shuffle=shuffle,
@@ -344,7 +344,7 @@ def ko_hallulens_mixed(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """KoHalluLens MixedEntity - 실제/가상 혼합 엔티티 평가"""
+    """KoHalluLens MixedEntity - Real/fictional mixed entity evaluation"""
     return create_benchmark(
         name="ko_hallulens_mixed",
         shuffle=shuffle,
@@ -357,7 +357,7 @@ def ko_hallulens_nonexistent(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """KoHalluLens NonExistentEntities - 가상 엔티티 거부 평가 (Generated + Mixed 통합)"""
+    """KoHalluLens NonExistentEntities - Non-existent entity refusal evaluation (Generated + Mixed combined)"""
     return create_benchmark(
         name="ko_hallulens_nonexistent",
         shuffle=shuffle,
@@ -366,7 +366,7 @@ def ko_hallulens_nonexistent(
 
 
 # =============================================================================
-# BFCL 벤치마크
+# BFCL Benchmarks
 # =============================================================================
 
 @task
@@ -375,13 +375,13 @@ def bfcl(
     limit: int | None = None,
     use_native_tools: bool = True,
 ) -> Task:
-    """BFCL - Function Calling 벤치마크 (통합)
+    """BFCL - Function Calling Benchmark (unified)
     
-    모델의 tool calling 지원 여부에 따라 solver를 선택합니다.
-    - use_native_tools=True (기본): Native Tool Calling (OpenAI, Claude, Gemini 등)
-    - use_native_tools=False: Text-based (EXAONE, 일부 오픈소스 등)
+    Selects solver based on model's tool calling support.
+    - use_native_tools=True (default): Native Tool Calling (OpenAI, Claude, Gemini, etc.)
+    - use_native_tools=False: Text-based (EXAONE, some open-source models, etc.)
     
-    모델 설정 파일에서 자동으로 설정 가능:
+    Can be set automatically via model config file:
         benchmarks:
           bfcl:
             use_native_tools: false
@@ -399,9 +399,9 @@ def bfcl_extended(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """[DEPRECATED] BFCL Extended - 대신 bfcl 벤치마크 사용 권장
+    """[DEPRECATED] BFCL Extended - Use bfcl benchmark instead
     
-    Tool calling 지원 모델용: OpenAI, Claude, Gemini 등
+    For models supporting tool calling: OpenAI, Claude, Gemini, etc.
     """
     return create_benchmark(
         name="bfcl_extended",
@@ -415,9 +415,9 @@ def bfcl_text(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """[DEPRECATED] BFCL Text - 대신 bfcl --use_native_tools=false 사용 권장
+    """[DEPRECATED] BFCL Text - Use bfcl --use_native_tools=false instead
     
-    Tool calling 미지원 모델용: EXAONE, 일부 오픈소스 등
+    For models without tool calling support: EXAONE, some open-source models, etc.
     """
     return create_benchmark(
         name="bfcl_text",
@@ -427,7 +427,7 @@ def bfcl_text(
 
 
 # =============================================================================
-# MT-Bench 벤치마크
+# MT-Bench Benchmark
 # =============================================================================
 
 @task
@@ -435,10 +435,10 @@ def ko_mtbench(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """MT-Bench 한국어 - 멀티턴 대화 평가
+    """MT-Bench Korean - Multi-turn conversation evaluation
     
-    8개 카테고리 (writing, roleplay, reasoning, math, coding, extraction, stem, humanities)
-    2턴 대화 형식, LLM Judge가 1-10점 평가
+    8 categories (writing, roleplay, reasoning, math, coding, extraction, stem, humanities)
+    2-turn conversation format, LLM Judge scores 1-10
     """
     return create_benchmark(
         name="ko_mtbench",
@@ -448,7 +448,7 @@ def ko_mtbench(
 
 
 # =============================================================================
-# SWE-bench 벤치마크
+# SWE-bench Benchmark
 # =============================================================================
 
 @task
@@ -456,14 +456,13 @@ def swebench_verified_official_80(
     shuffle: bool = False,
     limit: int | None = None,
 ) -> Task:
-    """SWE-bench Verified Official 80 - 소프트웨어 버그 수정 평가
+    """SWE-bench Verified Official 80 - Software bug fix evaluation
     
-    80개의 검증된 소프트웨어 버그 수정 과제
-    서버 기반 채점 (Docker 컨테이너에서 테스트 실행)
+    80 verified software bug fix tasks
+    Server-based scoring (runs tests in Docker container)
     """
     return create_benchmark(
         name="swebench_verified_official_80",
         shuffle=shuffle,
         limit=limit,
     )
-

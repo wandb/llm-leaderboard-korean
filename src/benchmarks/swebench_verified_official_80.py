@@ -1,4 +1,4 @@
-"""SWE-bench Verified (Official 80) - 버그 수정"""
+"""SWE-bench Verified (Official 80) - Bug Fixing"""
 
 from core.benchmark_config import BenchmarkConfig
 

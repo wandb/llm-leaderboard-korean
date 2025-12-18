@@ -1,18 +1,18 @@
 """
-BFCL Scorer - Function Calling 평가 Scorer
+BFCL Scorer - Function Calling Evaluation Scorer
 
-두 가지 모드 지원:
-1. Native Tool Calling - tool_calls에서 직접 추출
-2. Text-based - 텍스트 응답에서 JSON 파싱
+Two modes supported:
+1. Native Tool Calling - Extract directly from tool_calls
+2. Text-based - Parse JSON from text response
 
-평가 방식:
-- 모델의 tool_calls/텍스트와 ground_truth 비교
-- 함수명과 인자가 정확히 일치하면 정답
-- irrelevance: tool_call이 없거나 {"function": null} 이면 정답
+Evaluation method:
+- Compare model's tool_calls/text with ground_truth
+- Correct if function name and arguments match exactly
+- irrelevance: Correct if no tool_call or {"function": null}
 
-메트릭:
-- accuracy: 전체 정확도
-- category별 정확도
+Metrics:
+- accuracy: Overall accuracy
+- Category-specific accuracy
 """
 
 import ast
@@ -37,44 +37,44 @@ from inspect_ai.solver import TaskState
 
 
 # =============================================================================
-# Text-based 응답 파싱 (프롬프트 기반 모드용)
+# Text-based response parsing (for prompt-based mode)
 # =============================================================================
 
 def _parse_text_response(text: str) -> dict[str, Any] | None:
     """
-    텍스트 응답에서 JSON 함수 호출을 추출
+    Extract JSON function call from text response
     
     Expected format:
     {"function": "func_name", "arguments": {"arg1": "val1"}}
     
-    또는 거부 시:
+    Or for refusal:
     {"function": null, "arguments": null}
     """
     if not text:
         return None
     
     try:
-        # JSON 블록 추출 시도 (```json ... ``` 형식)
+        # Try to extract JSON block (```json ... ``` format)
         json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
         if json_match:
             json_str = json_match.group(1)
         else:
-            # 그냥 JSON 찾기
+            # Find just JSON
             json_match = re.search(r'\{[^{}]*"function"[^{}]*\}', text, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
             else:
-                # 전체가 JSON인 경우
+                # Entire text is JSON
                 json_str = text.strip()
         
         parsed = json.loads(json_str)
         
-        # 유효성 검사
+        # Validate
         if isinstance(parsed, dict) and "function" in parsed:
             func_name = parsed.get("function")
             arguments = parsed.get("arguments", {})
             
-            # null 처리 (거부)
+            # Handle null (refusal)
             if func_name is None:
                 return {"function": None, "arguments": None}
             
@@ -90,7 +90,7 @@ def _parse_text_response(text: str) -> dict[str, Any] | None:
 
 def _parse_function_call(call_str: str) -> dict[str, Any] | None:
     """
-    함수 호출 문자열을 파싱하여 {function, arguments} 딕셔너리로 변환
+    Parse function call string to {function, arguments} dictionary
     
     Input: "calculate_area(width=10, height=5)"
     Output: {"function": "calculate_area", "arguments": {"width": 10, "height": 5}}
@@ -99,18 +99,18 @@ def _parse_function_call(call_str: str) -> dict[str, Any] | None:
         return None
     
     try:
-        # AST로 파싱 시도
+        # Try AST parsing
         tree = ast.parse(call_str, mode='eval')
         if not isinstance(tree.body, ast.Call):
             return None
         
         call = tree.body
         
-        # 함수명 추출
+        # Extract function name
         if isinstance(call.func, ast.Name):
             func_name = call.func.id
         elif isinstance(call.func, ast.Attribute):
-            # triangle_properties.get 같은 경우
+            # Cases like triangle_properties.get
             parts = []
             node = call.func
             while isinstance(node, ast.Attribute):
@@ -122,14 +122,14 @@ def _parse_function_call(call_str: str) -> dict[str, Any] | None:
         else:
             return None
         
-        # 인자 추출
+        # Extract arguments
         arguments = {}
         for kw in call.keywords:
             try:
-                # ast.literal_eval로 값 평가
+                # Evaluate value with ast.literal_eval
                 arguments[kw.arg] = ast.literal_eval(kw.value)
             except:
-                # 평가 실패시 문자열로
+                # On evaluation failure, use as string
                 arguments[kw.arg] = ast.unparse(kw.value)
         
         return {"function": func_name, "arguments": arguments}
@@ -140,7 +140,7 @@ def _parse_function_call(call_str: str) -> dict[str, Any] | None:
 
 def _parse_dict_ground_truth(gt_dict: dict) -> dict[str, Any] | None:
     """
-    딕셔너리 형식 ground_truth를 파싱
+    Parse dictionary format ground_truth
     
     Input: {'calculate_area': {'width': [10], 'height': [5]}}
     Output: {"function": "calculate_area", "arguments": {"width": 10, "height": 5}}
@@ -154,7 +154,7 @@ def _parse_dict_ground_truth(gt_dict: dict) -> dict[str, Any] | None:
         
         arguments = {}
         for k, v in params.items():
-            # 리스트면 첫 번째 값 사용
+            # Use first value if list
             if isinstance(v, list) and v:
                 arguments[k] = v[0]
             else:
@@ -167,13 +167,13 @@ def _parse_dict_ground_truth(gt_dict: dict) -> dict[str, Any] | None:
 
 
 def _normalize_arguments(args: dict) -> dict:
-    """인자 정규화 (타입 통일, 빈 문자열 제거 등)"""
+    """Normalize arguments (unify types, remove empty strings, etc.)"""
     normalized = {}
     for k, v in args.items():
-        # 빈 문자열은 제외
+        # Exclude empty strings
         if v == "" or v == '':
             continue
-        # 숫자 문자열은 숫자로 변환
+        # Convert numeric strings to numbers
         if isinstance(v, str):
             try:
                 if '.' in v:
@@ -187,10 +187,10 @@ def _normalize_arguments(args: dict) -> dict:
 
 
 def _sanitize_function_name(name: str) -> str:
-    """함수 이름을 OpenAI API 호환 형식으로 정규화"""
-    # .을 _로 대체
+    """Normalize function name to OpenAI API compatible format"""
+    # Replace . with _
     sanitized = name.replace(".", "_")
-    # 허용되지 않는 문자 제거
+    # Remove disallowed characters
     sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", sanitized)
     return sanitized
 
@@ -200,7 +200,7 @@ def _compare_tool_calls(
     expected: dict[str, Any] | None,
 ) -> tuple[bool, str]:
     """
-    예측 tool_call과 정답 비교
+    Compare predicted tool_call with expected
     
     Returns:
         (is_correct, explanation)
@@ -214,14 +214,14 @@ def _compare_tool_calls(
     if expected is None:
         return False, "No expected answer"
     
-    # 함수명 비교 (정규화 후)
+    # Compare function names (after normalization)
     pred_func = _sanitize_function_name(predicted.get("function", ""))
     exp_func = _sanitize_function_name(expected.get("function", ""))
     
     if pred_func != exp_func:
         return False, f"Function mismatch: {pred_func} != {exp_func}"
     
-    # 인자 비교 (정규화 후)
+    # Compare arguments (after normalization)
     pred_args = _normalize_arguments(predicted.get("arguments", {}))
     exp_args = _normalize_arguments(expected.get("arguments", {}))
     
@@ -236,7 +236,7 @@ def _compare_tool_calls(
 # =============================================================================
 
 def _is_correct(score_value) -> bool:
-    """Score value가 정답인지 확인 (문자열 또는 숫자 모두 처리)"""
+    """Check if Score value is correct (handles both string and number)"""
     if isinstance(score_value, str):
         return score_value == CORRECT
     elif isinstance(score_value, (int, float)):
@@ -244,10 +244,10 @@ def _is_correct(score_value) -> bool:
     return False
 
 
-# 리더보드 기준 카테고리별 metric
+# Category-specific metrics (leaderboard standard)
 @metric
 def bfcl_simple_accuracy() -> Metric:
-    """simple (= simple_python) 정확도"""
+    """simple (= simple_python) accuracy"""
     def metric_fn(scores: list[SampleScore]) -> float:
         cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "simple"]
         return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
@@ -256,7 +256,7 @@ def bfcl_simple_accuracy() -> Metric:
 
 @metric
 def bfcl_multiple_accuracy() -> Metric:
-    """multiple 정확도"""
+    """multiple accuracy"""
     def metric_fn(scores: list[SampleScore]) -> float:
         cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "multiple"]
         return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
@@ -265,7 +265,7 @@ def bfcl_multiple_accuracy() -> Metric:
 
 @metric
 def bfcl_irrelevance_accuracy() -> Metric:
-    """irrelevance 정확도"""
+    """irrelevance accuracy"""
     def metric_fn(scores: list[SampleScore]) -> float:
         cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "irrelevance"]
         return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
@@ -274,7 +274,7 @@ def bfcl_irrelevance_accuracy() -> Metric:
 
 @metric
 def bfcl_java_accuracy() -> Metric:
-    """java (= simple_java) 정확도"""
+    """java (= simple_java) accuracy"""
     def metric_fn(scores: list[SampleScore]) -> float:
         cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "java"]
         return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
@@ -283,7 +283,7 @@ def bfcl_java_accuracy() -> Metric:
 
 @metric
 def bfcl_javascript_accuracy() -> Metric:
-    """javascript (= simple_javascript) 정확도"""
+    """javascript (= simple_javascript) accuracy"""
     def metric_fn(scores: list[SampleScore]) -> float:
         cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "javascript"]
         return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
@@ -292,7 +292,7 @@ def bfcl_javascript_accuracy() -> Metric:
 
 @metric
 def bfcl_live_simple_accuracy() -> Metric:
-    """live_simple 정확도"""
+    """live_simple accuracy"""
     def metric_fn(scores: list[SampleScore]) -> float:
         cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "live_simple"]
         return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
@@ -301,7 +301,7 @@ def bfcl_live_simple_accuracy() -> Metric:
 
 @metric
 def bfcl_live_multiple_accuracy() -> Metric:
-    """live_multiple 정확도"""
+    """live_multiple accuracy"""
     def metric_fn(scores: list[SampleScore]) -> float:
         cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "live_multiple"]
         return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
@@ -310,7 +310,7 @@ def bfcl_live_multiple_accuracy() -> Metric:
 
 @metric
 def bfcl_live_relevance_accuracy() -> Metric:
-    """live_relevance 정확도"""
+    """live_relevance accuracy"""
     def metric_fn(scores: list[SampleScore]) -> float:
         cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "live_relevance"]
         return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
@@ -319,7 +319,7 @@ def bfcl_live_relevance_accuracy() -> Metric:
 
 @metric
 def bfcl_live_irrelevance_accuracy() -> Metric:
-    """live_irrelevance 정확도"""
+    """live_irrelevance accuracy"""
     def metric_fn(scores: list[SampleScore]) -> float:
         cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "live_irrelevance"]
         return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
@@ -334,14 +334,14 @@ def bfcl_live_irrelevance_accuracy() -> Metric:
 
 @scorer(metrics=[
     accuracy(),
-    # 기본 함수 호출
+    # Basic function calling
     bfcl_simple_accuracy(),
     bfcl_multiple_accuracy(),
     bfcl_irrelevance_accuracy(),
-    # 언어별
+    # Language-specific
     bfcl_java_accuracy(),
     bfcl_javascript_accuracy(),
-    # 라이브 API
+    # Live API
     bfcl_live_simple_accuracy(),
     bfcl_live_multiple_accuracy(),
     bfcl_live_relevance_accuracy(),
@@ -351,30 +351,30 @@ def bfcl_scorer() -> Scorer:
     """
     BFCL Function Calling Scorer
     
-    평가 방식:
-    - 모델의 tool_calls와 ground_truth 비교
-    - irrelevance: tool_call이 없으면 정답
+    Evaluation method:
+    - Compare model's tool_calls with ground_truth
+    - irrelevance: Correct if no tool_call
     
-    metadata에서 필요한 정보:
-    - category: split 이름 (simple, multiple, exec_simple, exec_multiple, irrelevance)
-    - ground_truth: 정답 (문자열 또는 딕셔너리)
+    Required info from metadata:
+    - category: split name (simple, multiple, exec_simple, exec_multiple, irrelevance)
+    - ground_truth: Expected answer (string or dictionary)
     """
     async def score(state: TaskState, target: Target) -> Score:
         metadata = state.metadata or {}
         category = metadata.get("category", "unknown")
         is_text_based = metadata.get("_text_based_function_call", False)
         
-        # 거부 카테고리들
+        # Refusal categories
         refusal_categories = {"irrelevance", "live_irrelevance", "live_relevance"}
         
         # =====================================================================
-        # 1. 예측 추출 (Native vs Text-based)
+        # 1. Extract prediction (Native vs Text-based)
         # =====================================================================
         predicted = None
         is_refusal = False
         
         if is_text_based:
-            # Text-based 모드: 텍스트 응답에서 JSON 파싱
+            # Text-based mode: Parse JSON from text response
             assistant_messages = [
                 m for m in state.messages if isinstance(m, ChatMessageAssistant)
             ]
@@ -383,12 +383,12 @@ def bfcl_scorer() -> Scorer:
                 if isinstance(last_response, str):
                     predicted = _parse_text_response(last_response)
                     
-                    # {"function": null} = 거부
+                    # {"function": null} = refusal
                     if predicted and predicted.get("function") is None:
                         is_refusal = True
                         predicted = None
         else:
-            # Native 모드: tool_calls에서 직접 추출
+            # Native mode: Extract directly from tool_calls
             assistant_messages = [
                 m for m in state.messages if isinstance(m, ChatMessageAssistant)
             ]
@@ -408,7 +408,7 @@ def bfcl_scorer() -> Scorer:
                 is_refusal = True
         
         # =====================================================================
-        # 2. 거부 카테고리 처리
+        # 2. Handle refusal categories
         # =====================================================================
         if category in refusal_categories:
             is_correct = is_refusal or predicted is None
@@ -420,7 +420,7 @@ def bfcl_scorer() -> Scorer:
             )
         
         # =====================================================================
-        # 3. 일반 케이스: ground_truth와 비교
+        # 3. General case: Compare with ground_truth
         # =====================================================================
         gt_raw = metadata.get("ground_truth", [])
         if isinstance(gt_raw, str):
@@ -434,7 +434,7 @@ def bfcl_scorer() -> Scorer:
             elif isinstance(first_gt, dict):
                 expected = _parse_dict_ground_truth(first_gt)
         
-        # 비교
+        # Compare
         is_correct, explanation = _compare_tool_calls(predicted, expected)
         
         return Score(
@@ -450,4 +450,3 @@ def bfcl_scorer() -> Scorer:
         )
     
     return score
-
