@@ -19,6 +19,8 @@ metadata:
   provider: Provider Name       # Provider (OpenAI, Anthropic, Upstage, etc.)
   name: Model Display Name      # Display name
   release_date: "YYYY-MM-DD"    # Release date
+  size_category: None           # Size category ("Small (<10B)", "Medium (10-30B)", "Large (30B<)")
+  model_size: None
   description: "Model description"
   context_window: 128000        # Context window size (tokens)
   max_output_tokens: 4096       # Maximum output tokens
