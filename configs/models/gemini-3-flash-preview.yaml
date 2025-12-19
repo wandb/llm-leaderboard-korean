@@ -5,13 +5,13 @@
 # 참고: https://ai.google.dev/gemini-api/docs/openai
 
 # Model identifier - OpenAI provider로 설정
-model_id: openai/gemini-3-pro-preview
+model_id: openai/gemini-3-flash-preview
 
 # Model metadata
 metadata:
   provider: Google
-  name: gemini-3-pro-preview
-  release_date: "2025-11-18"
+  name: gemini-3-flash-preview
+  release_date: "2025-12-17"
   size_category: None
   model_size: None
   context_window: 1048576

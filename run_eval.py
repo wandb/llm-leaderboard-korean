@@ -158,13 +158,13 @@ def get_task_function(benchmark: str):
     raise ValueError(f"Unknown benchmark: {benchmark}")
 
 
-def get_inspect_model(config_name: str) -> tuple[str, dict]:
+def get_inspect_model(config_name: str) -> tuple[str, dict, str | None]:
     """
-    Get Inspect AI model string and model_args from config
+    Get Inspect AI model string, model_args, and base_url from config
     
     Returns:
-        (model_string, model_args)
-        e.g., ("openai/gpt-4o", {}) or ("openai/solar-pro2", {"api_key": "...", "base_url": "..."})
+        (model_string, model_args, base_url)
+        e.g., ("openai/gpt-4o", {}, None) or ("openai/solar-pro2", {"api_key": "..."}, "https://...")
     """
     config = get_config()
     model_config = config.get_model(config_name)
@@ -182,13 +182,14 @@ def get_inspect_model(config_name: str) -> tuple[str, dict]:
     else:
         inspect_model = model_id
     
-    # Build model_args for OpenAI-compatible APIs (non-official endpoints only)
-    model_args = {}
+    # Get base_url separately (passed to inspect_eval as model_base_url)
     base_url = model_config.get("base_url") or model_config.get("api_base")
-    
     # Skip base_url for official OpenAI API (inspect_ai already has it as default)
-    if base_url and "api.openai.com" not in base_url:
-        model_args["base_url"] = base_url
+    if base_url and "api.openai.com" in base_url:
+        base_url = None
+    
+    # Build model_args (without base_url to avoid duplication)
+    model_args = {}
     
     # Only pass api_key for non-OpenAI official APIs (OpenAI uses OPENAI_API_KEY env var)
     api_key_env = model_config.get("api_key_env")
@@ -200,7 +201,7 @@ def get_inspect_model(config_name: str) -> tuple[str, dict]:
     # Set INSPECT_WANDB_MODEL_NAME for Weave display
     os.environ["INSPECT_WANDB_MODEL_NAME"] = model_id
     
-    return inspect_model, model_args
+    return inspect_model, model_args, base_url
 
 
 def get_model_generate_config(config_name: str, benchmark: str) -> dict:
@@ -269,7 +270,7 @@ def run_benchmark(
         task = task_fn(limit=limit) if limit else task_fn()
         
         # Get model info
-        inspect_model, model_args = get_inspect_model(config_name)
+        inspect_model, model_args, base_url = get_inspect_model(config_name)
         
         # Get generation config
         generate_config = get_model_generate_config(config_name, benchmark)
@@ -280,6 +281,7 @@ def run_benchmark(
             tasks=[task],
             model=inspect_model,
             model_args=model_args,
+            model_base_url=base_url,
             limit=limit,
             log_dir="./logs",
             **generate_config,
