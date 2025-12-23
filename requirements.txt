@@ -114,7 +114,7 @@ jupyterlab_server==2.25.0
 keyring==23.5.0
 langchain==0.3.26
 langchain-anthropic==0.3.17
-langchain-core==0.3.68
+langchain-core==0.3.81
 langchain-google-genai==2.0.10
 langchain-mistralai==0.2.10
 langchain-openai==0.3.27
