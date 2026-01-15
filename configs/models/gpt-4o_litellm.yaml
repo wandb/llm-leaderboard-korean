@@ -1,0 +1,27 @@
+# GPT-4o via LiteLLM
+
+wandb:
+  run_name: "gpt-4o-2024-11-20"
+
+metadata:
+  release_date: "2024-11-20"
+  size_category: null
+  model_size: null
+  context_window: 128000
+  max_output_tokens: 16384
+
+model:
+  name: gpt-4o
+  client: litellm
+  provider: openai
+  api_key_env: OPENAI_API_KEY
+
+  params:
+    max_tokens: 16384
+    temperature: 0.1
+
+benchmarks:
+  bfcl:
+    use_native_tools: true
+  swebench_verified_official_80:
+    max_tokens: 16384

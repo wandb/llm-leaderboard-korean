@@ -1,237 +1,302 @@
-# Horangi Leaderboard 3
-## Overview
+# 🐯 Horangi - 한국어 LLM 벤치마크 평가 프레임워크
 
-This repository is for the Horangi Leaderboard 3, a comprehensive evaluation platform for large language models. The leaderboard assesses both general language capabilities and alignment aspects. For detailed information about the leaderboard, please visit [Nejumi Leaderboard](https://wandb.ai/wandb-japan/llm-leaderboard3/reports/Nejumi-LLM-3--Vmlldzo3OTg2NjM2) website.
+**호랑이(Horangi)** 는 한국어 LLM의 성능을 종합적으로 평가하는 오픈소스 벤치마크 프레임워크입니다.
 
-## Evaluation Metrics
-Our evaluation framework incorporates a diverse set of metrics to provide a holistic assessment of model performance:
+[WandB/Weave](https://wandb.ai/site/weave)와 [Inspect AI](https://inspect.ai-safety-institute.org.uk/)를 통합하여 범용언어성능(GLP)과 가치정렬성능(ALT) 두 축으로 한국어 LLM을 평가하며, 이를 위해 표준화된 벤치마크 데이터셋과 평가 파이프라인을 제공합니다.
+- 📦 20개 이상의 한국어 벤치마크가 [Weave](https://wandb.ai/horangi/horangi4/weave/objects)에 등록되어 있어, 별도의 데이터 준비 없이 바로 평가를 시작할 수 있습니다.
+  - 새로운 벤치마크를 추가할 수 있습니다. 자세한 내용은 [Horangi benchmark 문서](./docs/README_benchmark.md)를 참고하세요.
+- 🔓 OpenAI, Anthropic, Google 등 API 모델은 물론, vLLM 등으로 서빙하는 오픈소스 모델까지 동일한 기준으로 평가할 수 있습니다.
+- 📊 평가 결과는 Weave에 자동으로 기록되어 샘플별 분석, 모델 간 비교, 리더보드 생성이 가능합니다.
+- 🏆 **[호랑이 리더보드](https://horangi.ai)**에서 W&B가 운영하는 공식 리더보드를 확인할 수 있습니다.
+  - W&B Models로 평가 실행을 관리하고, Weave로 결과를 추적하여 **완전 자동화된 리더보드**를 제공합니다.
+  - 새 모델 평가 시 리더보드가 자동으로 업데이트되어 항상 최신 결과를 반영합니다.
+
+### 📬 문의
+
+| | |
+|---|---|
+| 리더보드 등재 신청 | [신청 폼](https://docs.google.com/forms/d/e/1FAIpQLSdQERNX8jCEuqzUiodjnUdAI7JRCemy5sgmVylio-u0DRb9Xw/viewform) |
+| 엔터프라이즈 문의 | contact-kr@wandb.com |
+
+---
+
+## 📋 목차
+
+- [특징](#-특징)
+- [결과 확인](#-결과-확인)
+- [지원 벤치마크](#-지원-벤치마크)
+- [프로젝트 구조](#-프로젝트-구조)
+- [설치](#-설치)
+- [빠른 시작](#-빠른-시작)
+- [설정 가이드](#️-설정-가이드)
+- [SWE-bench 평가 (코드 생성)](#-swe-bench-평가-코드-생성)
+
+---
+## ✨ 특징
+
+- 🇰🇷 **20여개 한국어 벤치마크** 지원
+- 📊 **WandB/Weave 자동 로깅** - 실험 추적 및 결과 비교
+- 🚀 **다양한 모델 지원** - OpenAI, Claude, Gemini, Solar, EXAONE 등
+- 📈 **리더보드 자동 생성** - Weave UI에서 모델 비교
+
+### 📈 결과 확인
+
+평가 완료 후 출력되는 Weave URL에서 상세 결과를 확인할 수 있습니다:
+자세한 내용은 [Horangi Weave 문서](./docs/README_weave.md)를 참고하세요.
+- **샘플별 점수 및 응답**
+- **모델 간 비교**
+- **집계 메트릭**
+- **자동 리더보드 생성**
+![Weave Leaderboard](./docs/assets/leaderboard.png)
+
+---
+
+## 📊 지원 벤치마크
+
+### 범용언어성능 (GLP) - General Language Performance
+
+언어 이해, 지식, 추론, 코딩, 함수호출 등 일반적인 언어 모델 능력을 평가합니다.
+
+| 평가 영역 | 벤치마크 | 설명 | 샘플 수 | 출처 |
+|----------|----------|------|--------:|------|
+| **구문해석** | `ko_balt_700_syntax` | 문장 구조 분석, 문법적 타당성 평가 | 100 | [snunlp/KoBALT-700](https://huggingface.co/datasets/snunlp/KoBALT-700) |
+| **의미해석** | `ko_balt_700_semantic` | 문맥 기반 추론, 의미적 일관성 평가 | 100 | [snunlp/KoBALT-700](https://huggingface.co/datasets/snunlp/KoBALT-700) |
+| | `haerae_bench_v1_rc` | 독해 기반 의미 해석력 평가 | 100 | [HAERAE-HUB/HAE_RAE_BENCH_1.0](https://huggingface.co/datasets/HAERAE-HUB/HAE_RAE_BENCH_1.0) |
+| **표현** | `ko_mtbench` | 글쓰기, 역할극, 인문학적 표현력 (LLM Judge) | 80 | [LGAI-EXAONE/KoMT-Bench](https://huggingface.co/datasets/LGAI-EXAONE/KoMT-Bench) |
+| **정보검색** | `squad_kor_v1` | 질의응답 기반 정보검색 능력 | 100 | [KorQuAD/squad_kor_v1](https://huggingface.co/datasets/KorQuAD/squad_kor_v1) |
+| **일반지식** | `kmmlu` | 상식, STEM 기초학문 이해도 | 100 | [HAERAE-HUB/KMMLU](https://huggingface.co/datasets/HAERAE-HUB/KMMLU) |
+| | `haerae_bench_v1_wo_rc` | 멀티턴 질의응답 기반 지식 평가 | 100 | [HAERAE-HUB/HAE_RAE_BENCH_1.0](https://huggingface.co/datasets/HAERAE-HUB/HAE_RAE_BENCH_1.0) |
+| **전문지식** | `kmmlu_pro` | 의학, 법률, 공학 등 고난도 전문지식 | 100 | [LGAI-EXAONE/KMMLU-Pro](https://huggingface.co/datasets/LGAI-EXAONE/KMMLU-Pro) |
+| | `ko_hle` | 한국어 고난도 전문가 수준 문제 | 100 | [cais/hle](https://huggingface.co/datasets/cais/hle) + 자체 번역 |
+| **상식추론** | `ko_hellaswag` | 문장 완성, 다음 문장 예측 | 100 | [davidkim205/ko_hellaswag](https://huggingface.co/datasets/davidkim205/ko_hellaswag) |
+| **수학추론** | `hrm8k` | 한국어 수학 추론 (GSM8K, KSM, MATH, MMMLU, OMNI_MATH 통합) | 100 | [HAERAE-HUB/HRM8K](https://huggingface.co/datasets/HAERAE-HUB/HRM8K) |
+| | `ko_aime2025` | AIME 2025 고난도 수학 | 30 | [allganize/AIME2025-ko](https://huggingface.co/datasets/allganize/AIME2025-ko) |
+| **추상추론** | `ko_arc_agi` | 시각적/구조적 추론, 추상적 문제 해결 | 100 | [ARC-AGI](https://arcprize.org/) |
+| **코딩** | `swebench_verified_official_80` | GitHub 이슈 해결 능력 | 80 | [SWE-bench](https://www.swebench.com/) |
+| **함수호출** | `bfcl` | 함수 호출 정확성 (단일, 멀티턴, 무관계검출) | 258 | [BFCL](https://gorilla.cs.berkeley.edu/blogs/8_berkeley_function_calling_leaderboard.html) |
+
+### 가치정렬성능 (ALT) - Alignment Performance
+
+제어성, 윤리, 유해성/편향성 방지, 환각 방지 등 모델의 안전성과 정렬 수준을 평가합니다.
+
+| 평가 영역 | 벤치마크 | 설명 | 샘플 수 | 출처 |
+|----------|----------|------|--------:|------|
+| **제어성** | `ifeval_ko` | 지시문 수행, 명령 준수 능력 | 100 | [allganize/IFEval-Ko](https://huggingface.co/datasets/allganize/IFEval-Ko) |
+| **윤리/도덕** | `ko_moral` | 사회 규범 준수, 안전한 언어 생성 | 100 | [AI Hub 윤리 데이터](https://aihub.or.kr/aihubdata/data/view.do?dataSetSn=558) |
+| **유해성방지** | `korean_hate_speech` | 혐오발언, 공격적 발화 탐지 및 억제 | 100 | [kocohub/korean-hate-speech](https://github.com/kocohub/korean-hate-speech) |
+| **편향성방지** | `kobbq` | 특정 집단/속성에 대한 편향성 평가 | 100 | [naver-ai/kobbq](https://huggingface.co/datasets/naver-ai/kobbq) |
+| **환각방지** | `ko_truthful_qa` | 사실성 검증, 근거 기반 답변 생성 | 100 | 자체 번역 |
+| | `ko_hallulens_wikiqa` | Wikipedia QA 기반 환각 평가 | 100 | [facebookresearch/HalluLens](https://github.com/facebookresearch/HalluLens) + 자체 번역 |
+| | `ko_hallulens_longwiki` | 긴 문맥 Wikipedia 환각 평가 | 100 | [facebookresearch/HalluLens](https://github.com/facebookresearch/HalluLens) + 자체 번역 |
+| | `ko_hallulens_nonexistent` | 가상 엔티티 거부 능력 평가 | 100 | [facebookresearch/HalluLens](https://github.com/facebookresearch/HalluLens) + 자체 번역 |
 
 
-| Main Category | Subcategory | Automated Evaluation with Correct Data | AI Evaluation | Note |
-|---------------|-------------|----------------------------------------|---------------|------|
-| General Language Processing | Expression | | MT-bench/roleplay (0shot)<br>MT-bench/humanities (0shot)<br>MT-bench/writing (0shot) | |
-| ^   | Translation | ALT e-to-j (jaster) (0shot, 2shot)<br>ALT j-to-e (jaster) (0shot, 2shot)<br>wikicorpus-e-to-j(jaster) (0shot, 2shot)<br>wikicorpus-j-to-e(jaster) (0shot, 2shot) | | |
-| ^   | Summarization | | | |
-| ^   | Information Extraction | JSQuaD (jaster) (0shot, 2shot) | | |
-| ^   | Reasoning | | MT-bench/reasoning (0shot) | |
-| ^   | Mathematical Reasoning | MAWPS*(jaster) (0shot, 2shot)<br>MGSM*(jaster) (0shot, 2shot) | MT-bench/math (0shot) | |
-| ^   | (Entity) Extraction | wiki_ner*(jaster) (0shot, 2shot)<br>wiki_coreference(jaster) (0shot, 2shot)<br>chABSA*(jaster) (0shot, 2shot) | MT-bench/extraction (0shot) | |
-| ^   | Knowledge / Question Answering | JCommonsenseQA*(jaster) (0shot, 2shot)<br>JEMHopQA*(jaster) (0shot, 2shot)<br>JMMLU*(0shot, 2shot)<br>NIILC*(jaster) (0shot, 2shot)<br>aio*(jaster) (0shot, 2shot) | MT-bench/stem (0shot) | |
-| ^   | English | MMLU_en (0shot, 2shot) | | |
-| ^   | semantic analysis | JNLI*(jaster) (0shot, 2shot)<br>JaNLI*(jaster) (0shot, 2shot)<br>JSeM*(jaster) (0shot, 2shot)<br>JSICK*(jaster) (0shot, 2shot)<br>Jamp*(jaster) (0shot, 2shot) | | |
-| ^   | syntactic analysis | JCoLA-in-domain*(jaster) (0shot, 2shot)<br>JCoLA-out-of-domain*(jaster) (0shot, 2shot)<br>JBLiMP*(jaster) (0shot, 2shot)<br>wiki_reading*(jaster) (0shot, 2shot)<br>wiki_pas*(jaster) (0shot, 2shot)<br>wiki_dependency*(jaster) (0shot, 2shot) | | |
-| Alignment | Controllability | jaster* (0shot, 2shot)<br>LCTG | | LCTG cannot be used for business purposes. Usage for research and using the result in the press release are acceptable. |
-| ^   | Ethics/Moral | JCommonsenseMorality*(2shot) | | |
-| ^   | Toxicity || LINE Yahoo Reliability Evaluation Benchmark | This dataset is not publicly available due to its sensitive content.| <TBU> |
-| ^   | Bias | JBBQ (2shot) | | JBBQ needs to be downloaded from [JBBQ github repository](https://github.com/ynklab/JBBQ_data?tab=readme-ov-file). |
-| ^   | Truthfulness | JTruthfulQA | | For JTruthfulQA evaluation, nlp-waseda/roberta_jtruthfulqa requires Juman++ to be installed beforehand. You can install it by running the script/install_jumanpp.sh script. |
-| ^   | Robustness | Test multiple patterns against JMMLU (W&B original) (0shot, 2shot)<br>- Standard method<br>- Choices are symbols<br>- Select anything but the correct answer | | |
+<details>
+<summary>📦 데이터셋 참조 (Weave)</summary>
+
+데이터셋은 `horangi/horangi4` 프로젝트에 업로드되어 있습니다:
+
+| 데이터셋 | Weave Ref |
+|----------|-----------|
+| KoHellaSwag_mini | `weave:///horangi/horangi4/object/KoHellaSwag_mini:latest` |
+| KoAIME2025_mini | `weave:///horangi/horangi4/object/KoAIME2025_mini:latest` |
+| IFEval_Ko_mini | `weave:///horangi/horangi4/object/IFEval_Ko_mini:latest` |
+| HAERAE_Bench_v1_mini | `weave:///horangi/horangi4/object/HAERAE_Bench_v1_mini:latest` |
+| KoBALT_700_mini | `weave:///horangi/horangi4/object/KoBALT_700_mini:latest` |
+| KMMLU_mini | `weave:///horangi/horangi4/object/KMMLU_mini:latest` |
+| KMMLU_Pro_mini | `weave:///horangi/horangi4/object/KMMLU_Pro_mini:latest` |
+| SQuAD_Kor_v1_mini | `weave:///horangi/horangi4/object/SQuAD_Kor_v1_mini:latest` |
+| KoTruthfulQA_mini | `weave:///horangi/horangi4/object/KoTruthfulQA_mini:latest` |
+| KoMoral_mini | `weave:///horangi/horangi4/object/KoMoral_mini:latest` |
+| KoARC_AGI_mini | `weave:///horangi/horangi4/object/KoARC_AGI_mini:latest` |
+| HRM8K_mini | `weave:///horangi/horangi4/object/HRM8K_mini:latest` |
+| KoreanHateSpeech_mini | `weave:///horangi/horangi4/object/KoreanHateSpeech_mini:latest` |
+| KoBBQ_mini | `weave:///horangi/horangi4/object/KoBBQ_mini:latest` |
+| KoHLE_mini | `weave:///horangi/horangi4/object/KoHLE_mini:latest` |
+| KoHalluLens_WikiQA_mini | `weave:///horangi/horangi4/object/KoHalluLens_WikiQA_mini:latest` |
+| KoHalluLens_LongWiki_mini | `weave:///horangi/horangi4/object/KoHalluLens_LongWiki_mini:latest` |
+| KoHalluLens_NonExistent_mini | `weave:///horangi/horangi4/object/KoHalluLens_NonExistent_mini:latest` |
+| BFCL_mini | `weave:///horangi/horangi4/object/BFCL_mini:latest` |
+| KoMTBench_mini | `weave:///horangi/horangi4/object/KoMTBench_mini:latest` |
+| SWEBench_Verified_80_mini | `weave:///horangi/horangi4/object/SWEBench_Verified_80_mini:latest` |
+
+</details>
+
+---
 
 
-- metrics with (0, 2-shot) are averaged across both settings.
-- Metrics marked with an asterisk (*) evaluate control capabilities.
-- For MT-bench, [StabilityAI's MT-Bench JP](https://github.com/Stability-AI/FastChat/tree/jp-stable) is used with GPT-4o-2024-05-13 as the model to evaluate.
-- For LCTG, the only quantity test is conducted. (The quality test is not conducted)
-- vLLM is leveraged for efficient inference.
-- **Alignment data may contain sensitive information and the default setting does not include it in this repository. If you want to evaluate your models agains Alinghment data, please check each dataset instruction carefully**
+## 📁 프로젝트 구조
 
-## Implementation Guide
-
-### Environment Setup
-1. Set up environment variables
 ```
-export WANDB_API_KEY=<your WANDB_API_KEY>
-export OPENAI_API_KEY=<your OPENAI_API_KEY>
-export LANG=ja_JP.UTF-8
-# if needed, set the following API KEY too
-export ANTHROPIC_API_KEY=<your ANTHROPIC_API_KEY>
-export GOOGLE_API_KEY=<your GOOGLE_API_KEY>
-export COHERE_API_KEY=<your COHERE_API_KEY>
-export MISTRAL_API_KEY=<your MISTRAL_API_KEY>
-export AWS_ACCESS_KEY_ID=<your AWS_ACCESS_KEY_ID>
-export AWS_SECRET_ACCESS_KEY=<your AWS_SECRET_ACCESS_KEY>
-export AWS_DEFAULT_REGION=<your AWS_DEFAULT_REGION>
-export UPSTAGE_API_KEY=<your UPSTAGE_API_KEY>
-# if needed, please login in huggingface
-huggingface-cli login
+horangi/
+├── horangi.py              # @task 함수 정의 (벤치마크 진입점)
+├── run_eval.py             # 평가 실행 스크립트
+├── configs/
+│   ├── base_config.yaml    # 전역 기본 설정
+│   └── models/             # 모델 설정 파일
+├── src/
+│   ├── benchmarks/         # 벤치마크 설정
+│   ├── core/               # 핵심 로직
+│   ├── scorers/            # 커스텀 Scorer
+│   └── solvers/            # 커스텀 Solver
+└── logs/                   # 평가 로그
 ```
 
-2. Clone the repository
+> 📖 **새 벤치마크 추가 방법**은 [docs/README_benchmark.md](docs/README_benchmark.md)를 참고하세요.
+
+---
+
+
+## 📦 설치
+
+### 요구 사항
+
+- Python 3.12+
+- [uv](https://github.com/astral-sh/uv) (권장) 또는 pip
+
+### 설치 방법
+
 ```bash
-git clone https://github.com/wandb/llm-leaderboard.git
-cd llm-leaderboard
+# uv 설치 (없는 경우)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 저장소 클론
+git clone https://github.com/wandb-korea/horangi.git
+cd horangi
+
+# 의존성 설치
+uv sync
 ```
 
-3. Set up a Python environment with `requirements.txt`
+### 환경 변수 설정
 
-### Dataset Preparation
+`.env.sample`을 복사하여 `.env` 파일을 생성하거나 환경 변수를 직접 설정합니다:
 
-For detailed instructions on dataset preparation and caveate, please refer to [scripts/data_uploader/README.md](./scripts/data_uploader/README.md).
-
-In Nejumi Leadeboard3, the following dataset are used.
-
-**Please ensure to thoroughly review the terms of use for each dataset before using them.**
-
-1. [jaster](https://github.com/llm-jp/llm-jp-eval/tree/nejumi3-data)(Apache-2.0 license)
-2. [MT-Bench-JA](https://github.com/Stability-AI/FastChat/tree/jp-stable) (Apache-2.0 license)
-3. [LCTG](https://github.com/CyberAgentAILab/LCTG-Bench) (Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License. Permission from AI shift to use for the leaderboard and was received.)
-4. [JBBQ](https://github.com/ynklab/JBBQ_data?tab=readme-ov-file) (Creative Commons Attribution 4.0 International License.)
-5. LINE Yahoo Inappropriate Speech Evaluation Dataset (not publically available)
-6. [JTruthfulQA](https://github.com/nlp-waseda/JTruthfulQA) (Creative Commons Attribution 4.0 International License.)
-
-
-
-### Configuration
-
-#### Base configuration
-
-The `base_config.yaml` file contains basic settings, and you can create a separate YAML file for model-specific settings. This allows for easy customization of settings for each model while maintaining a consistent base configuration.
-
-Below, you will find a detailed description of the variables utilized in the `base_config.yaml` file.
-
-- **wandb:** Information used for Weights & Biases (W&B) support.
-    - `entity`: Name of the W&B Entity.
-    - `project`: Name of the W&B Project.
-    - `run_name`: Name of the W&B run. Please set up run name in a model-specific config.
-- **testmode:** Default is false. Set to true for lightweight implementation with a small number of questions per category (for functionality checks).
-- **inference_interval:** Set inference interval in seconds. This is particularly effective when there are rate limits, such as with APIs.
-- **run:** Set to true for each evaluation dataset you want to run.
-- **model:** Information about the model.
-    - `artifacts_path`: Path of the wandb artifacts where the model is located.
-    - `max_model_len`: Maximum token length of the input.
-    - `chat_template`: Path to the chat template file. This is required for open-weights models.
-    - `dtype`: Data type. Choose from float32, float16, bfloat16.
-    - `trust_remote_code`:  Default is true.
-    - `device_map`: Device map. Default is "auto".
-    - `load_in_8bit`: 8-bit quantization. Default is false.
-    - `load_in_4bit`: 4-bit quantization. Default is false.
-
-- **generator:** Settings for generation. For more details, refer to the [generation_utils](https://huggingface.co/docs/transformers/internal/generation_utils) in Hugging Face Transformers.
-    - `top_p`: top-p sampling. Default is 1.0.
-    - `temperature`: The temperature for sampling. Default is 0.1.
-    - `max_tokens`: Maximum number of tokens to generate. This value will be overwritten in the script.
-
-- **num_few_shots:**  Number of few-shot examples to use.
-
-- **github_version:** For recording, not required to be changed.
-
-- **jaster:**  Settings for the Jaster dataset.
-    - `artifacts_path`: URL of the WandB Artifact for the Jaster dataset.
-    - `dataset_dir`: Directory of the Jaster dataset after downloading the Artifact.
-
-- **jmmlu_robustness:** Whether to include the JMMLU Robustness evaluation. Default is True.
-
-- **lctg:** Settings for the LCTG dataset.
-    - `artifacts_path`: URL of the WandB Artifact for the LCTG dataset.
-    - `dataset_dir`: Directory of the LCTG dataset after downloading the Artifact.
-
-- **jbbq:** Settings for the JBBQ dataset.
-    - `artifacts_path`: URL of the WandB Artifact for the JBBQ dataset.
-    - `dataset_dir`: Directory of the JBBQ dataset after downloading the Artifact.
-
-- **toxicity:** Settings for the toxicity evaluation.
-    - `artifact_path`: URL of the WandB Artifact of the toxicity dataset.
-    - `judge_prompts_path`: URL of the WandB Artifact of the toxicity judge prompts.
-    - `max_workers`: Number of workers for parallel processing.
-    - `judge_model`: Model used for toxicity judgment. Default is `gpt-4o-2024-05-13`
-
-- **jtruthfulqa:** Settings for the LCTG dataset.
-    - `artifact_path`: URL of the WandB Artifact for the JTruthfulQA dataset.
-    - `roberta_model_name`: Name of the RoBERTa model used for evaluation. Default is 'nlp-waseda/roberta_jtruthfulqa'.
-
-- **mtbench:** Settings for the MT-Bench evaluation.
-    - `temperature_override`: Override the temperature for each category of the MT-Bench.
-    - `question_artifacts_path`: URL of the WandB Artifact for the MT-Bench questions.
-    - `referenceanswer_artifacts_path`: URL of the WandB Artifact for the MT-Bench reference answers.
-    - `judge_prompt_artifacts_path`: URL of the WandB Artifact for the MT-Bench judge prompts.
-    - `bench_name`: Choose 'japanese_mt_bench' for the Japanese MT-Bench, or 'mt_bench' for the English version.
-    - `model_id`: The name of the model. You can replace this with a different value if needed.
-    - `question_begin`: Starting position for the question in the generated text.
-    - `question_end`: Ending position for the question in the generated text.
-    - `max_new_token`: Maximum number of new tokens to generate.
-    - `num_choices`: Number of choices to generate.
-    - `num_gpus_per_model`: Number of GPUs to use per model.
-    - `num_gpus_total`: Total number of GPUs to use.
-    - `max_gpu_memory`: Maximum GPU memory to use (leave as null to use the default).
-    - `dtype`: Data type. Choose from None, float32, float16, bfloat16.
-    - `judge_model`: Model used for judging the generated responses. Default is `gpt-4o-2024-05-13`
-    - `mode`: Mode of evaluation. Default is 'single'.
-    - `baseline_model`: Model used for comparison. Leave as null for default behavior.
-    - `parallel`: Number of parallel threads to use.
-    - `first_n`: Number of generated responses to use for comparison. Leave as null for default behavior.
-
-### Model configuration
-After setting up the base-configuration file, the next step is to set up a configuration file for model under `configs/`.
-#### API Model Configurations
-This framework supports evaluating models using APIs such as OpenAI, Anthropic, Google, and Cohere. You need to create a separate config file for each API model. For example, the config file for OpenAI's gpt-4o-2024-05-13 would be named `configs/config-gpt-4o-2024-05-13.yaml`.
-
-- **wandb:** Information used for Weights & Biases (W&B) support.
-    - `run_name`: Name of the W&B run.
-- **api:** Choose the API to use from `openai`, `anthropic`, `google`, `amazon_bedrock`.
-- **batch_size:** Batch size for API calls (recommended: 32).
-- **model:** Information about the model. 
-    - `pretrained_model_name_or_path`: Name of the API model.
-    - `size_category`: Specify "api" to indicate using an API model.
-    - `size`: Model size (leave as null for API models).
-    - `release_date`: Model release date. (MM/DD/YYYY)
-
-#### Other Model Configurations
-
-This framework also supports evaluating models using VLLM.  You need to create a separate config file for each VLLM model. For example, the config file for Microsoft's Phi-3-medium-128k-instruct would be named `configs/config-Phi-3-medium-128k-instruct.yaml`.
-
-- **wandb:** Information used for Weights & Biases (W&B) support.
-    - `run_name`: Name of the W&B run.
-- **api:** Set to `vllm` to indicate using a VLLM model.
-- **num_gpus:** Number of GPUs to use.
-- **batch_size:** Batch size for VLLM (recommended: 256).
-- **model:** Information about the model.
-    - `artifacts_path`: When loading a model from wandb artifacts, it is necessary to include a description. If not, there is no need to write it. Example notation: wandb-japan/llm-leaderboard/llm-jp-13b-instruct-lora-jaster-v1.0:v0   
-    - `pretrained_model_name_or_path`: Name of the VLLM model.
-    - `chat_template`: Path to the chat template file (if needed).
-    - `size_category`: Specify model size category. In Nejumi Leaderboard, the category is defined as "10B<", "10B<= <30B", "<=30B" and "api".
-    - `size`: Model size (parameter).
-    - `release_date`: Model release date (MM/DD/YYYY).
-    - `max_model_len`: Maximum token length of the input (if needed).
-
-
-#### Create Chat template (needed for models except for API)
-1. create chat_templates/model_id.jinja
-If the chat_template is specified in the tokenizer_config.json of the evaluation model, create a .jinja file with that configuration.
-If chat_template is not specified in tokenizer_config.json, refer to the model card or other relevant documentation to create a chat_template and document it in a .jinja file.
-
-2. test chat_templates
-If you want to check the output of the chat_templates, you can use the following script:
 ```bash
-python3 scripts/test_chat_template.py -m <model_id> -c <chat_template>
+# Provide the API key for the model(s) you intend to use
+HF_TOKEN=your_huggingface_token
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+GEMINI_API_KEY=your_gemini_api_key
+UPSTAGE_API_KEY=your_upstage_api_key
+
+# W&B 설정
+WANDB_API_KEY=your_wandb_api_key
+WANDB_ENTITY=your_wandb_entity
+WANDB_PROJECT=your_wandb_project
+# inspect_ai 설정
+INSPECT_WANDB_WEAVE_ENABLED=true_or_false
+INSPECT_WANDB_MODELS_ENABLED=true_or_false
+# swebench server 설정
+SWE_API_KEY=your_swebench_server_api_key
 ```
-If the model ID and chat_template are the same, you can omit -c <chat_template>.
+
+---
+
+## 🚀 빠른 시작
+
+`run_eval.py`로 벤치마크를 실행하고 W&B에 결과를 기록합니다.
+
+```bash
+# 모든 벤치마크 실행
+uv run python run_eval.py --config gpt-4o
+
+# 특정 벤치마크만 실행
+uv run python run_eval.py --config gpt-4o --only kmmlu
+
+# 여러 벤치마크 실행
+uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq,ko_hellaswag
+
+# 샘플 수 제한 (테스트용)
+uv run python run_eval.py --config gpt-4o --limit 10
+
+# 빠른 테스트 (가벼운 벤치마크만)
+uv run python run_eval.py --config gpt-4o --quick
+
+# 기존 W&B run 재개 (중단된 평가 이어서 실행)
+uv run python run_eval.py --config gpt-4o --resume <run_id>
+
+# W&B 태그 추가
+uv run python run_eval.py --config gpt-4o --tag experiment1 --tag test
+```
+
+### 옵션
+
+| 옵션 | 설명 |
+|------|------|
+| `--config` | 모델 설정 파일 (필수) |
+| `--only` | 특정 벤치마크만 실행 (쉼표로 구분) |
+| `--limit` | 벤치마크당 샘플 수 제한 |
+| `--quick` | 빠른 테스트 (가벼운 벤치마크만 실행) |
+| `--resume` | 기존 W&B run ID로 재개 |
+| `--tag` | W&B 태그 추가 (여러 번 사용 가능) |
+
+### 주요 기능
+
+- **vLLM 서버 자동 관리**: `_template_vllm.yaml` 설정 시 vLLM 서버가 자동으로 시작/종료됩니다
+- **W&B Models 연동**: 평가 결과가 W&B에 자동 기록됩니다
+- **진행 상황 로깅**: 각 벤치마크 결과가 실시간으로 표시됩니다
+- **스코어 집계 테이블**: 평가 완료 후 전체 결과 요약을 출력합니다
+
+---
+
+## ⚙️ 설정 가이드
+
+### 새 모델 추가
+```
+configs/
+├── base_config.yaml      # 전역 기본 설정
+└── models/               # 모델별 설정
+    ├── _template_api.yaml    # 템플릿
+    ├── _template_vllm.yaml    # 템플릿
+    ├── gpt-4o.yaml
+    └── solar_pro2.yaml
+```
+
+```bash
+# 1. 템플릿 복사
+cp configs/models/_template_api.yaml configs/models/my-model.yaml
+# vllm 서버를 자동으로 열어서 테스트하는경우
+# 평가실행 시 vLLM 서버가 자동으로 시작되고 평가 완료 후 종료됩니다. 별도로 vLLM 서버를 실행할 필요가 없습니다.
+# cp configs/models/_template_vllm.yaml configs/models/my-model.yaml
+
+# 2. 설정 편집
+vi configs/models/my-model.yaml
+
+# 3. 실행
+uv run python run_eval.py --config my-model
+```
+
+### 새 벤치마크 추가
+[Horangi benchmark 문서](./docs/README_benchmark.md)를 참고해주세요.
+---
+
+## 🔧 SWE-bench 평가 (코드 생성)
+
+SWE-bench는 실제 오픈소스 프로젝트의 버그 수정 능력을 평가하는 벤치마크입니다.
+
+📖 **자세한 설정 가이드**: [docs/README_swebench.md](docs/README_swebench.md)
+
+### 빠른 시작
+
+```bash
+# 1. 서버 실행 (Docker가 있는 Linux 환경)
+uv run python src/server/swebench_server.py --host 0.0.0.0 --port 8000
+
+# 2. 클라이언트 설정 (macOS 등)
+export SWE_SERVER_URL=http://YOUR_SERVER:8000
+
+# 3. 평가 실행
+uv run python run_eval.py --config gpt-4o --only swebench_verified_official_80 --limit 5
+```
+
+---
+
+## 📚 참고 자료
+- [WandB Weave](https://wandb.ai/site/weave)
+- [Inspect AI Documentation](https://inspect.ai-safety-institute.org.uk/)
+- [inspect_evals](https://github.com/UKGovernmentBEIS/inspect_evals)
+- [inspect-wandb (fork)](https://github.com/hw-oh/inspect_wandb)
+- [inspect_evals (fork)](https://github.com/hw-oh/inspect_evals)
 
 
-## Evaluation Execution
-Once you prepare the dataset and the configuration files, you can run the evaluation process.
-
-You can use either `-c` or `-s` option:
-    - **-c (config):** Specify the config file by its name, e.g., `python3 scripts/run_eval.py -c config-gpt-4o-2024-05-13.yaml`
-    - **-s (select-config):** Select from a list of available config files. This option is useful if you have multiple config files. 
-   ```bash
-   python3 scripts/run_eval.py -s
-   or 
-   python3 scripts/run_eval.py -c
-   ```
-
-
-The results of the evaluation will be logged to the specified W&B project.
-
-## When you want to edit runs or add additional evaluation metrics
-Please refer to [belend_run_configs/README.md](blend_run_configs/README.md).
-
-
-
-## Contributing
-Contributions to this repository is welcom. Please submit your suggestions via pull requests. Please note that we may not accept all pull requests.
-
-## License
-This repository is available for commercial use. However, please adhere to the respective rights and licenses of each evaluation dataset used.
-
-## Contact
-For questions or support, please concatct to contact-jp@wandb.com.

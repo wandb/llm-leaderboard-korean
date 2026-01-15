@@ -1,0 +1,29 @@
+# Solar Pro 2 (Upstage, OpenAI-Compatible)
+
+wandb:
+  run_name: "solar-pro2-251215"
+
+metadata:
+  release_date: "2025-12-15"
+  size_category: null
+  model_size: null
+  context_window: 65536
+  max_output_tokens: 16384
+
+model:
+  name: solar-pro2-251215
+  client: openai
+  provider: upstage
+  base_url: https://api.upstage.ai/v1
+  api_key_env: UPSTAGE_API_KEY
+
+  params:
+    max_tokens: 16384
+    temperature: 0.1
+    reasoning_effort: high
+
+benchmarks:
+  bfcl:
+    use_native_tools: true
+  swebench_verified_official_80:
+    max_tokens: 16384
