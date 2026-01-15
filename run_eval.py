@@ -420,7 +420,7 @@ def run_benchmark(
             log_dir="./logs",
             fail_on_error=False,
             continue_on_fail=True,
-            display="plain",  # tqdm-style progress bar
+            display="full",  # tqdm-style progress bar
             **generate_config,
         )
         
