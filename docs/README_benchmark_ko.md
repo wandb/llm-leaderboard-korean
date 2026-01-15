@@ -54,7 +54,7 @@ BENCHMARK_DESCRIPTIONS = {
 ### Step 3: Task 함수 추가
 
 ```python
-# horangi.py (루트)
+# src/benchmarks/horangi.py
 @task
 def my_benchmark(shuffle: bool = False, limit: int | None = None) -> Task:
     """My Benchmark"""
@@ -169,7 +169,7 @@ __all__ = [..., "my_scorer"]
 
 - [ ] `src/benchmarks/`에 config 파일 생성
 - [ ] `src/benchmarks/__init__.py`에 등록
-- [ ] `horangi.py`에 `@task` 함수 추가
+- [ ] `src/benchmarks/horangi.py`에 `@task` 함수 추가
 - [ ] 테스트 실행
 
 ---

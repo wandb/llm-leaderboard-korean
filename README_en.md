@@ -131,13 +131,13 @@ Datasets are uploaded to the `horangi/horangi4` project:
 
 ```
 horangi/
-├── horangi.py              # @task function definitions (benchmark entry point)
 ├── run_eval.py             # Evaluation execution script
 ├── configs/
 │   ├── base_config.yaml    # Global default settings
 │   └── models/             # Model configuration files
 ├── src/
-│   ├── benchmarks/         # Benchmark configurations
+│   ├── benchmarks/
+│   │   └── horangi.py      # @task function definitions (benchmark entry point)
 │   ├── core/               # Core logic
 │   ├── scorers/            # Custom Scorers
 │   └── solvers/            # Custom Solvers

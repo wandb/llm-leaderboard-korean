@@ -54,7 +54,7 @@ BENCHMARK_DESCRIPTIONS = {
 ### Step 3: Add Task Function
 
 ```python
-# horangi.py (root)
+# src/benchmarks/horangi.py
 @task
 def my_benchmark(shuffle: bool = False, limit: int | None = None) -> Task:
     """My Benchmark"""
@@ -169,7 +169,7 @@ When adding a new benchmark:
 
 - [ ] Create config file in `src/benchmarks/`
 - [ ] Register in `src/benchmarks/__init__.py`
-- [ ] Add `@task` function in `horangi.py`
+- [ ] Add `@task` function in `src/benchmarks/horangi.py`
 - [ ] Run tests
 
 ---

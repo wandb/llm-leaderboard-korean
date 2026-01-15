@@ -131,13 +131,13 @@
 
 ```
 horangi/
-├── horangi.py              # @task 함수 정의 (벤치마크 진입점)
 ├── run_eval.py             # 평가 실행 스크립트
 ├── configs/
 │   ├── base_config.yaml    # 전역 기본 설정
 │   └── models/             # 모델 설정 파일
 ├── src/
-│   ├── benchmarks/         # 벤치마크 설정
+│   ├── benchmarks/
+│   │   └── horangi.py      # @task 함수 정의 (벤치마크 진입점)
 │   ├── core/               # 핵심 로직
 │   ├── scorers/            # 커스텀 Scorer
 │   └── solvers/            # 커스텀 Solver

@@ -247,7 +247,7 @@ def get_task_function(benchmark: str):
     Returns:
         Task function
     """
-    import horangi
+    from src.benchmarks import horangi
     if hasattr(horangi, benchmark):
         return getattr(horangi, benchmark)
     raise ValueError(f"Unknown benchmark: {benchmark}")
