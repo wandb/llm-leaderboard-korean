@@ -1,0 +1,31 @@
+# Claude Opus 4.5 (Low Effort)
+
+wandb:
+  run_name: "claude-opus-4-5-20251101: low-effort"
+
+metadata:
+  release_date: "2025-11-01"
+  size_category: null
+  model_size: null
+  context_window: 200000
+  max_output_tokens: 64000
+
+model:
+  name: claude-opus-4-5-20251101
+  client: litellm
+  provider: anthropic
+  api_key_env: ANTHROPIC_API_KEY
+
+  params:
+    max_tokens: 64000
+    temperature: 1.0
+    reasoning_effort: low
+    timeout: 3600
+    max_retries: 10
+
+benchmarks:
+  bfcl:
+    use_native_tools: true
+    max_tokens: 32000
+  swebench_verified_official_80:
+    max_tokens: 64000

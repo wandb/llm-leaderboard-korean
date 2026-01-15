@@ -1,0 +1,134 @@
+# =============================================================================
+# Model Configuration Template (v2)
+# 
+# Copy this file when adding a new model.
+# Filename: <model-name>.yaml (e.g., gpt-4o.yaml, claude-opus-4-5.yaml)
+# =============================================================================
+
+# W&B Settings
+wandb:
+  run_name: "model-name: effort-level"   # Display name for W&B run
+
+# Model Metadata
+metadata:
+  release_date: "YYYY-MM-DD"              # Model release date
+  size_category: null                     # "Small (<10B)", "Medium (10-30B)", "Large (30B<)"
+  model_size: null                        # e.g., "4B", "32B", "70B"
+  context_window: 128000                  # Context window size (tokens)
+  max_output_tokens: 4096                 # Maximum output tokens
+
+# =============================================================================
+# Model Configuration
+# =============================================================================
+
+model:
+  # Model name (without client prefix)
+  # Examples:
+  #   - claude-opus-4-5-20251101
+  #   - gpt-5.2-2025-12-11
+  #   - solar-pro2-251215
+  #   - Qwen/Qwen3-4B-Instruct-2507 (for HuggingFace models)
+  name: model-name
+
+  # API Client: litellm | openai
+  #   - litellm: Uses LiteLLM (supports Anthropic, OpenAI, xAI, etc.)
+  #   - openai: Uses OpenAI SDK (for OpenAI or OpenAI-compatible APIs)
+  client: litellm
+
+  # Model Provider (for LiteLLM routing)
+  # Examples: anthropic, openai, xai, google, qwen, lgai, upstage
+  provider: anthropic
+
+  # Custom API URL (for OpenAI-compatible APIs)
+  # Examples:
+  #   - vLLM server: http://YOUR_SERVER_IP:8000/v1
+  #   - Upstage: https://api.upstage.ai/v1
+  #   - Google: https://generativelanguage.googleapis.com/v1beta/openai/
+  # base_url: https://api.example.com/v1
+
+  # Environment variable name for API key
+  api_key_env: YOUR_API_KEY_ENV
+
+  # Generation Parameters
+  params:
+    max_tokens: 4096                      # Maximum generation tokens
+    temperature: 0.0                      # Generation temperature
+    # reasoning_effort: high              # For reasoning models (high/low/xhigh)
+    # timeout: 3600                       # Request timeout (seconds)
+    # max_retries: 10                     # Retry count on errors
+
+# =============================================================================
+# Benchmark-specific Overrides (optional)
+# =============================================================================
+
+benchmarks:
+  # BFCL: Function Calling benchmark
+  # - use_native_tools: true  → Native Tool Calling (OpenAI, Claude, Gemini, etc.)
+  # - use_native_tools: false → Text-based (recommended for open-source models)
+  bfcl:
+    use_native_tools: true
+  
+  # MT-Bench: May need higher temperature for creative responses
+  # ko_mtbench:
+  #   temperature: 0.7
+  
+  # SWE-bench: May need longer output
+  # swebench_verified_official_80:
+  #   max_tokens: 16384
+
+# =============================================================================
+# vLLM Server Auto-Start (optional)
+# =============================================================================
+#
+# If vllm section is present, run_eval.py will automatically start a vLLM server
+# before evaluation and stop it after completion.
+# If vllm section is absent, it will use the external server specified in model.base_url.
+
+# vllm:
+#   model_path: "LGAI-EXAONE/EXAONE-4.0.1-32B-Instruct"  # HuggingFace model ID or local path
+#   tensor_parallel_size: 4                               # Number of GPUs for tensor parallelism
+#   gpu_memory_utilization: 0.9                           # GPU memory utilization (0.0-1.0)
+#   port: 8000                                            # Server port
+#   max_model_len: 32768                                  # Maximum model context length
+#   trust_remote_code: true                               # Trust remote code from HuggingFace
+#   # dtype: auto                                         # Data type (auto, float16, bfloat16)
+#   # quantization: null                                  # Quantization method (awq, gptq, etc.)
+#   # enforce_eager: false                                # Disable CUDA graph for debugging
+
+# =============================================================================
+# Examples by Model Type
+# =============================================================================
+#
+# 1. LiteLLM (Claude, Grok, etc.):
+#    model:
+#      name: claude-opus-4-5-20251101
+#      client: litellm
+#      provider: anthropic
+#      api_key_env: ANTHROPIC_API_KEY
+#
+# 2. Direct OpenAI (GPT, o-series):
+#    model:
+#      name: gpt-5.2-2025-12-11
+#      client: openai
+#      provider: openai
+#      api_key_env: OPENAI_API_KEY
+#
+# 3. OpenAI-Compatible API (Upstage, vLLM, Google, etc.):
+#    model:
+#      name: solar-pro2-251215
+#      client: openai
+#      provider: upstage
+#      base_url: https://api.upstage.ai/v1
+#      api_key_env: UPSTAGE_API_KEY
+#
+# 4. vLLM Auto-Start (Local Model):
+#    vllm:
+#      model_path: "LGAI-EXAONE/EXAONE-4.0.1-32B-Instruct"
+#      tensor_parallel_size: 4
+#      gpu_memory_utilization: 0.9
+#    model:
+#      name: exaone-4.0.1-32b
+#      client: litellm
+#      provider: hosted_vllm
+#      base_url: http://localhost:8000/v1
+#      api_key_env: HOSTED_VLLM_API_KEY

@@ -1,0 +1,28 @@
+# Gemini 3 Pro Preview (OpenAI-Compatible)
+
+wandb:
+  run_name: "gemini-3-pro-preview"
+
+metadata:
+  release_date: "2025-11-18"
+  size_category: null
+  model_size: null
+  context_window: 1048576
+  max_output_tokens: 65536
+
+model:
+  name: gemini-3-pro-preview
+  client: openai
+  provider: google
+  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+  api_key_env: GOOGLE_API_KEY
+
+  params:
+    max_tokens: 65536
+    temperature: 0.3
+
+benchmarks:
+  bfcl:
+    use_native_tools: true
+  swebench_verified_official_80:
+    max_tokens: 65536

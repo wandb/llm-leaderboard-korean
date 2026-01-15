@@ -1,0 +1,43 @@
+# Qwen3-4B (vLLM, OpenAI-Compatible)
+
+wandb:
+  run_name: "Qwen3-4B"
+
+metadata:
+  release_date: "2025-04-29"
+  size_category: "Small (<10B)"
+  model_size: 4000000000
+  active_params: 4000000000
+  context_window: 32768
+
+# vLLM Server Auto-Start Configuration
+vllm:
+  model_path: "Qwen/Qwen3-4B"
+  tensor_parallel_size: 1
+  port: 8005
+  host: "0.0.0.0"
+  max_model_len: 32768
+  trust_remote_code: true
+  served_model_name: "qwen3-4b"
+  enable_auto_tool_choice: true
+  tool_call_parser: "hermes"
+  reasoning_parser: "qwen3"
+
+model:
+  name: qwen3-4b
+  client: litellm
+  provider: hosted_vllm
+  api_key_env: HOSTED_VLLM_API_KEY
+
+  params:
+    max_tokens: 16384
+    temperature: 0.6
+    top_p: 0.95
+    extra_body:
+      chat_template_kwargs:
+        enable_thinking: true
+
+benchmarks:
+  bfcl:
+    use_native_tools: true
+
