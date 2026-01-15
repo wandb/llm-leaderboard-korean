@@ -42,9 +42,6 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 
-[project.scripts]
-horangi = "cli:main"
-
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
@@ -69,7 +66,7 @@ Repository = "https://github.com/wandb-korea/horangi"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cli", "src/core", "src/benchmarks", "src/scorers", "src/solvers", "src/server", "src/data"]
+packages = ["src/core", "src/benchmarks", "src/scorers", "src/solvers", "src/server", "src/data"]
 
 [tool.hatch.build.targets.sdist]
 include = [

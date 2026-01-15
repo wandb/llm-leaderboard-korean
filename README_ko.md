@@ -37,7 +37,6 @@
 - 🇰🇷 **20여개 한국어 벤치마크** 지원
 - 📊 **WandB/Weave 자동 로깅** - 실험 추적 및 결과 비교
 - 🚀 **다양한 모델 지원** - OpenAI, Claude, Gemini, Solar, EXAONE 등
-- 🛠️ **CLI 지원** - `horangi` 명령어로 간편 실행
 - 📈 **리더보드 자동 생성** - Weave UI에서 모델 비교
 
 ### 📈 결과 확인
@@ -130,8 +129,8 @@
 
 ```
 horangi/
-├── horangi.py              # @task 함수 정의 (진입점)
-├── run_eval.py             # 전체 벤치마크 실행 스크립트
+├── horangi.py              # @task 함수 정의 (벤치마크 진입점)
+├── run_eval.py             # 평가 실행 스크립트
 ├── configs/
 │   ├── base_config.yaml    # 전역 기본 설정
 │   └── models/             # 모델 설정 파일
@@ -139,9 +138,7 @@ horangi/
 │   ├── benchmarks/         # 벤치마크 설정
 │   ├── core/               # 핵심 로직
 │   ├── scorers/            # 커스텀 Scorer
-│   ├── solvers/            # 커스텀 Solver
-│   └── cli/                # CLI 엔트리포인트
-├── create_benchmark/       # 데이터셋 생성 스크립트
+│   └── solvers/            # 커스텀 Solver
 └── logs/                   # 평가 로그
 ```
 
@@ -198,49 +195,54 @@ SWE_API_KEY=your_swebench_server_api_key
 
 ## 🚀 빠른 시작
 
-### 1. 벤치마크 목록 확인
+`run_eval.py`로 벤치마크를 실행하고 W&B에 결과를 기록합니다.
 
 ```bash
-uv run horangi --list
-```
+# 모든 벤치마크 실행
+uv run python run_eval.py --config gpt-4o
 
-### 2. 벤치마크 실행
+# 특정 벤치마크만 실행
+uv run python run_eval.py --config gpt-4o --only kmmlu
 
-모델을 지정하는 **두 가지 방법**이 있습니다:
-
-#### 방법 A: `--model` 옵션으로 직접 지정 (간단한 테스트용)
-
-```bash
-# 기본 실행
-uv run horangi kmmlu --model openai/gpt-4o
+# 여러 벤치마크 실행
+uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq,ko_hellaswag
 
 # 샘플 수 제한 (테스트용)
-uv run horangi kmmlu --model openai/gpt-4o -T limit=10
+uv run python run_eval.py --config gpt-4o --limit 10
+
+# 빠른 테스트 (가벼운 벤치마크만)
+uv run python run_eval.py --config gpt-4o --quick
+
+# 기존 W&B run 재개 (중단된 평가 이어서 실행)
+uv run python run_eval.py --config gpt-4o --resume <run_id>
+
+# W&B 태그 추가
+uv run python run_eval.py --config gpt-4o --tag experiment1 --tag test
 ```
 
-#### 방법 B: `--config` 옵션으로 설정 파일 사용 (권장)
+### 옵션
 
-설정 파일(`configs/models/*.yaml`)을 사용하면 API 엔드포인트, 생성 파라미터, 메타데이터 등을 미리 정의할 수 있습니다.
+| 옵션 | 설명 |
+|------|------|
+| `--config` | 모델 설정 파일 (필수) |
+| `--only` | 특정 벤치마크만 실행 (쉼표로 구분) |
+| `--limit` | 벤치마크당 샘플 수 제한 |
+| `--quick` | 빠른 테스트 (가벼운 벤치마크만 실행) |
+| `--resume` | 기존 W&B run ID로 재개 |
+| `--tag` | W&B 태그 추가 (여러 번 사용 가능) |
 
-```bash
-# 설정 파일 사용 (configs/models/gpt-4o.yaml)
-uv run horangi kmmlu --config gpt-4o
+### 주요 기능
 
-# 샘플 수 제한
-uv run horangi kmmlu --config gpt-4o -T limit=10
-
-# 여러 벤치마크 일괄 실행 (run_eval.py 사용)
-uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq
-```
-
-> `--config`를 사용하면 설정을 재사용할 수 있어 편리합니다.
+- **vLLM 서버 자동 관리**: `_template_vllm.yaml` 설정 시 vLLM 서버가 자동으로 시작/종료됩니다
+- **W&B Models 연동**: 평가 결과가 W&B에 자동 기록됩니다
+- **진행 상황 로깅**: 각 벤치마크 결과가 실시간으로 표시됩니다
+- **스코어 집계 테이블**: 평가 완료 후 전체 결과 요약을 출력합니다
 
 ---
 
 ## ⚙️ 설정 가이드
 
-### 설정 파일 구조
-
+### 새 모델 추가
 ```
 configs/
 ├── base_config.yaml      # 전역 기본 설정
@@ -251,13 +253,11 @@ configs/
     └── solar_pro2.yaml
 ```
 
-### 새 모델 추가
-
 ```bash
 # 1. 템플릿 복사
 cp configs/models/_template_api.yaml configs/models/my-model.yaml
 # vllm 서버를 자동으로 열어서 테스트하는경우
-# `run_eval.py` 실행 시 vLLM 서버가 자동으로 시작되고 평가 완료 후 종료됩니다. 별도로 vLLM 서버를 실행할 필요가 없습니다.
+# 평가실행 시 vLLM 서버가 자동으로 시작되고 평가 완료 후 종료됩니다. 별도로 vLLM 서버를 실행할 필요가 없습니다.
 # cp configs/models/_template_vllm.yaml configs/models/my-model.yaml
 
 # 2. 설정 편집
@@ -267,13 +267,8 @@ vi configs/models/my-model.yaml
 uv run python run_eval.py --config my-model
 ```
 
-### `--model` vs `--config`
-
-| 방식 | 사용 시점 | 예시 |
-|------|----------|------|
-| `--model` | 간단한 실행, 일회성 테스트 | `--model openai/gpt-4o` |
-| `--config` | 반복 사용, OpenAI 호환 API, 벤치마크별 설정 | `--config solar_pro2` |
-
+### 새 벤치마크 추가
+[Horangi benchmark 문서](./docs/README_benchmark.md)를 참고해주세요.
 ---
 
 ## 🔧 SWE-bench 평가 (코드 생성)
@@ -292,7 +287,7 @@ uv run python src/server/swebench_server.py --host 0.0.0.0 --port 8000
 export SWE_SERVER_URL=http://YOUR_SERVER:8000
 
 # 3. 평가 실행
-uv run horangi swebench_verified_official_80 --config gpt-4o -T limit=5
+uv run python run_eval.py --config gpt-4o --only swebench_verified_official_80 --limit 5
 ```
 
 ---
