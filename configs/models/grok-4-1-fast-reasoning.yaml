@@ -1,0 +1,28 @@
+# Grok-4.1 Fast Reasoning
+
+wandb:
+  run_name: "grok-4-1-fast-reasoning"
+
+metadata:
+  release_date: "2025-11-17"
+  size_category: null
+  model_size: null
+  context_window: 2000000
+  max_output_tokens: 65536
+
+model:
+  name: grok-4-1-fast-reasoning
+  client: litellm
+  provider: xai
+  api_key_env: XAI_API_KEY
+
+  params:
+    max_tokens: 65536
+    temperature: 1.0
+    reasoning_effort: high
+
+benchmarks:
+  bfcl:
+    use_native_tools: true
+  swebench_verified_official_80:
+    max_tokens: 65536

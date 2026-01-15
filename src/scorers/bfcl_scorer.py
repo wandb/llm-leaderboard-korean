@@ -1,0 +1,452 @@
+"""
+BFCL Scorer - Function Calling Evaluation Scorer
+
+Two modes supported:
+1. Native Tool Calling - Extract directly from tool_calls
+2. Text-based - Parse JSON from text response
+
+Evaluation method:
+- Compare model's tool_calls/text with ground_truth
+- Correct if function name and arguments match exactly
+- irrelevance: Correct if no tool_call or {"function": null}
+
+Metrics:
+- accuracy: Overall accuracy
+- Category-specific accuracy
+"""
+
+import ast
+import json
+import re
+from typing import Any
+
+from inspect_ai.model import ChatMessageAssistant
+from inspect_ai.scorer import (
+    Score,
+    SampleScore,
+    Scorer,
+    Target,
+    scorer,
+    metric,
+    Metric,
+    accuracy,
+    CORRECT,
+    INCORRECT,
+)
+from inspect_ai.solver import TaskState
+
+
+# =============================================================================
+# Text-based response parsing (for prompt-based mode)
+# =============================================================================
+
+def _parse_text_response(text: str) -> dict[str, Any] | None:
+    """
+    Extract JSON function call from text response
+    
+    Expected format:
+    {"function": "func_name", "arguments": {"arg1": "val1"}}
+    
+    Or for refusal:
+    {"function": null, "arguments": null}
+    """
+    if not text:
+        return None
+    
+    try:
+        # Try to extract JSON block (```json ... ``` format)
+        json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
+        else:
+            # Find just JSON
+            json_match = re.search(r'\{[^{}]*"function"[^{}]*\}', text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+            else:
+                # Entire text is JSON
+                json_str = text.strip()
+        
+        parsed = json.loads(json_str)
+        
+        # Validate
+        if isinstance(parsed, dict) and "function" in parsed:
+            func_name = parsed.get("function")
+            arguments = parsed.get("arguments", {})
+            
+            # Handle null (refusal)
+            if func_name is None:
+                return {"function": None, "arguments": None}
+            
+            return {
+                "function": str(func_name),
+                "arguments": arguments if isinstance(arguments, dict) else {},
+            }
+    except (json.JSONDecodeError, Exception):
+        pass
+    
+    return None
+
+
+def _parse_function_call(call_str: str) -> dict[str, Any] | None:
+    """
+    Parse function call string to {function, arguments} dictionary
+    
+    Input: "calculate_area(width=10, height=5)"
+    Output: {"function": "calculate_area", "arguments": {"width": 10, "height": 5}}
+    """
+    if not call_str or not isinstance(call_str, str):
+        return None
+    
+    try:
+        # Try AST parsing
+        tree = ast.parse(call_str, mode='eval')
+        if not isinstance(tree.body, ast.Call):
+            return None
+        
+        call = tree.body
+        
+        # Extract function name
+        if isinstance(call.func, ast.Name):
+            func_name = call.func.id
+        elif isinstance(call.func, ast.Attribute):
+            # Cases like triangle_properties.get
+            parts = []
+            node = call.func
+            while isinstance(node, ast.Attribute):
+                parts.append(node.attr)
+                node = node.value
+            if isinstance(node, ast.Name):
+                parts.append(node.id)
+            func_name = ".".join(reversed(parts))
+        else:
+            return None
+        
+        # Extract arguments
+        arguments = {}
+        for kw in call.keywords:
+            try:
+                # Evaluate value with ast.literal_eval
+                arguments[kw.arg] = ast.literal_eval(kw.value)
+            except:
+                # On evaluation failure, use as string
+                arguments[kw.arg] = ast.unparse(kw.value)
+        
+        return {"function": func_name, "arguments": arguments}
+    
+    except Exception:
+        return None
+
+
+def _parse_dict_ground_truth(gt_dict: dict) -> dict[str, Any] | None:
+    """
+    Parse dictionary format ground_truth
+    
+    Input: {'calculate_area': {'width': [10], 'height': [5]}}
+    Output: {"function": "calculate_area", "arguments": {"width": 10, "height": 5}}
+    """
+    if not gt_dict or not isinstance(gt_dict, dict):
+        return None
+    
+    try:
+        func_name = list(gt_dict.keys())[0]
+        params = gt_dict[func_name]
+        
+        arguments = {}
+        for k, v in params.items():
+            # Use first value if list
+            if isinstance(v, list) and v:
+                arguments[k] = v[0]
+            else:
+                arguments[k] = v
+        
+        return {"function": func_name, "arguments": arguments}
+    
+    except Exception:
+        return None
+
+
+def _normalize_arguments(args: dict) -> dict:
+    """Normalize arguments (unify types, remove empty strings, etc.)"""
+    normalized = {}
+    for k, v in args.items():
+        # Exclude empty strings
+        if v == "" or v == '':
+            continue
+        # Convert numeric strings to numbers
+        if isinstance(v, str):
+            try:
+                if '.' in v:
+                    v = float(v)
+                else:
+                    v = int(v)
+            except ValueError:
+                pass
+        normalized[k] = v
+    return normalized
+
+
+def _sanitize_function_name(name: str) -> str:
+    """Normalize function name to OpenAI API compatible format"""
+    # Replace . with _
+    sanitized = name.replace(".", "_")
+    # Remove disallowed characters
+    sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", sanitized)
+    return sanitized
+
+
+def _compare_tool_calls(
+    predicted: dict[str, Any] | None,
+    expected: dict[str, Any] | None,
+) -> tuple[bool, str]:
+    """
+    Compare predicted tool_call with expected
+    
+    Returns:
+        (is_correct, explanation)
+    """
+    if predicted is None and expected is None:
+        return True, "Both None"
+    
+    if predicted is None:
+        return False, "No tool call predicted"
+    
+    if expected is None:
+        return False, "No expected answer"
+    
+    # Compare function names (after normalization)
+    pred_func = _sanitize_function_name(predicted.get("function", ""))
+    exp_func = _sanitize_function_name(expected.get("function", ""))
+    
+    if pred_func != exp_func:
+        return False, f"Function mismatch: {pred_func} != {exp_func}"
+    
+    # Compare arguments (after normalization)
+    pred_args = _normalize_arguments(predicted.get("arguments", {}))
+    exp_args = _normalize_arguments(expected.get("arguments", {}))
+    
+    if pred_args != exp_args:
+        return False, f"Arguments mismatch: {pred_args} != {exp_args}"
+    
+    return True, "Exact match"
+
+
+# =============================================================================
+# Metrics
+# =============================================================================
+
+def _is_correct(score_value) -> bool:
+    """Check if Score value is correct (handles both string and number)"""
+    if isinstance(score_value, str):
+        return score_value == CORRECT
+    elif isinstance(score_value, (int, float)):
+        return score_value >= 1.0
+    return False
+
+
+# Category-specific metrics (leaderboard standard)
+@metric
+def bfcl_simple_accuracy() -> Metric:
+    """simple (= simple_python) accuracy"""
+    def metric_fn(scores: list[SampleScore]) -> float:
+        cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "simple"]
+        return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
+    return metric_fn
+
+
+@metric
+def bfcl_multiple_accuracy() -> Metric:
+    """multiple accuracy"""
+    def metric_fn(scores: list[SampleScore]) -> float:
+        cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "multiple"]
+        return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
+    return metric_fn
+
+
+@metric
+def bfcl_irrelevance_accuracy() -> Metric:
+    """irrelevance accuracy"""
+    def metric_fn(scores: list[SampleScore]) -> float:
+        cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "irrelevance"]
+        return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
+    return metric_fn
+
+
+@metric
+def bfcl_java_accuracy() -> Metric:
+    """java (= simple_java) accuracy"""
+    def metric_fn(scores: list[SampleScore]) -> float:
+        cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "java"]
+        return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
+    return metric_fn
+
+
+@metric
+def bfcl_javascript_accuracy() -> Metric:
+    """javascript (= simple_javascript) accuracy"""
+    def metric_fn(scores: list[SampleScore]) -> float:
+        cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "javascript"]
+        return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
+    return metric_fn
+
+
+@metric
+def bfcl_live_simple_accuracy() -> Metric:
+    """live_simple accuracy"""
+    def metric_fn(scores: list[SampleScore]) -> float:
+        cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "live_simple"]
+        return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
+    return metric_fn
+
+
+@metric
+def bfcl_live_multiple_accuracy() -> Metric:
+    """live_multiple accuracy"""
+    def metric_fn(scores: list[SampleScore]) -> float:
+        cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "live_multiple"]
+        return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
+    return metric_fn
+
+
+@metric
+def bfcl_live_relevance_accuracy() -> Metric:
+    """live_relevance accuracy"""
+    def metric_fn(scores: list[SampleScore]) -> float:
+        cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "live_relevance"]
+        return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
+    return metric_fn
+
+
+@metric
+def bfcl_live_irrelevance_accuracy() -> Metric:
+    """live_irrelevance accuracy"""
+    def metric_fn(scores: list[SampleScore]) -> float:
+        cat_scores = [s for s in scores if s.score.metadata and s.score.metadata.get("category") == "live_irrelevance"]
+        return sum(1 for s in cat_scores if _is_correct(s.score.value)) / len(cat_scores) if cat_scores else 0.0
+    return metric_fn
+
+
+
+
+# =============================================================================
+# Scorer
+# =============================================================================
+
+@scorer(metrics=[
+    accuracy(),
+    # Basic function calling
+    bfcl_simple_accuracy(),
+    bfcl_multiple_accuracy(),
+    bfcl_irrelevance_accuracy(),
+    # Language-specific
+    bfcl_java_accuracy(),
+    bfcl_javascript_accuracy(),
+    # Live API
+    bfcl_live_simple_accuracy(),
+    bfcl_live_multiple_accuracy(),
+    bfcl_live_relevance_accuracy(),
+    bfcl_live_irrelevance_accuracy(),
+])
+def bfcl_scorer() -> Scorer:
+    """
+    BFCL Function Calling Scorer
+    
+    Evaluation method:
+    - Compare model's tool_calls with ground_truth
+    - irrelevance: Correct if no tool_call
+    
+    Required info from metadata:
+    - category: split name (simple, multiple, exec_simple, exec_multiple, irrelevance)
+    - ground_truth: Expected answer (string or dictionary)
+    """
+    async def score(state: TaskState, target: Target) -> Score:
+        metadata = state.metadata or {}
+        category = metadata.get("category", "unknown")
+        is_text_based = metadata.get("_text_based_function_call", False)
+        
+        # Refusal categories
+        refusal_categories = {"irrelevance", "live_irrelevance", "live_relevance"}
+        
+        # =====================================================================
+        # 1. Extract prediction (Native vs Text-based)
+        # =====================================================================
+        predicted = None
+        is_refusal = False
+        
+        if is_text_based:
+            # Text-based mode: Parse JSON from text response
+            assistant_messages = [
+                m for m in state.messages if isinstance(m, ChatMessageAssistant)
+            ]
+            if assistant_messages:
+                last_response = assistant_messages[-1].content
+                if isinstance(last_response, str):
+                    predicted = _parse_text_response(last_response)
+                    
+                    # {"function": null} = refusal
+                    if predicted and predicted.get("function") is None:
+                        is_refusal = True
+                        predicted = None
+        else:
+            # Native mode: Extract directly from tool_calls
+            assistant_messages = [
+                m for m in state.messages if isinstance(m, ChatMessageAssistant)
+            ]
+            
+            tool_calls = []
+            for msg in assistant_messages:
+                if msg.tool_calls:
+                    tool_calls.extend(msg.tool_calls)
+            
+            if tool_calls:
+                tc = tool_calls[0]
+                predicted = {
+                    "function": tc.function,
+                    "arguments": tc.arguments if isinstance(tc.arguments, dict) else {},
+                }
+            else:
+                is_refusal = True
+        
+        # =====================================================================
+        # 2. Handle refusal categories
+        # =====================================================================
+        if category in refusal_categories:
+            is_correct = is_refusal or predicted is None
+            return Score(
+                value=CORRECT if is_correct else INCORRECT,
+                answer="Refused" if is_refusal else str(predicted),
+                explanation="Correctly refused" if is_correct else "Should not call function",
+                metadata={"category": category, "is_text_based": is_text_based},
+            )
+        
+        # =====================================================================
+        # 3. General case: Compare with ground_truth
+        # =====================================================================
+        gt_raw = metadata.get("ground_truth", [])
+        if isinstance(gt_raw, str):
+            gt_raw = [gt_raw]
+        
+        expected = None
+        if gt_raw:
+            first_gt = gt_raw[0]
+            if isinstance(first_gt, str):
+                expected = _parse_function_call(first_gt)
+            elif isinstance(first_gt, dict):
+                expected = _parse_dict_ground_truth(first_gt)
+        
+        # Compare
+        is_correct, explanation = _compare_tool_calls(predicted, expected)
+        
+        return Score(
+            value=CORRECT if is_correct else INCORRECT,
+            answer=str(predicted) if predicted else "No function call",
+            explanation=explanation,
+            metadata={
+                "category": category,
+                "predicted": predicted,
+                "expected": expected,
+                "is_text_based": is_text_based,
+            },
+        )
+    
+    return score

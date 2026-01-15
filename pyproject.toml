@@ -1,0 +1,90 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "horangi"
+version = "0.1.0"
+description = "한국어 LLM 벤치마크 평가 프레임워크 (Inspect AI + WandB 통합)"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["korean", "llm", "benchmark", "evaluation", "inspect-ai", "wandb", "weave"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "inspect-ai @ git+https://github.com/hw-oh/inspect_ai.git",
+    "inspect-wandb[weave] @ git+https://github.com/hw-oh/inspect_wandb.git",
+    "pandas>=2.0.0",
+    "jsonlines>=4.0.0",
+    "datasets>=2.18.0",
+    "anthropic>=0.20.0",
+    "openai>=2.8.0",
+    "instruction_following_eval @ git+https://github.com/josejg/instruction_following_eval.git",
+    "inspect-evals>=0.3.103",
+    "google-genai>=1.55.0",
+    "litellm>=1.80.11",
+    # vLLM + transformers 호환성을 위해 명시적으로 지정
+    "transformers>=4.48.0",
+    "huggingface-hub>=0.28.0,<1.0",
+    "numpy<2.3",  # numba 호환성
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+horangi = "cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.0.0",
+]
+google = ["google-genai>=0.1.0"]
+swebench-server = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.23.0",
+    "python-dotenv>=1.0.0",
+    "swebench==2.1.6",  # llm-leaderboard 호환 버전 (정확히 고정)
+]
+
+[project.urls]
+Homepage = "https://github.com/wandb-korea/horangi"
+Documentation = "https://github.com/wandb-korea/horangi#readme"
+Repository = "https://github.com/wandb-korea/horangi"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cli", "src/core", "src/benchmarks", "src/scorers", "src/solvers", "src/server", "src/data"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py311", "py312", "py313"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]

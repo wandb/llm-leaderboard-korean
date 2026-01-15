@@ -1,0 +1,50 @@
+# =============================================================================
+# DeepSeek V3.2 (deepseek-chat)
+# =============================================================================
+
+# W&B Settings
+wandb:
+  run_name: "deepseek-v3.2: high-effort"
+
+# Model Metadata
+metadata:
+  release_date: "2025-12-01"
+  size_category: "Large (30B<)"
+  model_size: 671000000000         # 671B total parameters
+  active_params: 37000000000       # 37B active parameters (MoE)
+  context_window: 164000           # 128K context
+  max_output_tokens: 64000         # 16K max output
+
+# =============================================================================
+# Model Configuration
+# =============================================================================
+
+model:
+  # DeepSeek V3.2 = deepseek-chat (latest)
+  # LiteLLM uses "deepseek/" prefix
+  name: deepseek-reasoner
+
+  # API Client
+  client: litellm
+
+  # Model Provider (LiteLLM routing)
+  provider: deepseek
+
+  # Environment variable name for API key
+  api_key_env: DEEPSEEK_API_KEY
+
+  # Generation Parameters
+  params:
+    max_tokens: 64000
+    temperature: 1.0
+    top_p: 0.95
+    reasoning_effort: high
+
+# =============================================================================
+# Benchmark-specific Overrides
+# =============================================================================
+
+benchmarks:
+  bfcl:
+    use_native_tools: false        # Reasoner 모델은 native tool calling 미지원
+
