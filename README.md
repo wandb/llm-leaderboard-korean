@@ -37,7 +37,6 @@ By integrating [WandB/Weave](https://wandb.ai/site/weave) and [Inspect AI](https
 - 🇰🇷 **20+ Korean benchmarks** supported
 - 📊 **Automatic WandB/Weave logging** - Experiment tracking and result comparison
 - 🚀 **Various model support** - OpenAI, Claude, Gemini, Solar, EXAONE, etc.
-- 🛠️ **CLI support** - Easy execution with `horangi` command
 - 📈 **Automatic leaderboard generation** - Model comparison in Weave UI
 
 ### 📈 Viewing Results
@@ -130,8 +129,8 @@ Datasets are uploaded to the `horangi/horangi4` project:
 
 ```
 horangi/
-├── horangi.py              # @task function definitions (entry point)
-├── run_eval.py             # Full benchmark execution script
+├── horangi.py              # @task function definitions (benchmark entry point)
+├── run_eval.py             # Evaluation execution script
 ├── configs/
 │   ├── base_config.yaml    # Global default settings
 │   └── models/             # Model configuration files
@@ -139,9 +138,7 @@ horangi/
 │   ├── benchmarks/         # Benchmark configurations
 │   ├── core/               # Core logic
 │   ├── scorers/            # Custom Scorers
-│   ├── solvers/            # Custom Solvers
-│   └── cli/                # CLI entry point
-├── create_benchmark/       # Dataset creation scripts
+│   └── solvers/            # Custom Solvers
 └── logs/                   # Evaluation logs
 ```
 
@@ -198,42 +195,48 @@ SWE_API_KEY=your_swebench_server_api_key
 
 ## 🚀 Quick Start
 
-### 1. List Available Benchmarks
+Run benchmarks with `run_eval.py` and log results to W&B.
 
 ```bash
-uv run horangi --list
-```
+# Run all benchmarks
+uv run python run_eval.py --config gpt-4o
 
-### 2. Run Benchmarks
+# Run specific benchmark
+uv run python run_eval.py --config gpt-4o --only kmmlu
 
-There are **two ways** to specify a model:
-
-#### Method A: Direct specification with `--model` option (for simple tests)
-
-```bash
-# Basic execution
-uv run horangi kmmlu --model openai/gpt-4o
+# Run multiple benchmarks
+uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq,ko_hellaswag
 
 # Limit samples (for testing)
-uv run horangi kmmlu --model openai/gpt-4o -T limit=10
+uv run python run_eval.py --config gpt-4o --limit 10
+
+# Quick test (lightweight benchmarks only)
+uv run python run_eval.py --config gpt-4o --quick
+
+# Resume existing W&B run
+uv run python run_eval.py --config gpt-4o --resume <run_id>
+
+# Add W&B tags
+uv run python run_eval.py --config gpt-4o --tag experiment1 --tag test
 ```
 
-#### Method B: Use configuration file with `--config` option (recommended)
+### Options
 
-Configuration files (`configs/models/*.yaml`) allow you to pre-define API endpoints, generation parameters, metadata, etc.
+| Option | Description |
+|--------|-------------|
+| `--config` | Model configuration file (required) |
+| `--only` | Run specific benchmarks only (comma-separated) |
+| `--limit` | Limit samples per benchmark |
+| `--quick` | Quick test (lightweight benchmarks only) |
+| `--resume` | Resume existing W&B run by ID |
+| `--tag` | Add W&B tags (can be used multiple times) |
 
-```bash
-# Use configuration file (configs/models/gpt-4o.yaml)
-uv run horangi kmmlu --config gpt-4o
+### Key Features
 
-# Limit samples
-uv run horangi kmmlu --config gpt-4o -T limit=10
-
-# Batch run multiple benchmarks (using run_eval.py)
-uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq
-```
-
-> Using `--config` makes it convenient to reuse settings.
+- **vLLM Server Auto-management**: When using `_template_vllm.yaml`, vLLM server starts/stops automatically
+- **W&B Models Integration**: Evaluation results are automatically logged to W&B
+- **Progress Logging**: Real-time display of benchmark results
+- **Score Aggregation Table**: Summary of all results after evaluation completes
 
 ---
 
@@ -267,12 +270,9 @@ vi configs/models/my-model.yaml
 uv run python run_eval.py --config my-model
 ```
 
-### `--model` vs `--config`
+### Adding a New Benchmark
 
-| Method | When to Use | Example |
-|------|----------|------|
-| `--model` | Simple execution, one-time tests | `--model openai/gpt-4o` |
-| `--config` | Repeated use, OpenAI-compatible API, per-benchmark settings | `--config solar_pro2` |
+See [Horangi benchmark documentation](./docs/README_benchmark.md).
 
 ---
 
@@ -292,7 +292,7 @@ uv run python src/server/swebench_server.py --host 0.0.0.0 --port 8000
 export SWE_SERVER_URL=http://YOUR_SERVER:8000
 
 # 3. Run evaluation
-uv run horangi swebench_verified_official_80 --config gpt-4o -T limit=5
+uv run python run_eval.py --config gpt-4o --only swebench_verified_official_80 --limit 5
 ```
 
 ---
