@@ -29,9 +29,7 @@ By integrating [WandB/Weave](https://wandb.ai/site/weave) and [Inspect AI](https
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
 - [Configuration Guide](#️-configuration-guide)
-- [Evaluating Open-source Models with vLLM](#️-evaluating-open-source-models-with-vllm)
 - [SWE-bench Evaluation (Code Generation)](#-swe-bench-evaluation-code-generation)
-- [Troubleshooting](#-troubleshooting)
 
 ---
 ## ✨ Features
@@ -41,6 +39,7 @@ By integrating [WandB/Weave](https://wandb.ai/site/weave) and [Inspect AI](https
 - 🚀 **Various model support** - OpenAI, Claude, Gemini, Solar, EXAONE, etc.
 - 🛠️ **CLI support** - Easy execution with `horangi` command
 - 📈 **Automatic leaderboard generation** - Model comparison in Weave UI
+
 ### 📈 Viewing Results
 
 After evaluation completes, you can view detailed results at the Weave URL in the output:
@@ -234,7 +233,7 @@ uv run horangi kmmlu --config gpt-4o -T limit=10
 uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq
 ```
 
-> **💡 Tip**: Using `--config` makes it convenient to reuse settings for custom API endpoints (vLLM, Ollama, etc.).
+> Using `--config` makes it convenient to reuse settings.
 
 ---
 
@@ -246,58 +245,26 @@ uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq
 configs/
 ├── base_config.yaml      # Global default settings
 └── models/               # Per-model settings
-    ├── _template.yaml    # Template
+    ├── _template_api.yaml    # Template
+    ├── _template_vllm.yaml   # Template
     ├── gpt-4o.yaml
-    └── solar-pro2-251215.yaml
-```
-
-### Model Configuration Format
-
-```yaml
-# configs/models/my-model.yaml
-
-wandb:
-  run_name: "my-model: high-effort"    # W&B run display name
-
-metadata:
-  release_date: "2025-01-01"           # Model release date
-  size_category: null                  # "Small (<10B)", "Medium (10-30B)", "Large (30B<)"
-  model_size: null                     # e.g., "4B", "32B", "70B"
-  context_window: 128000
-  max_output_tokens: 4096
-
-model:
-  name: my-model-name                  # Model name
-  client: litellm                      # litellm | openai
-  provider: openai                     # anthropic, openai, xai, google, etc.
-  # base_url: https://...              # For OpenAI-compatible APIs
-  api_key_env: OPENAI_API_KEY
-
-  params:
-    max_tokens: 4096
-    temperature: 0.0
-    # reasoning_effort: high           # For reasoning models
-    # timeout: 3600
-    # max_retries: 10
-
-benchmarks:
-  bfcl:
-    use_native_tools: true
-  swebench_verified_official_80:
-    max_tokens: 16384
+    └── solar_pro2.yaml
 ```
 
 ### Adding a New Model
 
 ```bash
 # 1. Copy template
-cp configs/models/_template.yaml configs/models/my-model.yaml
+cp configs/models/_template_api.yaml configs/models/my-model.yaml
+# For auto-starting vLLM server:
+# `run_eval.py` automatically starts vLLM server before evaluation and stops it after completion. No need to run vLLM server separately.
+# cp configs/models/_template_vllm.yaml configs/models/my-model.yaml
 
 # 2. Edit configuration
 vi configs/models/my-model.yaml
 
 # 3. Run
-uv run horangi kmmlu --config my-model -T limit=5
+uv run python run_eval.py --config my-model
 ```
 
 ### `--model` vs `--config`
@@ -305,75 +272,7 @@ uv run horangi kmmlu --config my-model -T limit=5
 | Method | When to Use | Example |
 |------|----------|------|
 | `--model` | Simple execution, one-time tests | `--model openai/gpt-4o` |
-| `--config` | Repeated use, OpenAI-compatible API, per-benchmark settings | `--config solar-pro2-251215` |
-
----
-
-## 🖥️ Evaluating Open-source Models with vLLM
-
-Here's how to serve open-source models with vLLM on a GPU server and run benchmarks locally.
-
-### 1. Run vLLM Server on GPU Server
-
-```bash
-# Install vLLM
-pip install vllm
-
-# Serve model (auto-downloads from HuggingFace)
-vllm serve LGAI-EXAONE/EXAONE-4.0.1-32B\
-  --host 0.0.0.0 \
-  --port 8000 \
-  --served-model-name EXAONE-4.0.1-32B
-  --api_key my-secret-key
-```
-
-> **💡 `--served-model-name`**: By default, vLLM uses the full HuggingFace path (`LGAI-EXAONE/EXAONE-4.0.1-32B`) as the model name. This option lets you specify a shorter alias, making config file writing easier.
-
-### 2. Create Model Configuration File
-
-```yaml
-# configs/models/EXAONE-4.0.1-32B.yaml
-
-wandb:
-  run_name: "EXAONE-4.0.1-32B"
-
-metadata:
-  release_date: "2025-07-29"
-  size_category: "Large (30B<)"
-  model_size: 32000000000
-  context_window: 32768
-  max_output_tokens: 4096
-
-model:
-  name: LGAI-EXAONE/EXAONE-4.0.1-32B   # HuggingFace model path
-  client: openai                        # vLLM provides OpenAI-compatible API
-  provider: lgai                        # Model provider (for metadata)
-  base_url: http://YOUR_SERVER_IP:8000/v1
-  api_key_env: VLLM_API_KEY
-
-  params:
-    max_tokens: 4096
-    temperature: 0.0
-
-benchmarks:
-  bfcl:
-    use_native_tools: false             # Text-based recommended for open-source models
-  ko_mtbench:
-    temperature: 0.7
-```
-
-### 3. Run Benchmarks
-
-```bash
-# Set environment variable
-export VLLM_API_KEY=my-secret-key
-
-# Test run
-uv run horangi kmmlu --config EXAONE-4.0.1-32B -T limit=5
-
-# Full benchmarks
-uv run python run_eval.py --config EXAONE-4.0.1-32B
-```
+| `--config` | Repeated use, OpenAI-compatible API, per-benchmark settings | `--config solar_pro2` |
 
 ---
 

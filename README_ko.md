@@ -29,9 +29,7 @@
 - [설치](#-설치)
 - [빠른 시작](#-빠른-시작)
 - [설정 가이드](#️-설정-가이드)
-- [vLLM으로 오픈소스 모델 평가](#️-vllm으로-오픈소스-모델-평가)
 - [SWE-bench 평가 (코드 생성)](#-swe-bench-평가-코드-생성)
-- [트러블슈팅](#-트러블슈팅)
 
 ---
 ## ✨ 특징
@@ -41,6 +39,7 @@
 - 🚀 **다양한 모델 지원** - OpenAI, Claude, Gemini, Solar, EXAONE 등
 - 🛠️ **CLI 지원** - `horangi` 명령어로 간편 실행
 - 📈 **리더보드 자동 생성** - Weave UI에서 모델 비교
+
 ### 📈 결과 확인
 
 평가 완료 후 출력되는 Weave URL에서 상세 결과를 확인할 수 있습니다:
@@ -234,7 +233,7 @@ uv run horangi kmmlu --config gpt-4o -T limit=10
 uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq
 ```
 
-> **💡 Tip**: `--config`를 사용하면 커스텀 API 엔드포인트(vLLM, Ollama 등)의 설정을 재사용할 수 있어 편리합니다.
+> `--config`를 사용하면 설정을 재사용할 수 있어 편리합니다.
 
 ---
 
@@ -246,7 +245,8 @@ uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq
 configs/
 ├── base_config.yaml      # 전역 기본 설정
 └── models/               # 모델별 설정
-    ├── _template.yaml    # 템플릿
+    ├── _template_api.yaml    # 템플릿
+    ├── _template_vllm.yaml    # 템플릿
     ├── gpt-4o.yaml
     └── solar_pro2.yaml
 ```
@@ -255,13 +255,16 @@ configs/
 
 ```bash
 # 1. 템플릿 복사
-cp configs/models/_template.yaml configs/models/my-model.yaml
+cp configs/models/_template_api.yaml configs/models/my-model.yaml
+# vllm 서버를 자동으로 열어서 테스트하는경우
+# `run_eval.py` 실행 시 vLLM 서버가 자동으로 시작되고 평가 완료 후 종료됩니다. 별도로 vLLM 서버를 실행할 필요가 없습니다.
+# cp configs/models/_template_vllm.yaml configs/models/my-model.yaml
 
 # 2. 설정 편집
 vi configs/models/my-model.yaml
 
 # 3. 실행
-uv run horangi kmmlu --config my-model -T limit=5
+uv run python run_eval.py --config my-model
 ```
 
 ### `--model` vs `--config`
@@ -270,66 +273,6 @@ uv run horangi kmmlu --config my-model -T limit=5
 |------|----------|------|
 | `--model` | 간단한 실행, 일회성 테스트 | `--model openai/gpt-4o` |
 | `--config` | 반복 사용, OpenAI 호환 API, 벤치마크별 설정 | `--config solar_pro2` |
-
----
-
-## 🖥️ vLLM으로 오픈소스 모델 평가
-
-GPU 서버에서 vLLM으로 오픈소스 모델을 서빙하고, 로컬에서 벤치마크를 실행하는 방법입니다.
-
-### 1. GPU 서버에서 vLLM 서버 실행
-
-```bash
-# vLLM 설치
-pip install vllm
-
-# 모델 서빙 (HuggingFace에서 자동 다운로드)
-vllm serve LGAI-EXAONE/EXAONE-4.0.1-32B\
-  --host 0.0.0.0 \
-  --port 8000 \
-  --served-model-name EXAONE-4.0.1-32B
-  --api_key my-secret-key
-```
-
-> **💡 `--served-model-name`**: vLLM은 기본적으로 HuggingFace 전체 경로(`LGAI-EXAONE/EXAONE-4.0.1-32B`)를 모델명으로 사용합니다. 이 옵션으로 짧은 별칭을 지정하면 config 파일 작성이 편리해집니다.
-
-### 2. 모델 설정 파일 작성
-
-```yaml
-# configs/models/EXAONE-4.0.1-32B.yaml
-model_id: LGAI-EXAONE/EXAONE-4.0.1-32B
-api_provider: openai
-
-metadata:
-  provider: Alibaba/Qwen
-  name: EXAONE-4.0.1-32B
-  description: "vLLM 서버에서 실행"
-
-# vLLM 서버 URL
-base_url: http://YOUR_SERVER_IP:8000/v1
-api_key_env: VLLM_API_KEY  # vLLM 기본 설정은 API 키 불필요
-
-defaults:
-  temperature: 0.0
-  max_tokens: 4096
-
-benchmarks:
-  bfcl:
-    use_native_tools: false  # 오픈소스 모델은 text-based 권장
-```
-
-### 3. 벤치마크 실행
-
-```bash
-# 환경변수 설정
-export VLLM_API_KEY=my-secret-key
-
-# 테스트 실행
-uv run horangi kmmlu --config EXAONE-4.0.1-32B -T limit=5
-
-# 전체 벤치마크
-uv run python run_eval.py --config EXAONE-4.0.1-32B
-```
 
 ---
 
