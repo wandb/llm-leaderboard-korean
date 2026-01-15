@@ -210,9 +210,6 @@ uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq,ko_hellaswag
 # Limit samples (for testing)
 uv run python run_eval.py --config gpt-4o --limit 10
 
-# Quick test (lightweight benchmarks only)
-uv run python run_eval.py --config gpt-4o --quick
-
 # Resume existing W&B run
 uv run python run_eval.py --config gpt-4o --resume <run_id>
 
@@ -227,7 +224,6 @@ uv run python run_eval.py --config gpt-4o --tag experiment1 --tag test
 | `--config` | Model configuration file (required) |
 | `--only` | Run specific benchmarks only (comma-separated) |
 | `--limit` | Limit samples per benchmark |
-| `--quick` | Quick test (lightweight benchmarks only) |
 | `--resume` | Resume existing W&B run by ID |
 | `--tag` | Add W&B tags (can be used multiple times) |
 

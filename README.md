@@ -210,9 +210,6 @@ uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq,ko_hellaswag
 # 샘플 수 제한 (테스트용)
 uv run python run_eval.py --config gpt-4o --limit 10
 
-# 빠른 테스트 (가벼운 벤치마크만)
-uv run python run_eval.py --config gpt-4o --quick
-
 # 기존 W&B run 재개 (중단된 평가 이어서 실행)
 uv run python run_eval.py --config gpt-4o --resume <run_id>
 
@@ -227,7 +224,6 @@ uv run python run_eval.py --config gpt-4o --tag experiment1 --tag test
 | `--config` | 모델 설정 파일 (필수) |
 | `--only` | 특정 벤치마크만 실행 (쉼표로 구분) |
 | `--limit` | 벤치마크당 샘플 수 제한 |
-| `--quick` | 빠른 테스트 (가벼운 벤치마크만 실행) |
 | `--resume` | 기존 W&B run ID로 재개 |
 | `--tag` | W&B 태그 추가 (여러 번 사용 가능) |
 
@@ -268,6 +264,7 @@ uv run python run_eval.py --config my-model
 ```
 
 ### 새 벤치마크 추가
+
 [Horangi benchmark 문서](./docs/README_benchmark.md)를 참고해주세요.
 ---
 

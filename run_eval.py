@@ -89,17 +89,6 @@ ALL_BENCHMARKS = [
     "swebench_verified_official_80",
 ]
 
-# Quick test benchmarks (lightweight ones only)
-QUICK_BENCHMARKS = [
-    "ko_hellaswag",
-    "kmmlu",
-    "kobbq",
-    "korean_hate_speech",
-    "ifeval_ko",
-    "ko_moral",
-]
-
-
 def get_model_env(config_name: str) -> dict[str, str]:
     """
     Generate API environment variables from model config file
@@ -535,9 +524,6 @@ def main():
 Examples:
     # Default run (entity/project loaded from configs/base_config.yaml)
     uv run python run_eval.py --config gpt-4o
-
-    # Quick test (lightweight benchmarks only)
-    uv run python run_eval.py --config gpt-4o --quick
     
     # Run specific benchmarks only
     uv run python run_eval.py --config gpt-4o --only ko_hellaswag,kmmlu
@@ -553,8 +539,6 @@ Examples:
     )
     parser.add_argument("--limit", type=int,
                         help="Number of samples per benchmark")
-    parser.add_argument("--quick", action="store_true",
-                        help="Run only quick/light benchmarks")
     parser.add_argument("--only", type=str, default="",
                         help="Comma-separated list of benchmarks to run (exclusive)")
     parser.add_argument("--tag", type=str, action="append", default=[],
@@ -578,9 +562,7 @@ Examples:
     config = get_config()
     
     # Filter benchmarks
-    if args.quick:
-        benchmarks = QUICK_BENCHMARKS
-    elif args.only:
+    if args.only:
         benchmarks = [b.strip() for b in args.only.split(",") if b.strip()]
         # Validate
         invalid = [b for b in benchmarks if b not in ALL_BENCHMARKS]
