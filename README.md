@@ -144,7 +144,7 @@ horangi/
 └── logs/                   # 평가 로그
 ```
 
-> 📖 **새 벤치마크 추가 방법**은 [docs/README_benchmark.md](docs/README_benchmark.md)를 참고하세요.
+> 📖 **새 벤치마크 추가 방법**은 [docs/README_benchmark_ko.md](docs/README_benchmark_ko.md)를 참고하세요.
 
 ---
 

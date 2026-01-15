@@ -144,7 +144,7 @@ horangi/
 └── logs/                   # Evaluation logs
 ```
 
-> 📖 **How to add new benchmarks**: See [docs/README_benchmark.md](docs/README_benchmark.md).
+> 📖 **How to add new benchmarks**: See [docs/README_benchmark_en.md](docs/README_benchmark_en.md).
 
 ---
 
