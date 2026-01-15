@@ -41,12 +41,14 @@ By integrating [WandB/Weave](https://wandb.ai/site/weave) and [Inspect AI](https
 
 ### 📈 Viewing Results
 
-After evaluation completes, you can view detailed results at the Weave URL in the output:
+After evaluation completes, you can view detailed results at the Weave URL in the output, and view comprehensive evaluation result tables in the Models workspace.
 See [Horangi Weave documentation](./docs/README_weave.md) for more details.
 - **Per-sample scores and responses**
 - **Model comparison**
 - **Aggregated metrics**
 - **Automatic leaderboard generation**
+
+![Workspace](./docs/assets/workspace.png)
 ![Weave Leaderboard](./docs/assets/leaderboard.png)
 
 ---

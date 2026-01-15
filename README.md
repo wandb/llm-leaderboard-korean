@@ -41,12 +41,14 @@
 
 ### 📈 결과 확인
 
-평가 완료 후 출력되는 Weave URL에서 상세 결과를 확인할 수 있습니다:
+평가 완료 후 출력되는 Weave URL에서 상세 결과를 확인할 수 있으며, Models workspace에서 종합 평가 결과 테이블을 확인할 수 있습니다.:
 자세한 내용은 [Horangi Weave 문서](./docs/README_weave.md)를 참고하세요.
 - **샘플별 점수 및 응답**
 - **모델 간 비교**
 - **집계 메트릭**
 - **자동 리더보드 생성**
+
+![Workspace](./docs/assets/workspace.png)
 ![Weave Leaderboard](./docs/assets/leaderboard.png)
 
 ---
@@ -266,6 +268,7 @@ uv run python run_eval.py --config my-model
 ### 새 벤치마크 추가
 
 [Horangi benchmark 문서](./docs/README_benchmark.md)를 참고해주세요.
+
 ---
 
 ## 🔧 SWE-bench 평가 (코드 생성)
