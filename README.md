@@ -1,102 +1,102 @@
-# 🐯 Horangi - Korean LLM Benchmark Evaluation Framework
+# 🐯 Horangi - 한국어 LLM 벤치마크 평가 프레임워크
 
-**Horangi** is an open-source benchmark framework for comprehensively evaluating Korean LLM performance.
+**호랑이(Horangi)** 는 한국어 LLM의 성능을 종합적으로 평가하는 오픈소스 벤치마크 프레임워크입니다.
 
-By integrating [WandB/Weave](https://wandb.ai/site/weave) and [Inspect AI](https://inspect.ai-safety-institute.org.uk/), it evaluates Korean LLMs along two axes: General Language Performance (GLP) and Alignment Performance (ALT), providing standardized benchmark datasets and evaluation pipelines.
-- 📦 Over 20 Korean benchmarks are registered in [Weave](https://wandb.ai/horangi/horangi4/weave/objects), allowing you to start evaluation immediately without separate data preparation.
-  - You can add new benchmarks. See [Horangi benchmark documentation](./docs/README_benchmark.md) for details.
-- 🔓 You can evaluate API models (OpenAI, Anthropic, Google, etc.) as well as open-source models served via vLLM using the same standards.
-- 📊 Evaluation results are automatically logged to Weave, enabling sample-level analysis, model comparison, and leaderboard generation.
-- 🏆 Check out the official leaderboard operated by W&B at **[Horangi Leaderboard](https://horangi.ai)**.
-  - Manages evaluation runs with W&B Models and tracks results with Weave to provide a **fully automated leaderboard**.
-  - The leaderboard automatically updates when new models are evaluated, always reflecting the latest results.
+[WandB/Weave](https://wandb.ai/site/weave)와 [Inspect AI](https://inspect.ai-safety-institute.org.uk/)를 통합하여 범용언어성능(GLP)과 가치정렬성능(ALT) 두 축으로 한국어 LLM을 평가하며, 이를 위해 표준화된 벤치마크 데이터셋과 평가 파이프라인을 제공합니다.
+- 📦 20개 이상의 한국어 벤치마크가 [Weave](https://wandb.ai/horangi/horangi4/weave/objects)에 등록되어 있어, 별도의 데이터 준비 없이 바로 평가를 시작할 수 있습니다.
+  - 새로운 벤치마크를 추가할 수 있습니다. 자세한 내용은 [Horangi benchmark 문서](./docs/README_benchmark.md)를 참고하세요.
+- 🔓 OpenAI, Anthropic, Google 등 API 모델은 물론, vLLM 등으로 서빙하는 오픈소스 모델까지 동일한 기준으로 평가할 수 있습니다.
+- 📊 평가 결과는 Weave에 자동으로 기록되어 샘플별 분석, 모델 간 비교, 리더보드 생성이 가능합니다.
+- 🏆 **[호랑이 리더보드](https://horangi.ai)**에서 W&B가 운영하는 공식 리더보드를 확인할 수 있습니다.
+  - W&B Models로 평가 실행을 관리하고, Weave로 결과를 추적하여 **완전 자동화된 리더보드**를 제공합니다.
+  - 새 모델 평가 시 리더보드가 자동으로 업데이트되어 항상 최신 결과를 반영합니다.
 
-### 📬 Contact
+### 📬 문의
 
 | | |
 |---|---|
-| Leaderboard Registration | [Application Form](https://docs.google.com/forms/d/e/1FAIpQLSdQERNX8jCEuqzUiodjnUdAI7JRCemy5sgmVylio-u0DRb9Xw/viewform) |
-| Enterprise Inquiries | contact-kr@wandb.com |
+| 리더보드 등재 신청 | [신청 폼](https://docs.google.com/forms/d/e/1FAIpQLSdQERNX8jCEuqzUiodjnUdAI7JRCemy5sgmVylio-u0DRb9Xw/viewform) |
+| 엔터프라이즈 문의 | contact-kr@wandb.com |
 
 ---
 
-## 📋 Table of Contents
+## 📋 목차
 
-- [Features](#-features)
-- [Viewing Results](#-viewing-results)
-- [Supported Benchmarks](#-supported-benchmarks)
-- [Project Structure](#-project-structure)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [Configuration Guide](#️-configuration-guide)
-- [SWE-bench Evaluation (Code Generation)](#-swe-bench-evaluation-code-generation)
+- [특징](#-특징)
+- [결과 확인](#-결과-확인)
+- [지원 벤치마크](#-지원-벤치마크)
+- [프로젝트 구조](#-프로젝트-구조)
+- [설치](#-설치)
+- [빠른 시작](#-빠른-시작)
+- [설정 가이드](#️-설정-가이드)
+- [SWE-bench 평가 (코드 생성)](#-swe-bench-평가-코드-생성)
 
 ---
-## ✨ Features
+## ✨ 특징
 
-- 🇰🇷 **20+ Korean benchmarks** supported
-- 📊 **Automatic WandB/Weave logging** - Experiment tracking and result comparison
-- 🚀 **Various model support** - OpenAI, Claude, Gemini, Solar, EXAONE, etc.
-- 📈 **Automatic leaderboard generation** - Model comparison in Weave UI
+- 🇰🇷 **20여개 한국어 벤치마크** 지원
+- 📊 **WandB/Weave 자동 로깅** - 실험 추적 및 결과 비교
+- 🚀 **다양한 모델 지원** - OpenAI, Claude, Gemini, Solar, EXAONE 등
+- 📈 **리더보드 자동 생성** - Weave UI에서 모델 비교
 
-### 📈 Viewing Results
+### 📈 결과 확인
 
-After evaluation completes, you can view detailed results at the Weave URL in the output:
-See [Horangi Weave documentation](./docs/README_weave.md) for more details.
-- **Per-sample scores and responses**
-- **Model comparison**
-- **Aggregated metrics**
-- **Automatic leaderboard generation**
+평가 완료 후 출력되는 Weave URL에서 상세 결과를 확인할 수 있습니다:
+자세한 내용은 [Horangi Weave 문서](./docs/README_weave.md)를 참고하세요.
+- **샘플별 점수 및 응답**
+- **모델 간 비교**
+- **집계 메트릭**
+- **자동 리더보드 생성**
 ![Weave Leaderboard](./docs/assets/leaderboard.png)
 
 ---
 
-## 📊 Supported Benchmarks
+## 📊 지원 벤치마크
 
-### General Language Performance (GLP)
+### 범용언어성능 (GLP) - General Language Performance
 
-Evaluates general language model capabilities including language understanding, knowledge, reasoning, coding, and function calling.
+언어 이해, 지식, 추론, 코딩, 함수호출 등 일반적인 언어 모델 능력을 평가합니다.
 
-| Evaluation Area | Benchmark | Description | Samples | Source |
-|----------------|----------|------|--------:|------|
-| **Syntax Analysis** | `ko_balt_700_syntax` | Sentence structure analysis, grammatical validity evaluation | 100 | [snunlp/KoBALT-700](https://huggingface.co/datasets/snunlp/KoBALT-700) |
-| **Semantic Analysis** | `ko_balt_700_semantic` | Context-based inference, semantic consistency evaluation | 100 | [snunlp/KoBALT-700](https://huggingface.co/datasets/snunlp/KoBALT-700) |
-| | `haerae_bench_v1_rc` | Reading comprehension-based semantic interpretation | 100 | [HAERAE-HUB/HAE_RAE_BENCH_1.0](https://huggingface.co/datasets/HAERAE-HUB/HAE_RAE_BENCH_1.0) |
-| **Expression** | `ko_mtbench` | Writing, roleplay, humanities expression (LLM Judge) | 80 | [LGAI-EXAONE/KoMT-Bench](https://huggingface.co/datasets/LGAI-EXAONE/KoMT-Bench) |
-| **Information Retrieval** | `squad_kor_v1` | QA-based information retrieval | 100 | [KorQuAD/squad_kor_v1](https://huggingface.co/datasets/KorQuAD/squad_kor_v1) |
-| **General Knowledge** | `kmmlu` | Common sense, STEM fundamentals | 100 | [HAERAE-HUB/KMMLU](https://huggingface.co/datasets/HAERAE-HUB/KMMLU) |
-| | `haerae_bench_v1_wo_rc` | Multi-turn QA-based knowledge evaluation | 100 | [HAERAE-HUB/HAE_RAE_BENCH_1.0](https://huggingface.co/datasets/HAERAE-HUB/HAE_RAE_BENCH_1.0) |
-| **Expert Knowledge** | `kmmlu_pro` | Advanced expertise in medicine, law, engineering, etc. | 100 | [LGAI-EXAONE/KMMLU-Pro](https://huggingface.co/datasets/LGAI-EXAONE/KMMLU-Pro) |
-| | `ko_hle` | Korean expert-level difficult problems | 100 | [cais/hle](https://huggingface.co/datasets/cais/hle) + Custom translation |
-| **Common Sense Reasoning** | `ko_hellaswag` | Sentence completion, next sentence prediction | 100 | [davidkim205/ko_hellaswag](https://huggingface.co/datasets/davidkim205/ko_hellaswag) |
-| **Mathematical Reasoning** | `hrm8k` | Korean math reasoning (GSM8K, KSM, MATH, MMMLU, OMNI_MATH combined) | 100 | [HAERAE-HUB/HRM8K](https://huggingface.co/datasets/HAERAE-HUB/HRM8K) |
-| | `ko_aime2025` | AIME 2025 advanced math | 30 | [allganize/AIME2025-ko](https://huggingface.co/datasets/allganize/AIME2025-ko) |
-| **Abstract Reasoning** | `ko_arc_agi` | Visual/structural reasoning, abstract problem solving | 100 | [ARC-AGI](https://arcprize.org/) |
-| **Coding** | `swebench_verified_official_80` | GitHub issue resolution | 80 | [SWE-bench](https://www.swebench.com/) |
-| **Function Calling** | `bfcl` | Function calling accuracy (single, multi-turn, irrelevance detection) | 258 | [BFCL](https://gorilla.cs.berkeley.edu/blogs/8_berkeley_function_calling_leaderboard.html) |
+| 평가 영역 | 벤치마크 | 설명 | 샘플 수 | 출처 |
+|----------|----------|------|--------:|------|
+| **구문해석** | `ko_balt_700_syntax` | 문장 구조 분석, 문법적 타당성 평가 | 100 | [snunlp/KoBALT-700](https://huggingface.co/datasets/snunlp/KoBALT-700) |
+| **의미해석** | `ko_balt_700_semantic` | 문맥 기반 추론, 의미적 일관성 평가 | 100 | [snunlp/KoBALT-700](https://huggingface.co/datasets/snunlp/KoBALT-700) |
+| | `haerae_bench_v1_rc` | 독해 기반 의미 해석력 평가 | 100 | [HAERAE-HUB/HAE_RAE_BENCH_1.0](https://huggingface.co/datasets/HAERAE-HUB/HAE_RAE_BENCH_1.0) |
+| **표현** | `ko_mtbench` | 글쓰기, 역할극, 인문학적 표현력 (LLM Judge) | 80 | [LGAI-EXAONE/KoMT-Bench](https://huggingface.co/datasets/LGAI-EXAONE/KoMT-Bench) |
+| **정보검색** | `squad_kor_v1` | 질의응답 기반 정보검색 능력 | 100 | [KorQuAD/squad_kor_v1](https://huggingface.co/datasets/KorQuAD/squad_kor_v1) |
+| **일반지식** | `kmmlu` | 상식, STEM 기초학문 이해도 | 100 | [HAERAE-HUB/KMMLU](https://huggingface.co/datasets/HAERAE-HUB/KMMLU) |
+| | `haerae_bench_v1_wo_rc` | 멀티턴 질의응답 기반 지식 평가 | 100 | [HAERAE-HUB/HAE_RAE_BENCH_1.0](https://huggingface.co/datasets/HAERAE-HUB/HAE_RAE_BENCH_1.0) |
+| **전문지식** | `kmmlu_pro` | 의학, 법률, 공학 등 고난도 전문지식 | 100 | [LGAI-EXAONE/KMMLU-Pro](https://huggingface.co/datasets/LGAI-EXAONE/KMMLU-Pro) |
+| | `ko_hle` | 한국어 고난도 전문가 수준 문제 | 100 | [cais/hle](https://huggingface.co/datasets/cais/hle) + 자체 번역 |
+| **상식추론** | `ko_hellaswag` | 문장 완성, 다음 문장 예측 | 100 | [davidkim205/ko_hellaswag](https://huggingface.co/datasets/davidkim205/ko_hellaswag) |
+| **수학추론** | `hrm8k` | 한국어 수학 추론 (GSM8K, KSM, MATH, MMMLU, OMNI_MATH 통합) | 100 | [HAERAE-HUB/HRM8K](https://huggingface.co/datasets/HAERAE-HUB/HRM8K) |
+| | `ko_aime2025` | AIME 2025 고난도 수학 | 30 | [allganize/AIME2025-ko](https://huggingface.co/datasets/allganize/AIME2025-ko) |
+| **추상추론** | `ko_arc_agi` | 시각적/구조적 추론, 추상적 문제 해결 | 100 | [ARC-AGI](https://arcprize.org/) |
+| **코딩** | `swebench_verified_official_80` | GitHub 이슈 해결 능력 | 80 | [SWE-bench](https://www.swebench.com/) |
+| **함수호출** | `bfcl` | 함수 호출 정확성 (단일, 멀티턴, 무관계검출) | 258 | [BFCL](https://gorilla.cs.berkeley.edu/blogs/8_berkeley_function_calling_leaderboard.html) |
 
-### Alignment Performance (ALT)
+### 가치정렬성능 (ALT) - Alignment Performance
 
-Evaluates model safety and alignment including controllability, ethics, harm/bias prevention, and hallucination prevention.
+제어성, 윤리, 유해성/편향성 방지, 환각 방지 등 모델의 안전성과 정렬 수준을 평가합니다.
 
-| Evaluation Area | Benchmark | Description | Samples | Source |
-|----------------|----------|------|--------:|------|
-| **Controllability** | `ifeval_ko` | Instruction following, command compliance | 100 | [allganize/IFEval-Ko](https://huggingface.co/datasets/allganize/IFEval-Ko) |
-| **Ethics/Morality** | `ko_moral` | Social norm compliance, safe language generation | 100 | [AI Hub Ethics Data](https://aihub.or.kr/aihubdata/data/view.do?dataSetSn=558) |
-| **Harm Prevention** | `korean_hate_speech` | Hate speech, offensive speech detection and suppression | 100 | [kocohub/korean-hate-speech](https://github.com/kocohub/korean-hate-speech) |
-| **Bias Prevention** | `kobbq` | Bias evaluation against specific groups/attributes | 100 | [naver-ai/kobbq](https://huggingface.co/datasets/naver-ai/kobbq) |
-| **Hallucination Prevention** | `ko_truthful_qa` | Factuality verification, evidence-based response | 100 | Custom translation |
-| | `ko_hallulens_wikiqa` | Wikipedia QA-based hallucination evaluation | 100 | [facebookresearch/HalluLens](https://github.com/facebookresearch/HalluLens) + Custom translation |
-| | `ko_hallulens_longwiki` | Long context Wikipedia hallucination evaluation | 100 | [facebookresearch/HalluLens](https://github.com/facebookresearch/HalluLens) + Custom translation |
-| | `ko_hallulens_nonexistent` | Fictional entity refusal ability evaluation | 100 | [facebookresearch/HalluLens](https://github.com/facebookresearch/HalluLens) + Custom translation |
+| 평가 영역 | 벤치마크 | 설명 | 샘플 수 | 출처 |
+|----------|----------|------|--------:|------|
+| **제어성** | `ifeval_ko` | 지시문 수행, 명령 준수 능력 | 100 | [allganize/IFEval-Ko](https://huggingface.co/datasets/allganize/IFEval-Ko) |
+| **윤리/도덕** | `ko_moral` | 사회 규범 준수, 안전한 언어 생성 | 100 | [AI Hub 윤리 데이터](https://aihub.or.kr/aihubdata/data/view.do?dataSetSn=558) |
+| **유해성방지** | `korean_hate_speech` | 혐오발언, 공격적 발화 탐지 및 억제 | 100 | [kocohub/korean-hate-speech](https://github.com/kocohub/korean-hate-speech) |
+| **편향성방지** | `kobbq` | 특정 집단/속성에 대한 편향성 평가 | 100 | [naver-ai/kobbq](https://huggingface.co/datasets/naver-ai/kobbq) |
+| **환각방지** | `ko_truthful_qa` | 사실성 검증, 근거 기반 답변 생성 | 100 | 자체 번역 |
+| | `ko_hallulens_wikiqa` | Wikipedia QA 기반 환각 평가 | 100 | [facebookresearch/HalluLens](https://github.com/facebookresearch/HalluLens) + 자체 번역 |
+| | `ko_hallulens_longwiki` | 긴 문맥 Wikipedia 환각 평가 | 100 | [facebookresearch/HalluLens](https://github.com/facebookresearch/HalluLens) + 자체 번역 |
+| | `ko_hallulens_nonexistent` | 가상 엔티티 거부 능력 평가 | 100 | [facebookresearch/HalluLens](https://github.com/facebookresearch/HalluLens) + 자체 번역 |
 
 
 <details>
-<summary>📦 Dataset References (Weave)</summary>
+<summary>📦 데이터셋 참조 (Weave)</summary>
 
-Datasets are uploaded to the `horangi/horangi4` project:
+데이터셋은 `horangi/horangi4` 프로젝트에 업로드되어 있습니다:
 
-| Dataset | Weave Ref |
+| 데이터셋 | Weave Ref |
 |----------|-----------|
 | KoHellaSwag_mini | `weave:///horangi/horangi4/object/KoHellaSwag_mini:latest` |
 | KoAIME2025_mini | `weave:///horangi/horangi4/object/KoAIME2025_mini:latest` |
@@ -125,52 +125,52 @@ Datasets are uploaded to the `horangi/horangi4` project:
 ---
 
 
-## 📁 Project Structure
+## 📁 프로젝트 구조
 
 ```
 horangi/
-├── horangi.py              # @task function definitions (benchmark entry point)
-├── run_eval.py             # Evaluation execution script
+├── horangi.py              # @task 함수 정의 (벤치마크 진입점)
+├── run_eval.py             # 평가 실행 스크립트
 ├── configs/
-│   ├── base_config.yaml    # Global default settings
-│   └── models/             # Model configuration files
+│   ├── base_config.yaml    # 전역 기본 설정
+│   └── models/             # 모델 설정 파일
 ├── src/
-│   ├── benchmarks/         # Benchmark configurations
-│   ├── core/               # Core logic
-│   ├── scorers/            # Custom Scorers
-│   └── solvers/            # Custom Solvers
-└── logs/                   # Evaluation logs
+│   ├── benchmarks/         # 벤치마크 설정
+│   ├── core/               # 핵심 로직
+│   ├── scorers/            # 커스텀 Scorer
+│   └── solvers/            # 커스텀 Solver
+└── logs/                   # 평가 로그
 ```
 
-> 📖 **How to add new benchmarks**: See [docs/README_benchmark.md](docs/README_benchmark.md).
+> 📖 **새 벤치마크 추가 방법**은 [docs/README_benchmark.md](docs/README_benchmark.md)를 참고하세요.
 
 ---
 
 
-## 📦 Installation
+## 📦 설치
 
-### Requirements
+### 요구 사항
 
 - Python 3.12+
-- [uv](https://github.com/astral-sh/uv) (recommended) or pip
+- [uv](https://github.com/astral-sh/uv) (권장) 또는 pip
 
-### Installation Steps
+### 설치 방법
 
 ```bash
-# Install uv (if not installed)
+# uv 설치 (없는 경우)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Clone repository
+# 저장소 클론
 git clone https://github.com/wandb-korea/horangi.git
 cd horangi
 
-# Install dependencies
+# 의존성 설치
 uv sync
 ```
 
-### Environment Variables
+### 환경 변수 설정
 
-Copy `.env.sample` to create a `.env` file or set environment variables directly:
+`.env.sample`을 복사하여 `.env` 파일을 생성하거나 환경 변수를 직접 설정합니다:
 
 ```bash
 # Provide the API key for the model(s) you intend to use
@@ -180,127 +180,123 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 GEMINI_API_KEY=your_gemini_api_key
 UPSTAGE_API_KEY=your_upstage_api_key
 
-# W&B settings
+# W&B 설정
 WANDB_API_KEY=your_wandb_api_key
 WANDB_ENTITY=your_wandb_entity
 WANDB_PROJECT=your_wandb_project
-# inspect_ai settings
+# inspect_ai 설정
 INSPECT_WANDB_WEAVE_ENABLED=true_or_false
 INSPECT_WANDB_MODELS_ENABLED=true_or_false
-# swebench server settings
+# swebench server 설정
 SWE_API_KEY=your_swebench_server_api_key
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 빠른 시작
 
-Run benchmarks with `run_eval.py` and log results to W&B.
+`run_eval.py`로 벤치마크를 실행하고 W&B에 결과를 기록합니다.
 
 ```bash
-# Run all benchmarks
+# 모든 벤치마크 실행
 uv run python run_eval.py --config gpt-4o
 
-# Run specific benchmark
+# 특정 벤치마크만 실행
 uv run python run_eval.py --config gpt-4o --only kmmlu
 
-# Run multiple benchmarks
+# 여러 벤치마크 실행
 uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq,ko_hellaswag
 
-# Limit samples (for testing)
+# 샘플 수 제한 (테스트용)
 uv run python run_eval.py --config gpt-4o --limit 10
 
-# Quick test (lightweight benchmarks only)
+# 빠른 테스트 (가벼운 벤치마크만)
 uv run python run_eval.py --config gpt-4o --quick
 
-# Resume existing W&B run
+# 기존 W&B run 재개 (중단된 평가 이어서 실행)
 uv run python run_eval.py --config gpt-4o --resume <run_id>
 
-# Add W&B tags
+# W&B 태그 추가
 uv run python run_eval.py --config gpt-4o --tag experiment1 --tag test
 ```
 
-### Options
+### 옵션
 
-| Option | Description |
-|--------|-------------|
-| `--config` | Model configuration file (required) |
-| `--only` | Run specific benchmarks only (comma-separated) |
-| `--limit` | Limit samples per benchmark |
-| `--quick` | Quick test (lightweight benchmarks only) |
-| `--resume` | Resume existing W&B run by ID |
-| `--tag` | Add W&B tags (can be used multiple times) |
+| 옵션 | 설명 |
+|------|------|
+| `--config` | 모델 설정 파일 (필수) |
+| `--only` | 특정 벤치마크만 실행 (쉼표로 구분) |
+| `--limit` | 벤치마크당 샘플 수 제한 |
+| `--quick` | 빠른 테스트 (가벼운 벤치마크만 실행) |
+| `--resume` | 기존 W&B run ID로 재개 |
+| `--tag` | W&B 태그 추가 (여러 번 사용 가능) |
 
-### Key Features
+### 주요 기능
 
-- **vLLM Server Auto-management**: When using `_template_vllm.yaml`, vLLM server starts/stops automatically
-- **W&B Models Integration**: Evaluation results are automatically logged to W&B
-- **Progress Logging**: Real-time display of benchmark results
-- **Score Aggregation Table**: Summary of all results after evaluation completes
+- **vLLM 서버 자동 관리**: `_template_vllm.yaml` 설정 시 vLLM 서버가 자동으로 시작/종료됩니다
+- **W&B Models 연동**: 평가 결과가 W&B에 자동 기록됩니다
+- **진행 상황 로깅**: 각 벤치마크 결과가 실시간으로 표시됩니다
+- **스코어 집계 테이블**: 평가 완료 후 전체 결과 요약을 출력합니다
 
 ---
 
-## ⚙️ Configuration Guide
+## ⚙️ 설정 가이드
 
-### Configuration File Structure
-
+### 새 모델 추가
 ```
 configs/
-├── base_config.yaml      # Global default settings
-└── models/               # Per-model settings
-    ├── _template_api.yaml    # Template
-    ├── _template_vllm.yaml   # Template
+├── base_config.yaml      # 전역 기본 설정
+└── models/               # 모델별 설정
+    ├── _template_api.yaml    # 템플릿
+    ├── _template_vllm.yaml    # 템플릿
     ├── gpt-4o.yaml
     └── solar_pro2.yaml
 ```
 
-### Adding a New Model
-
 ```bash
-# 1. Copy template
+# 1. 템플릿 복사
 cp configs/models/_template_api.yaml configs/models/my-model.yaml
-# For auto-starting vLLM server:
-# `run_eval.py` automatically starts vLLM server before evaluation and stops it after completion. No need to run vLLM server separately.
+# vllm 서버를 자동으로 열어서 테스트하는경우
+# 평가실행 시 vLLM 서버가 자동으로 시작되고 평가 완료 후 종료됩니다. 별도로 vLLM 서버를 실행할 필요가 없습니다.
 # cp configs/models/_template_vllm.yaml configs/models/my-model.yaml
 
-# 2. Edit configuration
+# 2. 설정 편집
 vi configs/models/my-model.yaml
 
-# 3. Run
+# 3. 실행
 uv run python run_eval.py --config my-model
 ```
 
-### Adding a New Benchmark
-
-See [Horangi benchmark documentation](./docs/README_benchmark.md).
-
+### 새 벤치마크 추가
+[Horangi benchmark 문서](./docs/README_benchmark.md)를 참고해주세요.
 ---
 
-## 🔧 SWE-bench Evaluation (Code Generation)
+## 🔧 SWE-bench 평가 (코드 생성)
 
-SWE-bench is a benchmark that evaluates the ability to fix bugs in real open-source projects.
+SWE-bench는 실제 오픈소스 프로젝트의 버그 수정 능력을 평가하는 벤치마크입니다.
 
-📖 **Detailed setup guide**: [docs/README_swebench.md](docs/README_swebench.md)
+📖 **자세한 설정 가이드**: [docs/README_swebench.md](docs/README_swebench.md)
 
-### Quick Start
+### 빠른 시작
 
 ```bash
-# 1. Run server (Linux environment with Docker)
+# 1. 서버 실행 (Docker가 있는 Linux 환경)
 uv run python src/server/swebench_server.py --host 0.0.0.0 --port 8000
 
-# 2. Client setup (macOS, etc.)
+# 2. 클라이언트 설정 (macOS 등)
 export SWE_SERVER_URL=http://YOUR_SERVER:8000
 
-# 3. Run evaluation
+# 3. 평가 실행
 uv run python run_eval.py --config gpt-4o --only swebench_verified_official_80 --limit 5
 ```
 
 ---
 
-## 📚 References
+## 📚 참고 자료
 - [WandB Weave](https://wandb.ai/site/weave)
 - [Inspect AI Documentation](https://inspect.ai-safety-institute.org.uk/)
 - [inspect_evals](https://github.com/UKGovernmentBEIS/inspect_evals)
 - [inspect-wandb (fork)](https://github.com/hw-oh/inspect_wandb)
 - [inspect_evals (fork)](https://github.com/hw-oh/inspect_evals)
+
 
