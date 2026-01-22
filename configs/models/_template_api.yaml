@@ -55,4 +55,4 @@ model:
 
 benchmarks:
   bfcl:
-    use_native_tools: true         # Native Tool Calling for API models
+    use_native_tools: false         # Native Tool Calling for API models

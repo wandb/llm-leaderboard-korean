@@ -26,7 +26,7 @@ model:
 
 benchmarks:
   bfcl:
-    use_native_tools: true           # Solar tool-call template 사용
+    use_native_tools: false           # Solar tool-call template 사용
 
   swebench_verified_official_80:
     temperature: 0.2

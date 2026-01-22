@@ -19,8 +19,33 @@ os.environ.setdefault("LITELLM_LOG", "ERROR")
 try:
     import litellm
     litellm.disable_async_logging = True
+    litellm.suppress_debug_info = True
 except ImportError:
     pass
+
+# Suppress asyncio "bound to different event loop" errors
+import asyncio
+import logging
+
+# Suppress asyncio error logs for LiteLLM worker issues
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
+
+def _ignore_litellm_loop_errors(loop, context):
+    """Ignore LiteLLM event loop binding errors"""
+    msg = context.get("message", "")
+    if "bound to a different event loop" in msg:
+        return  # Silently ignore
+    if "logging_worker" in str(context.get("exception", "")):
+        return  # Silently ignore
+    # For other exceptions, use default handler
+    loop.default_exception_handler(context)
+
+# Set custom exception handler for asyncio
+try:
+    loop = asyncio.get_event_loop()
+    loop.set_exception_handler(_ignore_litellm_loop_errors)
+except RuntimeError:
+    pass  # No event loop yet, will be handled later
 
 # Patch LLM clients EARLY for Weave token tracking (must be before clients are imported)
 try:
