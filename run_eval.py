@@ -87,6 +87,8 @@ ALL_BENCHMARKS = [
     "ko_hallulens_wikiqa",
     "ko_hallulens_nonexistent",
     "swebench_verified_official_80",
+    "humaneval_100",
+    "bigcodebench_100",
 ]
 
 def get_model_env(config_name: str) -> dict[str, str]:
@@ -495,6 +497,12 @@ def parse_scores_from_eval_log(eval_log, benchmark: str) -> dict | None:
     elif benchmark == "swebench_verified_official_80":
         # swebench: resolved rate
         main_score = find_metric("_resolved", "resolved")
+    elif benchmark == "humaneval_100":
+        # humaneval: passatk_mean (pass@1)
+        main_score = find_metric("passatk_mean", "_mean", "pass@1")
+    elif benchmark == "bigcodebench_100":
+        # bigcodebench: pass_rate or accuracy
+        main_score = find_metric("pass_rate", "_pass_rate", "_accuracy", "accuracy")
     
     # Fallback: find any accuracy metric
     if main_score is None:

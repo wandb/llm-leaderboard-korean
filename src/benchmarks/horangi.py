@@ -463,3 +463,41 @@ def hrm8k(
         shuffle=shuffle,
         limit=limit,
     )
+
+
+# =============================================================================
+# Coding Benchmarks (Stratified Samples)
+# =============================================================================
+
+@task
+def humaneval_100(
+    shuffle: bool = False,
+    limit: int | None = None,
+) -> Task:
+    """HumanEval 100 - Stratified sample of HumanEval benchmark
+    
+    100 problems sampled by code complexity (stratified by code length)
+    Uses inspect_evals humaneval solver/scorer
+    """
+    return create_benchmark(
+        name="humaneval_100",
+        shuffle=shuffle,
+        limit=limit,
+    )
+
+
+@task
+def bigcodebench_100(
+    shuffle: bool = False,
+    limit: int | None = None,
+) -> Task:
+    """BigCodeBench 100 - Stratified sample of BigCodeBench benchmark
+    
+    100 problems sampled by library usage (stratified by library distribution)
+    Uses inspect_evals bigcodebench solver/scorer
+    """
+    return create_benchmark(
+        name="bigcodebench_100",
+        shuffle=shuffle,
+        limit=limit,
+    )

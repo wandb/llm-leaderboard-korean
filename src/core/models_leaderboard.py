@@ -90,6 +90,14 @@ BENCHMARK_TAXONOMY = {
         "category": "GLP_코딩능력",
         "score_key": "score",
     },
+    "humaneval_100": {
+        "category": "GLP_코딩능력",
+        "score_key": "score",
+    },
+    "bigcodebench_100": {
+        "category": "GLP_코딩능력",
+        "score_key": "score",
+    },
     # GLP - 함수호출
     "bfcl": {
         "category": "GLP_함수호출",
@@ -215,14 +223,16 @@ def create_leaderboard_table(
     # 카테고리별 점수 수집
     category_scores: dict[str, list[float]] = {}
     
-    # 디버깅: benchmark_scores 내용 출력
-    print(f"   📊 Processing {len(benchmark_scores)} benchmarks...")
+    # 카테고리별 벤치마크 출력용 수집
+    category_benchmarks: dict[str, list[tuple[str, float]]] = {}
+    unknown_benchmarks: list[tuple[str, float]] = []
     
     for benchmark_name, score_info in benchmark_scores.items():
         main_score = score_info.get("score")
         
         if benchmark_name not in BENCHMARK_TAXONOMY:
-            print(f"   ⚠️ Benchmark '{benchmark_name}' not in BENCHMARK_TAXONOMY (score: {main_score})")
+            if main_score is not None:
+                unknown_benchmarks.append((benchmark_name, main_score))
             continue
         
         taxonomy = BENCHMARK_TAXONOMY[benchmark_name]
@@ -232,9 +242,11 @@ def create_leaderboard_table(
             if main_category not in category_scores:
                 category_scores[main_category] = []
             category_scores[main_category].append(main_score)
-            print(f"   ✅ {benchmark_name} → {main_category}: {main_score}")
-        else:
-            print(f"   ⚠️ {benchmark_name}: score is None")
+            
+            # 출력용 수집
+            if main_category not in category_benchmarks:
+                category_benchmarks[main_category] = []
+            category_benchmarks[main_category].append((benchmark_name, main_score))
         
         # sub_scores가 있는 경우 (ko_mtbench 등)
         if "sub_scores" in taxonomy and score_info.get("details"):
@@ -244,7 +256,30 @@ def create_leaderboard_table(
                     if sub_category not in category_scores:
                         category_scores[sub_category] = []
                     category_scores[sub_category].append(detail_value)
-                    print(f"   ✅ {benchmark_name}.{detail_key} → {sub_category}: {detail_value}")
+                    
+                    # 출력용 수집
+                    if sub_category not in category_benchmarks:
+                        category_benchmarks[sub_category] = []
+                    category_benchmarks[sub_category].append((f"{benchmark_name}.{detail_key}", detail_value))
+    
+    # 카테고리별 그룹핑하여 출력
+    print(f"   📊 Processing {len(benchmark_scores)} benchmarks...")
+    
+    # GLP 카테고리 먼저, ALT 카테고리 나중에
+    glp_categories = sorted([c for c in category_benchmarks.keys() if c.startswith("GLP_")])
+    alt_categories = sorted([c for c in category_benchmarks.keys() if c.startswith("ALT_")])
+    
+    for category in glp_categories + alt_categories:
+        benchmarks = category_benchmarks[category]
+        print(f"\n   📂 {category}")
+        for bench_name, score in benchmarks:
+            print(f"      ✅ {bench_name}: {score:.4f}")
+    
+    # 알 수 없는 벤치마크 출력
+    if unknown_benchmarks:
+        print(f"\n   ⚠️ Unknown benchmarks (not in taxonomy):")
+        for bench_name, score in unknown_benchmarks:
+            print(f"      - {bench_name}: {score}")
     
     # 카테고리별 평균 계산
     category_means = {}

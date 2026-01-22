@@ -43,6 +43,9 @@ from benchmarks.ko_mtbench import CONFIG as ko_mtbench
 from benchmarks.swebench_verified_official_80 import CONFIG as swebench_verified_official_80
 # HRM8K
 from benchmarks.hrm8k import CONFIG as hrm8k
+# Coding benchmarks (stratified samples)
+from benchmarks.humaneval_100 import CONFIG as humaneval_100
+from benchmarks.bigcodebench_100 import CONFIG as bigcodebench_100
 
 # Benchmark descriptions
 BENCHMARK_DESCRIPTIONS: dict[str, str] = {
@@ -80,6 +83,8 @@ BENCHMARK_DESCRIPTIONS: dict[str, str] = {
     "ko_mtbench": "Multi-turn conversation evaluation",
     # Coding
     "swebench_verified_official_80": "SWE-bench bug fix (80 tasks)",
+    "humaneval_100": "HumanEval 100 samples (stratified by complexity)",
+    "bigcodebench_100": "BigCodeBench 100 samples (stratified by library)",
     # Math Reasoning
     "hrm8k": "Korean math reasoning (HRM8K)",
 }
@@ -120,6 +125,9 @@ BENCHMARKS: dict = {
     "swebench_verified_official_80": swebench_verified_official_80,
     # HRM8K
     "hrm8k": hrm8k,
+    # Coding benchmarks (stratified samples)
+    "humaneval_100": humaneval_100,
+    "bigcodebench_100": bigcodebench_100,
 }
 
 def get_benchmark_config(name: str) -> dict:

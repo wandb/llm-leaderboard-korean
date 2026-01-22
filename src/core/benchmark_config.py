@@ -56,6 +56,9 @@ class BenchmarkConfig:
     sampling: Optional[str] = None
     sampling_by: Optional[str] = None
     
+    # Sandbox (for code execution benchmarks)
+    sandbox: Optional[str] = None  # "local", "docker", etc.
+    
     # Other
     default_fields: dict = field(default_factory=dict)
     metadata: dict = field(default_factory=dict)

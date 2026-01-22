@@ -144,11 +144,58 @@ def get_record_to_sample(base_module: str):
     """
     Get record_to_sample function from original benchmark.
     
+    Some benchmarks (like humaneval) use a factory pattern where record_to_sample()
+    returns the actual conversion function. This function handles both cases.
+    
+    Note: Some benchmarks use "get_record_to_sample" instead of "record_to_sample"
+    (e.g., bigcodebench). This function checks both names.
+    
     Args:
         base_module: Module path (e.g., "inspect_evals.ifeval.ifeval")
+    
+    Returns:
+        The actual record_to_sample function (not the factory)
     """
+    import inspect
+    from typing import Callable, get_type_hints
+    
     module = importlib.import_module(base_module)
-    return getattr(module, "record_to_sample", None)
+    
+    # Try both "record_to_sample" and "get_record_to_sample" names
+    func = getattr(module, "record_to_sample", None)
+    if func is None:
+        func = getattr(module, "get_record_to_sample", None)
+    
+    if func is None:
+        return None
+    
+    # Check if it's a factory function by looking at return type annotation
+    # Factory functions return Callable[[dict, ...], Sample]
+    try:
+        hints = get_type_hints(func)
+        return_type = hints.get("return")
+        
+        # If return type contains "Callable", it's a factory function
+        if return_type and "Callable" in str(return_type):
+            # Call the factory to get the actual function
+            return func()
+    except Exception:
+        pass
+    
+    # Check signature: if first param is not a dict-like, it's likely a factory
+    try:
+        sig = inspect.signature(func)
+        params = list(sig.parameters.values())
+        if params:
+            first_param = params[0]
+            # If first param has a default value or is not named like 'record', it might be factory
+            if first_param.default != inspect.Parameter.empty:
+                # Has default value, likely factory (e.g., instruction_prompt="...")
+                return func()
+    except Exception:
+        pass
+    
+    return func
 
 
 # =============================================================================
@@ -408,10 +455,14 @@ def create_benchmark(
         if config.get("system_message"):
             solver = [system_message(config["system_message"])] + list(solver)
         
+        # Use sandbox from config, or inherit from original task
+        sandbox = config.get("sandbox") or getattr(original_task, 'sandbox', None)
+        
         return Task(
             dataset=dataset,
             solver=solver,
             scorer=scorer,
+            sandbox=sandbox,
             name=name,
             metadata={
                 "benchmark": name,
