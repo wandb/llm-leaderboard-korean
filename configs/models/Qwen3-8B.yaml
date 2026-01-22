@@ -39,5 +39,6 @@ model:
 
 benchmarks:
   bfcl:
-    use_native_tools: true
+    # vLLM tool_calls 형식이 inspect-ai와 호환되지 않아 text-based mode 사용
+    use_native_tools: false
 

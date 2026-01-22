@@ -281,7 +281,14 @@ def create_leaderboard_table(
         df["FINAL_SCORE"] = None
     
     # 메타데이터 추가
-    df["release_date"] = pd.to_datetime(metadata.get("release_date", "unknown"), format="%Y-%m-%d")
+    release_date = metadata.get("release_date")
+    if release_date and release_date != "unknown":
+        try:
+            df["release_date"] = pd.to_datetime(release_date, format="%Y-%m-%d")
+        except (ValueError, TypeError):
+            df["release_date"] = pd.NaT
+    else:
+        df["release_date"] = pd.NaT
     df["size_category"] = metadata.get("size_category", "unknown")
     df["model_size"] = metadata.get("model_size", "unknown")
     
@@ -451,7 +458,16 @@ def log_leaderboard_tables(
             wandb_run.log({"alt_detail_radar_table": wandb.Table(dataframe=alt_detail_radar)})
             print("✅ Logged: alt_detail_radar_table")
         
-        # Summary에 주요 점수 추가
+        # Summary에 점수 추가
+        # 1) leaderboard_table의 모든 컬럼을 summary에 저장 (카테고리 스코어 + 메타데이터)
+        for col in leaderboard_df.columns:
+            if col == "model_name":
+                continue
+            value = leaderboard_df[col].iloc[0]
+            if pd.notna(value):
+                wandb_run.summary[col] = value
+        
+        # 기존 키 호환성 유지 (final_score, glp_avg, alt_avg)
         if "FINAL_SCORE" in leaderboard_df.columns:
             final_score = leaderboard_df["FINAL_SCORE"].iloc[0]
             if pd.notna(final_score):
@@ -466,6 +482,13 @@ def log_leaderboard_tables(
             alt_avg = leaderboard_df["가치정렬성능(ALT)_AVG"].iloc[0]
             if pd.notna(alt_avg):
                 wandb_run.summary["alt_avg"] = alt_avg
+        
+        # 2) benchmark_detail_table에서 개별 벤치마크 점수 저장
+        for _, row in benchmark_detail_df.iterrows():
+            benchmark_name = row.get("benchmark")
+            score = row.get("score")
+            if benchmark_name and pd.notna(score):
+                wandb_run.summary[f"benchmark/{benchmark_name}"] = score
         
         print("✅ W&B Leaderboard tables logged successfully!")
         

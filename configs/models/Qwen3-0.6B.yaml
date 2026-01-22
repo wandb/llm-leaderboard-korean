@@ -39,5 +39,5 @@ model:
 
 benchmarks:
   bfcl:
-    use_native_tools: true
+    use_native_tools: false  # vLLM tool_calls 형식 호환성 문제로 text-based 사용
 

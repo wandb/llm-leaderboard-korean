@@ -400,9 +400,48 @@ def bfcl_scorer() -> Scorer:
             
             if tool_calls:
                 tc = tool_calls[0]
+                
+                # Handle different tool_call formats:
+                # 1. inspect-ai native: tc.function (str), tc.arguments (dict)
+                # 2. vLLM/litellm raw: tc.function (dict with 'name', 'arguments')
+                if hasattr(tc, 'function'):
+                    func = tc.function
+                    if isinstance(func, dict):
+                        # vLLM/litellm format: {'name': '...', 'arguments': '...'}
+                        func_name = func.get('name', '')
+                        args_raw = func.get('arguments', '{}')
+                        if isinstance(args_raw, str):
+                            try:
+                                args = json.loads(args_raw)
+                            except json.JSONDecodeError:
+                                args = {}
+                        else:
+                            args = args_raw if isinstance(args_raw, dict) else {}
+                    else:
+                        # inspect-ai native format
+                        func_name = func
+                        args = tc.arguments if isinstance(tc.arguments, dict) else {}
+                else:
+                    # Fallback: dict-like access
+                    tc_dict = tc if isinstance(tc, dict) else vars(tc) if hasattr(tc, '__dict__') else {}
+                    func = tc_dict.get('function', {})
+                    if isinstance(func, dict):
+                        func_name = func.get('name', '')
+                        args_raw = func.get('arguments', '{}')
+                        if isinstance(args_raw, str):
+                            try:
+                                args = json.loads(args_raw)
+                            except json.JSONDecodeError:
+                                args = {}
+                        else:
+                            args = args_raw if isinstance(args_raw, dict) else {}
+                    else:
+                        func_name = str(func) if func else ''
+                        args = tc_dict.get('arguments', {})
+                
                 predicted = {
-                    "function": tc.function,
-                    "arguments": tc.arguments if isinstance(tc.arguments, dict) else {},
+                    "function": func_name,
+                    "arguments": args,
                 }
             else:
                 is_refusal = True

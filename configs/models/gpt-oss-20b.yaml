@@ -9,7 +9,7 @@ wandb:
 
 metadata:
   release_date: 2025-08-05
-  size_category: "Medium (10–30B)"
+  size_category: "Medium (10B-30B)"
   model_size: 20000000000          # GPT-OSS 20B
   active_params: 3600000000        # 3.6B
   context_window: 131072

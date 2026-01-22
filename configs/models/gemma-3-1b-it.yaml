@@ -5,7 +5,7 @@ wandb:
 
 metadata:
   release_date: "2025-03-12"
-  size_category: "Small (<1B)"
+  size_category: "Small (<10B)"
   model_size: 1000000000
   active_params: 1000000000
   context_window: 32768

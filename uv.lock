@@ -1221,8 +1221,8 @@ dependencies = [
     { name = "numpy" },
     { name = "openai" },
     { name = "pandas" },
-    { name = "pydantic" },
     { name = "transformers" },
+    { name = "typer" },
 ]
 
 [package.optional-dependencies]
@@ -1261,12 +1261,12 @@ requires-dist = [
     { name = "openai", specifier = ">=2.8.0" },
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0.0" },
-    { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "python-dotenv", marker = "extra == 'swebench-server'", specifier = ">=1.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "swebench", marker = "extra == 'swebench-server'", specifier = "==2.1.6" },
     { name = "transformers", specifier = ">=4.48.0" },
+    { name = "typer", specifier = ">=0.20.0" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'swebench-server'", specifier = ">=0.23.0" },
 ]
 provides-extras = ["dev", "google", "swebench-server"]

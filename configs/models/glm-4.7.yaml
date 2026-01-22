@@ -37,6 +37,8 @@ model:
     max_tokens: 131072
     temperature: 1.0
     top_p: 0.95
+    timeout: 3600
+    max_retries: 5
     extra_body:
       reasoning:
         enabled: true

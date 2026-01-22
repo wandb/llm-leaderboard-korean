@@ -172,6 +172,8 @@ def bfcl_solver() -> Solver:
                 continue
         
         state.tools.extend(tool_infos)
+        # tool_calls="none": 모델이 tool_call 생성만 하고, 실행하지 않음
+        # scorer에서 assistant 메시지의 tool_calls를 직접 파싱
         return await generate(state, tool_calls="none")
     
     return solve

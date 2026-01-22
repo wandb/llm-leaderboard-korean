@@ -1,4 +1,4 @@
-# A.X-4.0 (vLLM, OpenAI-Compatible)
+# A.X-4.0 (vLLM, OpenAI-Compatible) - Thinking OFF
 
 wandb:
   run_name: "A.X-4.0"
@@ -10,11 +10,22 @@ metadata:
   active_params: 72000000000
   context_window: 131072
 
+# vLLM Server Auto-Start Configuration
+vllm:
+  model_path: "skt/A.X-4.0"
+  tensor_parallel_size: 4
+  port: 8002
+  host: "0.0.0.0"
+  max_model_len: 131072
+  trust_remote_code: true
+  served_model_name: "a.x-4.0"
+  enable_auto_tool_choice: true
+  tool_call_parser: "hermes"
+
 model:
   name: a.x-4.0
   client: litellm
   provider: hosted_vllm
-  base_url: http://localhost:8001/v1
   api_key_env: HOSTED_VLLM_API_KEY
 
   params:
@@ -23,8 +34,8 @@ model:
     top_p: 0.95
     extra_body:
       chat_template_kwargs:
-        enable_thinking: true
+        enable_thinking: false
 
 benchmarks:
   bfcl:
-    use_native_tools: true
+    use_native_tools: false  # vLLM tool_calls 형식 호환성 문제로 text-based 사용
