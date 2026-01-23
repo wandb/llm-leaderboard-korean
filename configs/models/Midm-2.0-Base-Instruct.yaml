@@ -1,0 +1,37 @@
+# Midm-2.0-Base-Instruct (vLLM Auto-Start)
+#
+# run_eval.py가 자동으로 vLLM 서버를 시작/종료합니다.
+
+wandb:
+  run_name: "Midm-2.0-Base-Instruct"
+
+metadata:
+  release_date: "2025-07-04"
+  size_category: "Medium (10B-30B)"
+  model_size: 12000000000
+  active_params: 12000000000
+  context_window: 32768
+
+vllm:
+  model_path: "K-intelligence/Midm-2.0-Base-Instruct"
+  tensor_parallel_size: 1
+  port: 8000
+  host: "0.0.0.0"
+  max_model_len: 32768
+  trust_remote_code: true
+  served_model_name: "Midm-2.0-Base-Instruct"
+
+model:
+  name: Midm-2.0-Base-Instruct
+  client: litellm
+  provider: hosted_vllm
+  api_key_env: HOSTED_VLLM_API_KEY
+
+  params:
+    max_tokens: 16384
+    temperature: 0.6
+    top_p: 0.95
+
+benchmarks:
+  bfcl:
+    use_native_tools: false

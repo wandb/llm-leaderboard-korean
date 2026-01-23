@@ -14,7 +14,7 @@ metadata:
 model:
   name: A.X-K1                  # Model ID as provided
   client: openai
-  base_url: https://api.ax-k1.sktai.chat/v1/
+  base_url: http://localhost:8002/v1
   api_key_env: SKT_AX_API_KEY   # Set to "EMPTY" if no auth required
 
   params:
