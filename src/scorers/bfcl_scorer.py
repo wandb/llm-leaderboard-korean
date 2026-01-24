@@ -40,6 +40,66 @@ from inspect_ai.solver import TaskState
 # Text-based response parsing (for prompt-based mode)
 # =============================================================================
 
+def _extract_json_with_nested_braces(text: str) -> str | None:
+    """
+    Extract JSON object from text, handling nested braces properly.
+    Finds the first '{' and matches to the corresponding closing '}'.
+    """
+    start_idx = text.find('{')
+    if start_idx == -1:
+        return None
+    
+    depth = 0
+    in_string = False
+    escape_next = False
+    
+    for i, char in enumerate(text[start_idx:], start=start_idx):
+        if escape_next:
+            escape_next = False
+            continue
+        
+        if char == '\\' and in_string:
+            escape_next = True
+            continue
+        
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+        
+        if in_string:
+            continue
+        
+        if char == '{':
+            depth += 1
+        elif char == '}':
+            depth -= 1
+            if depth == 0:
+                return text[start_idx:i+1]
+    
+    return None
+
+
+def _remove_thinking_content(text: str) -> str:
+    """
+    Remove thinking/reasoning content from model response.
+    Handles various formats: <thinking>...</thinking>, <think>...</think>, etc.
+    """
+    # Remove <thinking>...</thinking> tags (case insensitive)
+    text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # Remove <reasoning>...</reasoning> tags
+    text = re.sub(r'<reasoning>.*?</reasoning>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # Remove markdown-style thinking blocks (```thinking ... ```)
+    text = re.sub(r'```thinking.*?```', '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # Remove lines starting with "Thinking:" or similar
+    text = re.sub(r'^(Thinking|Reasoning|Let me think).*?$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+    
+    return text.strip()
+
+
 def _parse_text_response(text: str) -> dict[str, Any] | None:
     """
     Extract JSON function call from text response
@@ -49,23 +109,30 @@ def _parse_text_response(text: str) -> dict[str, Any] | None:
     
     Or for refusal:
     {"function": null, "arguments": null}
+    
+    Handles:
+    - Thinking/reasoning content (removed before parsing)
+    - Nested JSON objects in arguments
+    - Code blocks (```json ... ```)
     """
     if not text:
         return None
     
+    # Step 1: Remove thinking/reasoning content
+    cleaned_text = _remove_thinking_content(text)
+    
     try:
-        # Try to extract JSON block (```json ... ``` format)
-        json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+        # Step 2: Try to extract JSON block (```json ... ``` format)
+        json_match = re.search(r'```(?:json)?\s*(\{.*\})\s*```', cleaned_text, re.DOTALL)
         if json_match:
             json_str = json_match.group(1)
         else:
-            # Find just JSON
-            json_match = re.search(r'\{[^{}]*"function"[^{}]*\}', text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(0)
-            else:
-                # Entire text is JSON
-                json_str = text.strip()
+            # Step 3: Extract JSON with proper nested brace handling
+            json_str = _extract_json_with_nested_braces(cleaned_text)
+            
+            if json_str is None:
+                # Fallback: try entire text as JSON
+                json_str = cleaned_text.strip()
         
         parsed = json.loads(json_str)
         
