@@ -40,6 +40,41 @@ from inspect_ai.solver import TaskState
 # Text-based response parsing (for prompt-based mode)
 # =============================================================================
 
+def _extract_text_from_content(content: Any) -> str:
+    """
+    Extract text from various content formats.
+    
+    Handles:
+    - str: Return as-is
+    - list: Extract text from content blocks (ContentText, dict with 'text', etc.)
+    - Other: Convert to string
+    """
+    if isinstance(content, str):
+        return content
+    
+    if isinstance(content, list):
+        text_parts = []
+        for item in content:
+            if isinstance(item, str):
+                text_parts.append(item)
+            elif hasattr(item, 'text'):
+                # ContentText or similar object with 'text' attribute
+                text_parts.append(str(item.text))
+            elif isinstance(item, dict):
+                # Dict with 'text' or 'content' key
+                if 'text' in item:
+                    text_parts.append(str(item['text']))
+                elif 'content' in item:
+                    text_parts.append(str(item['content']))
+            else:
+                # Try to convert to string
+                text_parts.append(str(item))
+        return '\n'.join(text_parts)
+    
+    # Fallback: convert to string
+    return str(content) if content else ''
+
+
 def _extract_json_with_nested_braces(text: str) -> str | None:
     """
     Extract JSON object from text, handling nested braces properly.
@@ -447,8 +482,11 @@ def bfcl_scorer() -> Scorer:
             ]
             if assistant_messages:
                 last_response = assistant_messages[-1].content
-                if isinstance(last_response, str):
-                    predicted = _parse_text_response(last_response)
+                # Extract text from various content formats (str, list, etc.)
+                response_text = _extract_text_from_content(last_response)
+                
+                if response_text:
+                    predicted = _parse_text_response(response_text)
                     
                     # {"function": null} = refusal
                     if predicted and predicted.get("function") is None:
