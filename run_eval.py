@@ -500,8 +500,8 @@ def parse_scores_from_eval_log(eval_log, benchmark: str) -> dict | None:
         # instruction_following_final_acc or instruction_following_prompt_strict_acc
         main_score = find_metric("_final_acc", "_prompt_strict_acc")
     elif benchmark == "kobbq":
-        # kobbq_scorer_kobbq_avg
-        main_score = find_metric("_kobbq_avg", "kobbq_avg")
+        # kobbq_scorer_accuracy
+        main_score = find_metric("_accuracy", "accuracy")
     elif benchmark == "ko_hle":
         # hle_grader_hle_accuracy
         main_score = find_metric("_hle_accuracy", "hle_accuracy")
