@@ -46,8 +46,9 @@ model:
     temperature: 0.6
     top_p: 0.95
     reasoning_effort: high        # For reasoning models (high/low/xhigh)
-    timeout: 3600                  # Request timeout (seconds)
-    max_retries: 10                # Retry count on errors
+    timeout: 7200                 # Request timeout (seconds)
+    max_retries: 2                # Retry count on errors
+    max_connections: 30           # API 동시 요청 수 (기본값: 10)
 
 # =============================================================================
 # Benchmark-specific Overrides (optional)

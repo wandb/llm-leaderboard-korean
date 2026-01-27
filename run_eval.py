@@ -355,6 +355,7 @@ def get_model_generate_config(config_name: str, benchmark: str) -> dict:
         "reasoning_tokens": "reasoning_tokens",
         "timeout": "timeout",
         "max_retries": "max_retries",
+        "max_connections": "max_connections",  # API 동시 요청 수
     }
     
     for key, eval_key in key_mapping.items():
