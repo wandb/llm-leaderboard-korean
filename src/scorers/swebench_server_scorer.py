@@ -381,6 +381,7 @@ def _http_json(
     """
     data = None
     req_headers = dict(headers) if headers else {}
+    req_headers.setdefault("User-Agent", "horangi-eval/1.0")
     if body is not None:
         data = json.dumps(body).encode("utf-8")
         req_headers["Content-Type"] = "application/json"
