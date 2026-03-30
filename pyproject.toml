@@ -97,6 +97,7 @@ dependencies = [
     "sendgrid>=6.12.5",
     "keras>=3.13.1",
     "tensorflow>=2.20.0",
+    "fastapi>=0.124.4",
 ]
 
 [project.scripts]

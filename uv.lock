@@ -1915,6 +1915,7 @@ dependencies = [
     { name = "dnspython" },
     { name = "docxtpl" },
     { name = "faker" },
+    { name = "fastapi" },
     { name = "flask" },
     { name = "flask-login" },
     { name = "flask-mail" },
@@ -2008,6 +2009,7 @@ requires-dist = [
     { name = "dnspython", specifier = ">=2.8.0" },
     { name = "docxtpl", specifier = ">=0.20.2" },
     { name = "faker", specifier = ">=40.1.2" },
+    { name = "fastapi", specifier = ">=0.124.4" },
     { name = "fastapi", marker = "extra == 'swebench-server'", specifier = ">=0.100.0" },
     { name = "flask", specifier = ">=3.1.2" },
     { name = "flask-login", specifier = ">=0.6.3" },
@@ -2029,7 +2031,7 @@ requires-dist = [
     { name = "jsonlines", specifier = ">=4.0.0" },
     { name = "keras", specifier = ">=3.13.1" },
     { name = "librosa", specifier = ">=0.11.0" },
-    { name = "litellm", specifier = ">=1.80.11" },
+    { name = "litellm", specifier = "==1.82.6" },
     { name = "lxml", specifier = ">=6.0.2" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "mechanize", specifier = ">=0.4.10" },
@@ -2901,14 +2903,12 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.80.11"
+version = "1.82.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "click" },
     { name = "fastuuid" },
-    { name = "grpcio", version = "1.67.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
-    { name = "grpcio", version = "1.76.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "httpx" },
     { name = "importlib-metadata" },
     { name = "jinja2" },
@@ -2919,9 +2919,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/55/47/be6cd7b356418ca8bef3b843507940ce77b76ef2dfe515f2b4ba9b461ff0/litellm-1.80.11.tar.gz", hash = "sha256:c9fc63e7acb6360363238fe291bcff1488c59ff66020416d8376c0ee56414a19", size = 13189510, upload-time = "2025-12-22T12:47:29.181Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/29/75/1c537aa458426a9127a92bc2273787b2f987f4e5044e21f01f2eed5244fd/litellm-1.82.6.tar.gz", hash = "sha256:2aa1c2da21fe940c33613aa447119674a3ad4d2ad5eb064e4d5ce5ee42420136", size = 17414147, upload-time = "2026-03-22T06:36:00.452Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/0b/9e637344f24f3fe0e8039cd2337389fe05e0d31f518bc3e0a5cdbe45784a/litellm-1.80.11-py3-none-any.whl", hash = "sha256:406283d66ead77dc7ff0e0b2559c80e9e497d8e7c2257efb1cb9210a20d09d54", size = 11456346, upload-time = "2025-12-22T12:47:26.469Z" },
+    { url = "https://files.pythonhosted.org/packages/02/6c/5327667e6dbe9e98cbfbd4261c8e91386a52e38f41419575854248bbab6a/litellm-1.82.6-py3-none-any.whl", hash = "sha256:164a3ef3e19f309e3cabc199bef3d2045212712fefdfa25fc7f75884a5b5b205", size = 15591595, upload-time = "2026-03-22T06:35:56.795Z" },
 ]
 
 [[package]]
