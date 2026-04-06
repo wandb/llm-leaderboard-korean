@@ -34,7 +34,7 @@ dependencies = [
     "instruction_following_eval @ git+https://github.com/josejg/instruction_following_eval.git",
     "inspect-evals>=0.3.103",
     "google-genai>=1.55.0",
-    "litellm==1.82.6",
+    "litellm==1.83.0",
     # vLLM + transformers 호환성을 위해 명시적으로 지정
     # Gemma 4 지원을 위해 transformers 5.5.0+ 필요
     "transformers>=5.5.0",
