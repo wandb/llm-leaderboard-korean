@@ -1,0 +1,43 @@
+# gemma-4-E4B-it (vLLM, OpenAI-Compatible)
+
+wandb:
+  run_name: "gemma-4-E4B-it: enable-thinking"
+
+metadata:
+  release_date: "2026-04-02"
+  size_category: "Small (<10B)"
+  model_size: 8000000000
+  active_params: 4500000000
+  context_window: 131072
+
+# vLLM Server Auto-Start Configuration
+vllm:
+  model_path: "google/gemma-4-E4B-it"
+  tensor_parallel_size: 1
+  port: 8009
+  host: "0.0.0.0"
+  max_model_len: 131072
+  trust_remote_code: true
+  served_model_name: "gemma-4-E4B-it"
+  enable_auto_tool_choice: true
+  tool_call_parser: "gemma4"
+  reasoning_parser: "gemma4"
+
+model:
+  name: gemma-4-E4B-it
+  client: litellm
+  provider: hosted_vllm
+  api_key_env: HOSTED_VLLM_API_KEY
+
+  params:
+    max_tokens: 16384
+    temperature: 0.6
+    top_p: 0.95
+    extra_body:
+      skip_special_tokens: false
+      chat_template_kwargs:
+        enable_thinking: true
+
+benchmarks:
+  bfcl:
+    use_native_tools: false

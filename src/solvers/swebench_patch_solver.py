@@ -177,6 +177,11 @@ def swebench_patch_solver(include_hints: bool = True) -> Solver:
         # Final instruction
         user_prompt += (
             "I need you to solve the provided issue by generating a single patch file that I can apply directly to this repository using git apply. Please respond with a single patch file in the format shown above.\n\n"
+            "IMPORTANT RULES:\n"
+            "- Make the MINIMAL change necessary to fix the issue. Do NOT refactor surrounding code.\n"
+            "- Do NOT create new files (e.g., test files). Only modify existing files.\n"
+            "- Do NOT include unnecessary context lines. Only include lines that are changed and the minimal context needed for the patch to apply.\n"
+            "- Keep the patch as short and focused as possible.\n\n"
             "Wrap your patch in <patch> tags like this: <patch>your patch here</patch>\n\n"
             "Respond below:\n"
         )

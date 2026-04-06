@@ -376,11 +376,12 @@ def get_model_generate_config(config_name: str, benchmark: str) -> dict:
 
 
 def run_benchmark(
-    benchmark: str, 
+    benchmark: str,
     config_name: str,
     limit: int | None,
     wandb_entity: str | None = None,
     wandb_project: str | None = None,
+    log_dir: str = "./logs",
 ) -> tuple[str, bool, str, dict | None]:
     """
     Run a single benchmark (in-process using inspect_ai.eval)
@@ -434,7 +435,7 @@ def run_benchmark(
             model_args=model_args,
             model_base_url=base_url,
             limit=limit,
-            log_dir="./logs",
+            log_dir=log_dir,
             fail_on_error=False,
             continue_on_fail=True,
             display="full",  # tqdm-style progress bar
@@ -579,7 +580,9 @@ Examples:
                         help="Additional W&B tags (can be used multiple times, e.g., --tag exp1 --tag test)")
     parser.add_argument("--resume", type=str, default=None,
                         help="Resume existing W&B run by run ID (e.g., abc123xy)")
-    
+    parser.add_argument("--log-dir", type=str, default="./logs",
+                        help="Directory for inspect_ai eval logs (default: ./logs)")
+
     args = parser.parse_args()
     
     # Load W&B settings from environment variables (.env file already loaded)
@@ -708,11 +711,12 @@ Examples:
         for i, benchmark in enumerate(benchmarks, 1):
             print(f"\n[{i}/{len(benchmarks)}] ", end="")
             name, success, error, scores = run_benchmark(
-                benchmark, 
+                benchmark,
                 args.config,
                 args.limit,
                 wandb_entity=entity,
                 wandb_project=project,
+                log_dir=args.log_dir,
             )
             results.append((name, success, error))
             

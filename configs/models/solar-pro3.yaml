@@ -1,0 +1,30 @@
+# Solar Pro 3 (Upstage, OpenRouter)
+
+wandb:
+  run_name: "solar-pro3"
+
+metadata:
+  release_date: "2026-01-27"
+  size_category: "Large (30B<)"
+  model_size: 102000000000
+  active_params: 12000000000
+  context_window: 128000
+  max_output_tokens: 16384
+
+model:
+  name: upstage/solar-pro-3
+  client: litellm
+  provider: openrouter
+  api_key_env: OPENROUTER_API_KEY
+
+  params:
+    max_tokens: 16384
+    temperature: 0.6
+    top_p: 0.95
+    timeout: 7200
+    max_retries: 2
+    max_connections: 30
+
+benchmarks:
+  bfcl:
+    use_native_tools: false

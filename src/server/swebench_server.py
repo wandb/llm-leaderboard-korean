@@ -47,6 +47,18 @@ from fastapi.responses import PlainTextResponse, JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
+# Try to import swebench utilities for patch preprocessing
+try:
+    from swebench.inference.make_datasets.utils import (
+        extract_minimal_patch as _swebench_minimal_patch,
+        repair_patch as _swebench_repair_patch,
+    )
+    SWEBENCH_UTILS_AVAILABLE = True
+except ImportError:
+    SWEBENCH_UTILS_AVAILABLE = False
+    _swebench_minimal_patch = None
+    _swebench_repair_patch = None
+
 
 # ------------------------------
 # Models
@@ -166,29 +178,45 @@ def _run_single_evaluation(job: InternalJob) -> Dict[str, Any]:
             "environment_setup_commit": instance.get("environment_setup_commit", ""),
         }, ensure_ascii=False) + "\n")
 
-    # DEBUG: Temporarily disable patch processing to identify the issue
-    patch_text = req.patch_diff
-    _log(job, f"Original patch: {repr(patch_text[:200])}")
-    
-    # Just ensure 'diff --git' header exists (without any other processing)
+    # --- Patch preprocessing pipeline ---
+    patch_text = req.patch_diff.strip()
+    _log(job, f"Original patch ({len(patch_text)} chars): {repr(patch_text[:200])}")
+
+    # Step 1: swebench repair_patch (normalize format)
+    if SWEBENCH_UTILS_AVAILABLE and _swebench_repair_patch and patch_text:
+        try:
+            repaired = _swebench_repair_patch(patch_text)
+            if repaired:
+                patch_text = repaired
+                _log(job, f"Step 1 repair_patch: {len(patch_text)} chars")
+        except Exception as e:
+            _log(job, f"Step 1 repair_patch failed (skipped): {e}")
+
+    # Step 2: Fix broken header lines (path split across lines)
+    if patch_text:
+        patch_text = _fix_split_headers(patch_text)
+        _log(job, f"Step 2 _fix_split_headers: {len(patch_text)} chars")
+
+    # Step 3: swebench extract_minimal_patch (remove extraneous text)
+    if SWEBENCH_UTILS_AVAILABLE and _swebench_minimal_patch and patch_text:
+        try:
+            minimal = _swebench_minimal_patch(patch_text)
+            if minimal and len(minimal.strip()) > 0:
+                patch_text = minimal
+                _log(job, f"Step 3 extract_minimal_patch: {len(patch_text)} chars")
+        except Exception as e:
+            _log(job, f"Step 3 extract_minimal_patch failed (skipped): {e}")
+
+    # Step 4: Insert missing 'diff --git' headers for each file in the patch
     if patch_text and "diff --git" not in patch_text:
-        lines = patch_text.splitlines()
-        a_line = next((ln for ln in lines if ln.startswith("--- ")), None)
-        b_line = next((ln for ln in lines if ln.startswith("+++ ")), None)
-        if a_line and b_line:
-            try:
-                a_path = a_line.split()[1]
-                b_path = b_line.split()[1]
-                header = f"diff --git {a_path} {b_path}\n"
-                patch_text = header + patch_text
-                _log(job, "Inserted missing 'diff --git' header")
-            except Exception:
-                pass
-    
+        patch_text = _insert_diff_git_headers(patch_text)
+        _log(job, f"Step 4 _insert_diff_git_headers: {len(patch_text)} chars")
+
     # Ensure trailing newline
     if patch_text and not patch_text.endswith('\n'):
-        patch_text = patch_text + '\n'
-        _log(job, "Added trailing newline to patch")
+        patch_text += '\n'
+
+    _log(job, f"Final patch ({len(patch_text)} chars): {repr(patch_text[:200])}")
 
     # Write predictions (model patch)
     with open(predictions_file, "w", encoding="utf-8") as f:
@@ -256,7 +284,30 @@ def _run_single_evaluation(job: InternalJob) -> Dict[str, Any]:
     return result_dict
 
 
-# NOTE: expand_hunk_headers is removed to maintain compatibility with local evaluator
+def _insert_diff_git_headers(patch: str) -> str:
+    """Insert 'diff --git' headers for each file in a multi-file patch.
+
+    Handles patches that have '--- a/...' and '+++ b/...' lines but are
+    missing the 'diff --git a/... b/...' header that git apply requires.
+    """
+    if not patch:
+        return patch
+    lines = patch.splitlines(keepends=True)
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        # Look for '--- a/...' followed by '+++ b/...'
+        if line.startswith("--- ") and (i + 1) < len(lines) and lines[i + 1].startswith("+++ "):
+            try:
+                a_path = line.split()[1]
+                b_path = lines[i + 1].split()[1]
+                result.append(f"diff --git {a_path} {b_path}\n")
+            except (IndexError, ValueError):
+                pass
+        result.append(line)
+        i += 1
+    return "".join(result)
 
 
 def _fix_split_headers(patch: str) -> str:

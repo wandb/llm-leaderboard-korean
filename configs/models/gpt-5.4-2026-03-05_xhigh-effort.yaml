@@ -7,7 +7,7 @@ metadata:
   release_date: "2026-03-05"
   size_category: null
   model_size: null
-  context_window: 400000
+  context_window: 1050000
   max_output_tokens: 128000
 
 model:
@@ -29,3 +29,4 @@ benchmarks:
     use_native_tools: true
   swebench_verified_official_80:
     max_tokens: 128000
+    temperature: 0

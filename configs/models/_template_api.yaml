@@ -1,8 +1,12 @@
 # =============================================================================
 # Model Configuration Template - API Version
-# 
-# Use this template for cloud API models (Anthropic, OpenAI, Google, xAI, etc.)
+#
+# Use this template for cloud API models.
 # Filename: <model-name>.yaml (e.g., gpt-4o.yaml, claude-opus-4-5.yaml)
+#
+# Provider examples:
+#   - Direct API: client=openai (OpenAI), client=litellm + provider=anthropic/google/xai
+#   - OpenRouter: client=litellm + provider=openrouter
 # =============================================================================
 
 # W&B Settings
@@ -26,18 +30,22 @@ model:
   # Model name (as recognized by the provider)
   # Examples:
   #   - claude-opus-4-5-20251101 (Anthropic)
-  #   - gpt-4o-2024-11-20 (OpenAI)
+  #   - gpt-4o-2024-11-20 (OpenAI direct: client=openai)
   #   - gemini-2.5-pro (Google)
+  #   - moonshotai/kimi-k2.5 (OpenRouter: provider=openrouter)
   name: model-name
 
   # API Client: litellm | openai
+  #   - openai: Direct OpenAI API (supports client_timeout, reasoning_effort)
+  #   - litellm: All other providers (Anthropic, Google, OpenRouter, etc.)
   client: litellm
 
   # Model Provider (for LiteLLM routing)
-  # Examples: anthropic, openai, xai, google, qwen, friendliai
+  # Examples: anthropic, openai, xai, google, qwen, friendliai, openrouter
   provider: anthropic
 
   # Environment variable name for API key
+  # Examples: ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY
   api_key_env: ANTHROPIC_API_KEY
 
   # Generation Parameters
@@ -49,6 +57,12 @@ model:
     timeout: 7200                 # Request timeout (seconds)
     max_retries: 2                # Retry count on errors
     max_connections: 30           # API 동시 요청 수 (기본값: 10)
+    # client_timeout: 600         # OpenAI direct client only (client=openai)
+
+    # OpenRouter reasoning models: enable thinking via extra_body
+    # extra_body:
+    #   reasoning:
+    #     enabled: true
 
 # =============================================================================
 # Benchmark-specific Overrides (optional)
@@ -57,3 +71,6 @@ model:
 benchmarks:
   bfcl:
     use_native_tools: false         # Native Tool Calling for API models
+  swebench_verified_official_80:
+    max_tokens: 64000               # Larger output for code generation
+    # temperature: 0                # Optional: deterministic for code tasks

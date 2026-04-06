@@ -75,6 +75,8 @@
 | | `ko_aime2025` | AIME 2025 고난도 수학 | 30 | [allganize/AIME2025-ko](https://huggingface.co/datasets/allganize/AIME2025-ko) |
 | **추상추론** | `ko_arc_agi` | 시각적/구조적 추론, 추상적 문제 해결 | 100 | [ARC-AGI](https://arcprize.org/) |
 | **코딩** | `swebench_verified_official_80` | GitHub 이슈 해결 능력 | 80 | [SWE-bench](https://www.swebench.com/) |
+| | `humaneval_100` | Python 코드 생성 (HumanEval) | 100 | [openai/human-eval](https://github.com/openai/human-eval) |
+| | `bigcodebench_100` | 복합 코딩 문제 해결 | 100 | [bigcode-project/bigcodebench](https://github.com/bigcode-project/bigcodebench) |
 | **함수호출** | `bfcl` | 함수 호출 정확성 (단일, 멀티턴, 무관계검출) | 258 | [BFCL](https://gorilla.cs.berkeley.edu/blogs/8_berkeley_function_calling_leaderboard.html) |
 
 ### 가치정렬성능 (ALT) - Alignment Performance
@@ -153,7 +155,7 @@ horangi/
 
 ### 요구 사항
 
-- Python 3.12+
+- Python 3.11+
 - [uv](https://github.com/astral-sh/uv) (권장) 또는 pip
 
 ### 설치 방법
@@ -163,8 +165,8 @@ horangi/
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # 저장소 클론
-git clone https://github.com/wandb-korea/horangi.git
-cd horangi
+git clone https://github.com/wandb/llm-leaderboard-korean.git
+cd llm-leaderboard-korean
 
 # 의존성 설치
 uv sync
@@ -228,6 +230,7 @@ uv run python run_eval.py --config gpt-4o --tag experiment1 --tag test
 | `--limit` | 벤치마크당 샘플 수 제한 |
 | `--resume` | 기존 W&B run ID로 재개 |
 | `--tag` | W&B 태그 추가 (여러 번 사용 가능) |
+| `--log-dir` | inspect_ai 평가 로그 디렉토리 (기본: `./logs`, 병렬 실행 시 분리 필요) |
 
 ### 주요 기능
 
@@ -275,7 +278,7 @@ uv run python run_eval.py --config my-model
 
 SWE-bench는 실제 오픈소스 프로젝트의 버그 수정 능력을 평가하는 벤치마크입니다.
 
-📖 **자세한 설정 가이드**: [docs/README_swebench.md](docs/README_swebench.md)
+📖 **자세한 설정 가이드**: [docs/README_swebench_ko.md](docs/README_swebench_ko.md) | **서버 셋업**: [docs/swebench_server_setup.md](docs/swebench_server_setup.md)
 
 ### 빠른 시작
 

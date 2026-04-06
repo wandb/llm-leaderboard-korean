@@ -214,7 +214,7 @@ def _build_vllm_command(
         # Suppress vLLM logs to keep evaluation output clean
         "--uvicorn-log-level", "warning",
         "--disable-log-stats",
-        "--disable-log-requests",
+        "--no-enable-log-requests",
     ]
     
     if served_model_name:
