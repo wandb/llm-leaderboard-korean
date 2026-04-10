@@ -1,20 +1,27 @@
-# 🔧 SWE-bench 평가 가이드
+# SWE-bench 평가 가이드
 
 SWE-bench는 실제 오픈소스 프로젝트의 버그 수정 능력을 평가하는 벤치마크입니다.  
 모델이 생성한 unified diff 패치를 Docker 환경에서 적용하고, 테스트 통과 여부로 채점합니다.
 
 ---
 
-## 📋 목차
+## 목차
 
 - [아키텍처](#아키텍처)
-- [서버 설치 및 실행](#서버-설치-및-실행)
+- [채점 서버](#채점-서버)
+  - [요구 사항](#요구-사항)
+  - [설치](#설치)
+  - [서버 시작](#서버-시작)
+  - [환경변수](#환경변수)
 - [클라이언트 설정](#클라이언트-설정)
 - [평가 실행](#평가-실행)
 - [데이터셋 정보](#데이터셋-정보)
 - [평가 흐름](#평가-흐름)
 - [출력 형식](#출력-형식-중요)
 - [서버 API](#서버-api-엔드포인트)
+- [트러블슈팅](#트러블슈팅)
+- [부록: AWS EC2로 서버 운영](#부록-aws-ec2로-서버-운영)
+- [참고 자료](#참고-자료)
 
 ---
 
@@ -37,11 +44,18 @@ SWE-bench는 실제 오픈소스 프로젝트의 버그 수정 능력을 평가�
 
 ---
 
-## 서버 설치 및 실행
+## 채점 서버
 
-평가 서버는 **Docker가 설치된 Linux 환경**에서 실행해야 합니다.
+Docker가 설치된 Linux 머신이면 어디서든 채점 서버를 띄울 수 있습니다.  
+자체 서버가 없는 경우 [부록: AWS EC2로 서버 운영](#부록-aws-ec2로-서버-운영)을 참고하세요.
 
-### 의존성 설치
+### 요구 사항
+
+- Linux (Docker 필요 — macOS Docker Desktop은 미지원)
+- Python 3.12+
+- 최소 4 vCPU / 16GB RAM / 100GB 디스크 권장
+
+### 설치
 
 ```bash
 # 방법 1: pip 직접 설치
@@ -54,19 +68,19 @@ uv add fastapi "uvicorn[standard]" swebench --optional swebench-server
 ### 서버 시작
 
 ```bash
-# 서버 시작
+# 포어그라운드 실행
 uv run python src/server/swebench_server.py --host 0.0.0.0 --port 8000
-
-# 또는 모듈로 실행
-uv run python -m server.swebench_server --host 0.0.0.0 --port 8000
 
 # 백그라운드 실행
 nohup python src/server/swebench_server.py \
   --host 0.0.0.0 --port 8000 \
   >/tmp/swebench_server.out 2>&1 & disown
+
+# 헬스체크
+curl http://localhost:8000/health
 ```
 
-### 서버 환경변수
+### 환경변수
 
 | 환경변수 | 기본값 | 설명 |
 |---------|--------|------|
@@ -74,17 +88,18 @@ nohup python src/server/swebench_server.py \
 | `SWE_MAX_JOBS` | `4` | 동시 실행 최대 작업 수 |
 | `SWE_JOB_TIMEOUT` | `1800` | 작업 타임아웃 (초, 30분) |
 | `SWE_PREBUILD_IMAGES` | `true` | Docker 이미지 사전 빌드 |
+| `SWE_WORKERS` | `4` | 동시 평가 워커 수 |
 
 ---
 
 ## 클라이언트 설정
 
-클라이언트(horangi)는 macOS나 다른 환경에서 실행 가능합니다.
+클라이언트(horangi)는 macOS 등 Docker 없는 환경에서도 실행 가능합니다.  
+채점 서버 URL만 알면 됩니다.
 
 ### 환경변수 설정
 
 ```bash
-# 서버 URL 설정
 export SWE_SERVER_URL=http://YOUR_SERVER:8000
 
 # (선택) API 키가 있는 경우
@@ -110,6 +125,12 @@ uv run horangi swebench_verified_official_80 --config gpt-4o -T limit=5
 
 # 전체 평가 (80개 샘플)
 uv run horangi swebench_verified_official_80 --config gpt-4o
+
+# run_eval.py를 통한 실행
+uv run python run_eval.py --config <model_config> --only swebench_verified_official_80
+
+# resume으로 swebench만 재실행
+uv run python resume_swebench.py --workers 4
 ```
 
 ---
@@ -193,7 +214,7 @@ uv run horangi swebench_verified_official_80 --config gpt-4o
 +    additional_fix()
 ```
 
-### ⚠️ CRITICAL
+### CRITICAL
 
 - **라인 번호 필수**: `@@ -start,count +start,count @@` 형식의 hunk header가 반드시 필요합니다.
 - 라인 번호 없이 `@@ @@`만 사용하면 패치 적용이 실패합니다.
@@ -217,7 +238,9 @@ uv run horangi swebench_verified_official_80 --config gpt-4o
 | `/health` | GET | 헬스 체크 |
 | `/v1/jobs` | POST | 평가 작업 생성 |
 | `/v1/jobs/{job_id}` | GET | 작업 상태 조회 |
+| `/v1/jobs/{job_id}/logs` | GET | 작업 로그 조회 |
 | `/v1/jobs/{job_id}/report` | GET | 평가 결과 조회 |
+| `/v1/summary` | GET | 전체 큐 상태 요약 |
 
 ### 작업 생성 예시
 
@@ -276,11 +299,6 @@ curl http://localhost:8000/v1/jobs/{job_id}/report
 
 ## 트러블슈팅
 
-### Docker 관련
-
-- 서버는 Docker가 필요합니다. Linux 환경에서 실행하세요.
-- macOS에서는 클라이언트만 실행하고, 서버는 별도 Linux 서버에서 운영하세요.
-
 ### 패치 적용 실패
 
 - hunk header에 라인 번호가 없는지 확인하세요.
@@ -291,10 +309,148 @@ curl http://localhost:8000/v1/jobs/{job_id}/report
 - 기본 타임아웃은 30분(1800초)입니다.
 - 복잡한 테스트는 더 오래 걸릴 수 있으니 `SWE_JOB_TIMEOUT` 환경변수로 조정하세요.
 
+### 서버 프로세스가 안 뜰 때
+
+```bash
+# 로그 확인
+cat /tmp/swebench_server.out
+
+# 포트 사용 중인 프로세스 확인/제거
+sudo lsof -t -i:8000 | xargs sudo kill -9
+```
+
+### Docker 이미지 디스크 부족
+
+```bash
+sudo docker system prune -af
+```
+
+---
+
+## 부록: AWS EC2로 서버 운영
+
+Docker가 돌아가는 Linux 서버가 없으면 AWS EC2를 빌려 쓸 수 있습니다.
+
+### 기존 인스턴스 사용
+
+프로젝트 전용 EC2 인스턴스가 이미 세팅되어 있습니다.
+
+| 항목 | 값 |
+|---|---|
+| Instance ID | `i-00796b3844c7f4a25` |
+| 타입 | m5.xlarge (4 vCPU, 16GB RAM, 100GB gp3) |
+| 리전 | ap-northeast-2 (서울) |
+| 보안그룹 | `sg-08535256fcd8b3e7a` (SSH 22, API 8000 개방) |
+| 키페어 | `swebench-server` (`~/.ssh/swebench-server.pem`) |
+
+```bash
+# 인스턴스 시작
+aws ec2 start-instances --instance-ids i-00796b3844c7f4a25 --region ap-northeast-2
+
+# Public IP 확인 (시작할 때마다 바뀜)
+aws ec2 describe-instances --instance-ids i-00796b3844c7f4a25 --region ap-northeast-2 \
+  --query 'Reservations[0].Instances[0].PublicIpAddress' --output text
+
+# SSH로 채점 서버 프로세스 시작
+ssh -i ~/.ssh/swebench-server.pem ubuntu@<PUBLIC_IP> \
+  'sudo bash -c "export PATH=/root/.local/bin:\$PATH; cd /opt/llm-leaderboard-korean; export SWE_WORKERS=4; nohup uv run python src/server/swebench_server.py --port 8000 >/tmp/swebench_server.out 2>&1 &"'
+
+# 헬스체크
+curl http://<PUBLIC_IP>:8000/health
+
+# 사용 끝나면 인스턴스 중지
+aws ec2 stop-instances --instance-ids i-00796b3844c7f4a25 --region ap-northeast-2
+```
+
+### 새 인스턴스 만들기
+
+#### 1. EC2 인스턴스 생성
+
+```bash
+# 키페어 생성
+aws ec2 create-key-pair --key-name swebench-server \
+  --query 'KeyMaterial' --output text > ~/.ssh/swebench-server.pem
+chmod 600 ~/.ssh/swebench-server.pem
+
+# 보안그룹 생성
+VPC_ID=$(aws ec2 describe-vpcs --query 'Vpcs[?IsDefault].VpcId' --output text)
+SG_ID=$(aws ec2 create-security-group \
+  --group-name swebench-sg --description "SWE-bench server" \
+  --vpc-id $VPC_ID --query 'GroupId' --output text)
+aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 22 --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 8000 --cidr 0.0.0.0/0
+
+# Ubuntu 22.04 AMI 찾기
+AMI_ID=$(aws ec2 describe-images --owners 099720109477 \
+  --filters "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*" \
+            "Name=state,Values=available" \
+  --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text)
+
+# 인스턴스 생성
+aws ec2 run-instances \
+  --image-id $AMI_ID \
+  --instance-type m5.xlarge \
+  --key-name swebench-server \
+  --security-group-ids $SG_ID \
+  --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":100,"VolumeType":"gp3"}}]' \
+  --associate-public-ip-address \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=swebench-server}]' \
+  --count 1
+```
+
+#### 2. 서버 환경 구축
+
+```bash
+ssh -i ~/.ssh/swebench-server.pem ubuntu@<PUBLIC_IP>
+
+sudo apt-get update -y
+sudo apt-get install -y docker.io python3-pip python3-venv git curl
+sudo systemctl enable docker && sudo systemctl start docker
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="/root/.local/bin:$PATH"
+
+cd /opt
+sudo git clone https://github.com/wandb/llm-leaderboard-korean.git
+cd llm-leaderboard-korean
+sudo uv python install 3.12
+sudo uv sync --python 3.12
+sudo uv pip install uvicorn swebench
+```
+
+#### 3. 채점 서버 시작
+
+```bash
+sudo bash -c '
+export PATH=/root/.local/bin:$PATH
+cd /opt/llm-leaderboard-korean
+export SWE_WORKERS=4
+nohup uv run python src/server/swebench_server.py --port 8000 \
+  >/tmp/swebench_server.out 2>&1 & disown
+'
+```
+
+### EC2 비용
+
+| 상태 | 비용 |
+|---|---|
+| Running (m5.xlarge) | ~$0.19/hr (~$136/월) |
+| Stopped | ~$8/월 (100GB EBS만) |
+
+사용하지 않을 때는 반드시 Stop 해두세요.
+
+### Public IP 고정 (Elastic IP)
+
+Stop/Start 하면 IP가 바뀝니다. 고정하려면:
+
+```bash
+ALLOC_ID=$(aws ec2 allocate-address --query 'AllocationId' --output text)
+aws ec2 associate-address --instance-id i-00796b3844c7f4a25 --allocation-id $ALLOC_ID
+```
+
 ---
 
 ## 참고 자료
 
 - [SWE-bench 공식 레포](https://github.com/princeton-nlp/SWE-bench)
 - [Nejumi LLM Leaderboard SWE-bench 가이드](https://github.com/wandb/llm-leaderboard/blob/main/docs/README_swebench.md)
-

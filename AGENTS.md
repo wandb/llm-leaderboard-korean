@@ -59,7 +59,7 @@ SWE_SERVER_URL  # swebench evaluation server URL
 
 For benchmark architecture and inheritance patterns, see `docs/README_benchmark_en.md`.
 
-For SWE-bench server setup, see `docs/swebench_server_setup.md`.
+For SWE-bench setup (server, client, evaluation), see `docs/README_swebench_en.md`.
 
 Models with a `vllm` section in their config auto-start a local vLLM server via `VLLMServerManager`.
 
@@ -84,7 +84,7 @@ Create `configs/models/<ModelName>.yaml`. Reference the template: `configs/model
 
 ## Step 3: Prepare SWE-bench Server
 
-SWE-bench evaluation requires a separate Docker-based server. Follow `docs/swebench_server_setup.md` to start the server and set `SWE_SERVER_URL` in `.env`.
+SWE-bench evaluation requires a separate Docker-based server. Follow `docs/README_swebench_en.md` to start the server and set `SWE_SERVER_URL` in `.env`.
 
 ## Step 4: Run Benchmarks
 

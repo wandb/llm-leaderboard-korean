@@ -280,7 +280,7 @@ See [Horangi benchmark documentation](./docs/README_benchmark.md).
 
 SWE-bench is a benchmark that evaluates the ability to fix bugs in real open-source projects.
 
-📖 **Detailed setup guide**: [docs/README_swebench_en.md](docs/README_swebench_en.md) | **Server setup**: [docs/swebench_server_setup.md](docs/swebench_server_setup.md)
+📖 **Detailed setup guide**: [docs/README_swebench_en.md](docs/README_swebench_en.md)
 
 ### Quick Start
 

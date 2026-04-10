@@ -16,7 +16,7 @@
 | | |
 |---|---|
 | 리더보드 등재 신청 | [신청 폼](https://docs.google.com/forms/d/e/1FAIpQLSdQERNX8jCEuqzUiodjnUdAI7JRCemy5sgmVylio-u0DRb9Xw/viewform) |
-| 엔터프라이즈 문의 | contact-kr@wandb.com |
+| 엔터프라이즈 도입 문의 | contact-kr@wandb.com |
 
 ---
 
@@ -278,7 +278,7 @@ uv run python run_eval.py --config my-model
 
 SWE-bench는 실제 오픈소스 프로젝트의 버그 수정 능력을 평가하는 벤치마크입니다.
 
-📖 **자세한 설정 가이드**: [docs/README_swebench_ko.md](docs/README_swebench_ko.md) | **서버 셋업**: [docs/swebench_server_setup.md](docs/swebench_server_setup.md)
+📖 **자세한 설정 가이드**: [docs/README_swebench_ko.md](docs/README_swebench_ko.md)
 
 ### 빠른 시작
 
