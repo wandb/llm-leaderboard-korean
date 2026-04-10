@@ -75,6 +75,8 @@ Evaluates general language model capabilities including language understanding, 
 | | `ko_aime2025` | AIME 2025 advanced math | 30 | [allganize/AIME2025-ko](https://huggingface.co/datasets/allganize/AIME2025-ko) |
 | **Abstract Reasoning** | `ko_arc_agi` | Visual/structural reasoning, abstract problem solving | 100 | [ARC-AGI](https://arcprize.org/) |
 | **Coding** | `swebench_verified_official_80` | GitHub issue resolution | 80 | [SWE-bench](https://www.swebench.com/) |
+| | `humaneval_100` | Python code generation (HumanEval) | 100 | [openai/human-eval](https://github.com/openai/human-eval) |
+| | `bigcodebench_100` | Complex coding problem solving | 100 | [bigcode-project/bigcodebench](https://github.com/bigcode-project/bigcodebench) |
 | **Function Calling** | `bfcl` | Function calling accuracy (single, multi-turn, irrelevance detection) | 258 | [BFCL](https://gorilla.cs.berkeley.edu/blogs/8_berkeley_function_calling_leaderboard.html) |
 
 ### Alignment Performance (ALT)
@@ -163,8 +165,8 @@ horangi/
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Clone repository
-git clone https://github.com/wandb-korea/horangi.git
-cd horangi
+git clone https://github.com/wandb/llm-leaderboard-korean.git
+cd llm-leaderboard-korean
 
 # Install dependencies
 uv sync
@@ -175,20 +177,20 @@ uv sync
 Copy `.env.sample` to create a `.env` file or set environment variables directly:
 
 ```bash
-# Provide the API key for the model(s) you intend to use
-HF_TOKEN=your_huggingface_token
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-GEMINI_API_KEY=your_gemini_api_key
-UPSTAGE_API_KEY=your_upstage_api_key
-
-# W&B settings
+# W&B settings (required)
 WANDB_API_KEY=your_wandb_api_key
 WANDB_ENTITY=your_wandb_entity
 WANDB_PROJECT=your_wandb_project
-# inspect_ai settings
-INSPECT_WANDB_WEAVE_ENABLED=true_or_false
-INSPECT_WANDB_MODELS_ENABLED=true_or_false
+
+# Model API keys (set for the models you use)
+HF_TOKEN=your_huggingface_token
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+GOOGLE_API_KEY=your_google_api_key
+DEEPSEEK_API_KEY=your_deepseek_api_key
+OPENROUTER_API_KEY=your_openrouter_api_key
+HOSTED_VLLM_API_KEY=dummy
+
 # swebench server settings
 SWE_API_KEY=your_swebench_server_api_key
 ```
@@ -278,7 +280,7 @@ See [Horangi benchmark documentation](./docs/README_benchmark.md).
 
 SWE-bench is a benchmark that evaluates the ability to fix bugs in real open-source projects.
 
-📖 **Detailed setup guide**: [docs/README_swebench.md](docs/README_swebench.md)
+📖 **Detailed setup guide**: [docs/README_swebench_en.md](docs/README_swebench_en.md) | **Server setup**: [docs/swebench_server_setup.md](docs/swebench_server_setup.md)
 
 ### Quick Start
 

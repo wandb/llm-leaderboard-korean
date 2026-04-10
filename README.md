@@ -155,7 +155,7 @@ horangi/
 
 ### 요구 사항
 
-- Python 3.11+
+- Python 3.12+
 - [uv](https://github.com/astral-sh/uv) (권장) 또는 pip
 
 ### 설치 방법
@@ -177,20 +177,20 @@ uv sync
 `.env.sample`을 복사하여 `.env` 파일을 생성하거나 환경 변수를 직접 설정합니다:
 
 ```bash
-# Provide the API key for the model(s) you intend to use
-HF_TOKEN=your_huggingface_token
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-GEMINI_API_KEY=your_gemini_api_key
-UPSTAGE_API_KEY=your_upstage_api_key
-
-# W&B 설정
+# W&B 설정 (필수)
 WANDB_API_KEY=your_wandb_api_key
 WANDB_ENTITY=your_wandb_entity
 WANDB_PROJECT=your_wandb_project
-# inspect_ai 설정
-INSPECT_WANDB_WEAVE_ENABLED=true_or_false
-INSPECT_WANDB_MODELS_ENABLED=true_or_false
+
+# 모델 API 키 (사용하는 모델에 맞게 설정)
+HF_TOKEN=your_huggingface_token
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+GOOGLE_API_KEY=your_google_api_key
+DEEPSEEK_API_KEY=your_deepseek_api_key
+OPENROUTER_API_KEY=your_openrouter_api_key
+HOSTED_VLLM_API_KEY=dummy
+
 # swebench server 설정
 SWE_API_KEY=your_swebench_server_api_key
 ```

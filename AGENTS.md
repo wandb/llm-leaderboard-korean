@@ -33,13 +33,25 @@ uv run python src/server/swebench_server.py --port 8000
 
 Config name is the YAML filename without extension from `configs/models/` (e.g., `gpt-5.4-2026-03-05_xhigh-effort`).
 
+# Initial Setup: W&B (Weights & Biases)
+
+All benchmark results are logged to W&B and its Weave leaderboard. Before running evaluations, users must:
+
+1. **Sign up** at [wandb.ai](https://wandb.ai) and get an API key from [wandb.ai/authorize](https://wandb.ai/authorize).
+2. **Create a project** in the W&B dashboard (e.g., `my-korean-llm-bench`). A project is a container for all your evaluation runs.
+3. **Set environment variables** in `.env`:
+   - `WANDB_API_KEY`: Your API key for authentication.
+   - `WANDB_ENTITY`: Your W&B username or team name. This is the account that owns the project.
+   - `WANDB_PROJECT`: The project name you created above.
+
 # Required Environment Variables
 
-Set in `.env` file at project root:
+Set in `.env` file at project root (copy from `.env.sample`):
 ```
-WANDB_ENTITY, WANDB_PROJECT, WANDB_API_KEY
-OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY
-OPENROUTER_API_KEY, HF_TOKEN
+WANDB_API_KEY, WANDB_ENTITY, WANDB_PROJECT
+OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY
+DEEPSEEK_API_KEY, OPENROUTER_API_KEY, HF_TOKEN
+HOSTED_VLLM_API_KEY, SWE_API_KEY
 SWE_SERVER_URL  # swebench evaluation server URL
 ```
 

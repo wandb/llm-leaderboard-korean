@@ -2390,7 +2390,7 @@ wheels = [
 [[package]]
 name = "inspect-wandb"
 version = "0.2.0"
-source = { git = "https://github.com/hw-oh/inspect_wandb.git#258e3a5fe3db4f6a6fe89d315b93454d3c7c5b6e" }
+source = { git = "https://github.com/hw-oh/inspect_wandb.git#127f052997ad557bf9406ac63caad5d694434180" }
 dependencies = [
     { name = "inspect-ai" },
     { name = "pydantic" },
