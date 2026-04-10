@@ -1,12 +1,8 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Project Overview
+# Project Overview
 
 Horangi (호랑이) is a Korean LLM benchmark evaluation framework built on top of Inspect AI. It evaluates 30+ benchmarks across two categories (GLP: General Language Performance, ALT: Alignment Performance) and publishes results to a W&B/Weave leaderboard.
 
-## Common Commands
+# Common Commands
 
 ```bash
 # Install dependencies
@@ -37,7 +33,7 @@ uv run python src/server/swebench_server.py --port 8000
 
 Config name is the YAML filename without extension from `configs/models/` (e.g., `gpt-5.4-2026-03-05_xhigh-effort`).
 
-## Required Environment Variables
+# Required Environment Variables
 
 Set in `.env` file at project root:
 ```
@@ -47,92 +43,57 @@ OPENROUTER_API_KEY, HF_TOKEN
 SWE_SERVER_URL  # swebench evaluation server URL
 ```
 
-## Architecture
+# Architecture
 
-### Evaluation Pipeline
+For benchmark architecture and inheritance patterns, see `docs/README_benchmark_en.md`.
 
-```
-configs/models/<name>.yaml          # Model config (client, params, benchmark overrides)
-        ↓
-run_eval.py                         # Orchestrator: loads config, iterates benchmarks
-        ↓
-src/benchmarks/horangi.py           # @task functions call create_benchmark()
-        ↓
-src/core/factory.py                 # Factory: loads data, creates Inspect AI Task
-  ├── loads BenchmarkConfig from src/benchmarks/<name>.py
-  ├── loads data from Weave refs or JSONL
-  ├── if `base` exists: inherits solver/scorer from inspect_evals
-  └── otherwise: uses custom solver/scorer from src/solvers/ and src/scorers/
-        ↓
-inspect_ai.eval()                   # Runs evaluation (inspect-wandb auto-logs to Weave)
-        ↓
-src/core/models_leaderboard.py      # Aggregates scores into GLP/ALT categories
-src/core/weave_leaderboard.py       # Publishes Weave leaderboard
-```
+For SWE-bench server setup, see `docs/swebench_server_setup.md`.
 
-### Key Pattern: Benchmark Inheritance
+Models with a `vllm` section in their config auto-start a local vLLM server via `VLLMServerManager`.
 
-Many benchmarks inherit from `inspect_evals` (official implementations). Horangi replaces only the dataset (Korean-translated) and solver while keeping the original scorer. This is done via the `base` field in BenchmarkConfig:
+# Adding and Evaluating a New Model (Step-by-Step)
 
-```python
-# src/benchmarks/ko_hellaswag.py
-CONFIG = BenchmarkConfig(
-    base="inspect_evals.hellaswag.hellaswag",  # Inherit scorer from official
-    data_type="weave",
-    data_source="weave:///horangi/horangi4/object/KoHellaSwag_mini:...",
-    solver="korean_multiple_choice",
-)
-```
+Full workflow for adding a new model and running all benchmarks.
 
-### Model Config Structure
+## Step 1: Gather Model Information
 
-```yaml
-# configs/models/<name>.yaml
-model:
-  name: gpt-5.4-2026-03-05       # Model identifier
-  client: openai | litellm        # API client
-  provider: openai | anthropic | openrouter | hosted_vllm
-  api_key_env: OPENAI_API_KEY
-  params:                          # Global generation params
-    max_tokens: 128000
-    temperature: 1
-    reasoning_effort: xhigh
+Fetch the HuggingFace model page and extract:
+- Model ID (e.g., `LGAI-EXAONE/EXAONE-4.5-33B`)
+- Parameter count, MoE status (active_params if applicable)
+- Context window size
+- Whether it is a thinking/reasoning model
+- Tool calling support and parser type (hermes, llama3_json, etc.)
+- Release date
+- **Special requirements**: custom vLLM/transformers fork needed or not
 
-benchmarks:                        # Per-benchmark overrides
-  swebench_verified_official_80:
-    max_tokens: 128000
-    temperature: 0
+## Step 2: Create Config YAML
+
+Create `configs/models/<ModelName>.yaml`. Reference the template: `configs/models/_template_vllm.yaml` and `configs/models/_template_api.yaml`
+
+## Step 3: Prepare SWE-bench Server
+
+SWE-bench evaluation requires a separate Docker-based server. Follow `docs/swebench_server_setup.md` to start the server and set `SWE_SERVER_URL` in `.env`.
+
+## Step 4: Run Benchmarks
+
+```bash
+# Standard models
+uv run python run_eval.py --config <ModelName>
+
+# Models with custom forks
+.venv/bin/python run_eval.py --config <ModelName>
+
+# Run specific benchmarks only
+.venv/bin/python run_eval.py --config <ModelName> --only kmmlu,kobbq
+
+# Limit samples (for quick testing)
+.venv/bin/python run_eval.py --config <ModelName> --limit 5
 ```
 
-`config_loader.py` merges base_config.yaml → model params → benchmark overrides.
+## Step 5: Troubleshooting
 
-### SWE-bench Evaluation
-
-SWE-bench uses a separate server architecture:
-1. **Solver** (`swebench_patch_solver.py`): LLM generates unified diff patch
-2. **Scorer** (`swebench_server_scorer.py`): Client-side patch normalization pipeline (extract_diff → repair_patch → fix_split_headers → extract_minimal_patch), then submits to server
-3. **Server** (`swebench_server.py`): Receives patch, runs swebench official harness in Docker, returns resolved/unresolved
-
-Server setup guide: `docs/swebench_server_setup.md`
-
-### Parallel Execution
-
-When running multiple models in parallel, each process needs isolated directories to avoid `inspect_ai` log_dir lock conflicts and wandb state corruption:
-- `--log-dir` per process (for inspect_ai eval logs)
-- `WANDB_DIR` per process (for wandb metadata)
-- `CUDA_VISIBLE_DEVICES` per vLLM model (GPU isolation)
-
-### vLLM Local Models
-
-Models with a `vllm` section in their config auto-start a local vLLM server via `VLLMServerManager`. These models require GPU access and cannot run in parallel with each other unless given dedicated GPUs.
-
-## Adding a New Benchmark
-
-1. Create `src/benchmarks/<name>.py` with a `CONFIG = BenchmarkConfig(...)` 
-2. Add `@task` function in `src/benchmarks/horangi.py`
-3. Register in `run_eval.py`'s `ALL_BENCHMARKS` list
-4. If custom scoring needed, add scorer in `src/scorers/` and register in `factory.py`
-
-## Adding a New Model
-
-Create `configs/models/<name>.yaml` following the structure above. The config name (filename without `.yaml`) is used as the `--config` argument.
+- **Timeout errors** (`litellm.Timeout`): For thinking models, ensure `timeout: 7200` and `max_retries: 10` are set in config.
+- **Architecture not recognized** (`model type "xxx" but Transformers does not recognize`): Custom transformers fork required. Check HuggingFace model page for install instructions.
+- **swebench score 0.0000**: Verify `SWE_SERVER_URL` is set in `.env` and server health check passes.
+- **GPU OOM**: Increase `tensor_parallel_size` or reduce `max_model_len`.
+- **Slow generation**: Expected with thinking models (long reasoning traces). Wait it out for fair evaluation.
