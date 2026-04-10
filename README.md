@@ -192,7 +192,7 @@ OPENROUTER_API_KEY=your_openrouter_api_key
 HOSTED_VLLM_API_KEY=dummy
 
 # swebench server 설정
-SWE_API_KEY=your_swebench_server_api_key
+SWE_SERVER_URL=http://YOUR_SERVER:8000
 ```
 
 ---
