@@ -1,0 +1,44 @@
+# NVIDIA-Nemotron-3-Nano-30B-A3B-BF16 (vLLM local, OpenAI-Compatible)
+# NOTE: requires vLLM >= 0.12.0 and nano_v3_reasoning_parser.py plugin from:
+#   https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16
+#
+# Manual server startup:
+#   vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16 \
+#     --served-model-name nemotron-3-nano-30b-a3b-bf16 \
+#     --port 8011 --host 0.0.0.0 \
+#     --tensor-parallel-size 1 --max-model-len 262144 \
+#     --trust-remote-code --max-num-seqs 8 \
+#     --enable-auto-tool-choice --tool-call-parser qwen3_coder \
+#     --reasoning-parser-plugin nano_v3_reasoning_parser.py \
+#     --reasoning-parser nano_v3
+
+wandb:
+  run_name: "NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
+
+metadata:
+  release_date: "2025-12-14"
+  size_category: "Large (30B<)"
+  model_size: 30000000000
+  active_params: 3500000000
+  context_window: 262144
+
+model:
+  name: nemotron-3-nano-30b-a3b-bf16
+  client: litellm
+  provider: hosted_vllm
+  base_url: "http://localhost:8011/v1"
+  api_key_env: HOSTED_VLLM_API_KEY
+
+  params:
+    max_tokens: 131072
+    temperature: 1.0
+    top_p: 1.0
+    timeout: 7200
+    max_retries: 10
+    extra_body:
+      chat_template_kwargs:
+        enable_thinking: true
+
+benchmarks:
+  bfcl:
+    use_native_tools: false
