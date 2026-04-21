@@ -2,12 +2,12 @@
 
 **호랑이(Horangi)** 는 한국어 LLM의 성능을 종합적으로 평가하는 오픈소스 벤치마크 프레임워크입니다.
 
-[WandB/Weave](https://wandb.ai/site/weave)와 [Inspect AI](https://inspect.ai-safety-institute.org.uk/)를 통합하여 범용언어성능(GLP)과 가치정렬성능(ALT) 두 축으로 한국어 LLM을 평가하며, 이를 위해 표준화된 벤치마크 데이터셋과 평가 파이프라인을 제공합니다.
-- 📦 20개 이상의 한국어 벤치마크가 [Weave](https://wandb.ai/horangi/horangi4/weave/objects)에 등록되어 있어, 별도의 데이터 준비 없이 바로 평가를 시작할 수 있습니다.
-  - 새로운 벤치마크를 추가할 수 있습니다. 자세한 내용은 [Horangi benchmark 문서](./docs/README_benchmark.md)를 참고하세요.
+범용언어성능(GLP)과 가치정렬성능(ALT) 두 축으로 한국어 LLM을 평가하며, 이를 위해 표준화된 벤치마크 데이터셋과 평가 파이프라인을 제공합니다.
+- 📦 20개 이상의 한국어 벤치마크가 [W&B Weave](https://wandb.ai/horangi/horangi4/weave/objects)에 등록되어 있어, 별도의 데이터 준비 없이 바로 평가를 시작할 수 있습니다.
+  - 새로운 벤치마크를 추가할 수 있습니다. 자세한 내용은 [새 벤치마크 추가 가이드](./docs/README_benchmark_ko.md)를 참고하세요.
 - 🔓 OpenAI, Anthropic, Google 등 API 모델은 물론, vLLM 등으로 서빙하는 오픈소스 모델까지 동일한 기준으로 평가할 수 있습니다.
-- 📊 평가 결과는 Weave에 자동으로 기록되어 샘플별 분석, 모델 간 비교, 리더보드 생성이 가능합니다.
-- 🏆 **[호랑이 리더보드](https://horangi.ai)**에서 W&B가 운영하는 공식 리더보드를 확인할 수 있습니다.
+- 📊 평가 결과는 Weights & Biases 플랫폼에 자동으로 기록되어 샘플별 분석, 모델 간 비교, 리더보드 생성이 가능합니다.
+- 🏆 [**호랑이 리더보드**](https://horangi.ai)에서 W&B가 운영하는 공식 리더보드를 확인할 수 있습니다.
   - W&B Models로 평가 실행을 관리하고, Weave로 결과를 추적하여 **완전 자동화된 리더보드**를 제공합니다.
   - 새 모델 평가 시 리더보드가 자동으로 업데이트되어 항상 최신 결과를 반영합니다.
 
@@ -41,15 +41,14 @@
 
 ### 📈 결과 확인
 
-평가 완료 후 출력되는 Weave URL에서 상세 결과를 확인할 수 있으며, Models workspace에서 종합 평가 결과 테이블을 확인할 수 있습니다.:
-자세한 내용은 [Horangi Weave 문서](./docs/README_weave.md)를 참고하세요.
+평가 완료 후 출력되는 Weave URL에서 상세 결과를 확인할 수 있으며, Models workspace에서 종합 평가 결과 테이블을 확인할 수 있습니다.
+자세한 내용은 [Weave 가이드](./docs/README_weave_ko.md)를 참고하세요.
 - **샘플별 점수 및 응답**
 - **모델 간 비교**
 - **집계 메트릭**
 - **자동 리더보드 생성**
 
 ![Workspace](./docs/assets/workspace.png)
-![Weave Leaderboard](./docs/assets/leaderboard.png)
 
 ---
 
@@ -146,7 +145,9 @@ horangi/
 └── logs/                   # 평가 로그
 ```
 
-> 📖 **새 벤치마크 추가 방법**은 [docs/README_benchmark_ko.md](docs/README_benchmark_ko.md)를 참고하세요.
+> 📖 확장 가이드:
+> - 새 모델 추가 → [docs/README_models_ko.md](docs/README_models_ko.md)
+> - 새 벤치마크 추가 → [docs/README_benchmark_ko.md](docs/README_benchmark_ko.md)
 
 ---
 
@@ -172,105 +173,107 @@ cd llm-leaderboard-korean
 uv sync
 ```
 
-### 환경 변수 설정
-
-`.env.sample`을 복사하여 `.env` 파일을 생성하거나 환경 변수를 직접 설정합니다:
-
-```bash
-# W&B 설정 (필수)
-WANDB_API_KEY=your_wandb_api_key
-WANDB_ENTITY=your_wandb_entity
-WANDB_PROJECT=your_wandb_project
-
-# 모델 API 키 (사용하는 모델에 맞게 설정)
-HF_TOKEN=your_huggingface_token
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-GOOGLE_API_KEY=your_google_api_key
-DEEPSEEK_API_KEY=your_deepseek_api_key
-OPENROUTER_API_KEY=your_openrouter_api_key
-HOSTED_VLLM_API_KEY=dummy
-
-# swebench server 설정
-SWE_SERVER_URL=http://YOUR_SERVER:8000
-```
-
 ---
 
 ## 🚀 빠른 시작
 
-`run_eval.py`로 벤치마크를 실행하고 W&B에 결과를 기록합니다.
+**0 → 첫 평가 결과까지 5분**. 아래 4단계를 순서대로 따라오면 됩니다.
+
+### 1. `.env` 파일 생성
 
 ```bash
-# 모든 벤치마크 실행
-uv run python run_eval.py --config gpt-4o
-
-# 특정 벤치마크만 실행
-uv run python run_eval.py --config gpt-4o --only kmmlu
-
-# 여러 벤치마크 실행
-uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq,ko_hellaswag
-
-# 샘플 수 제한 (테스트용)
-uv run python run_eval.py --config gpt-4o --limit 10
-
-# 기존 W&B run 재개 (중단된 평가 이어서 실행)
-uv run python run_eval.py --config gpt-4o --resume <run_id>
-
-# W&B 태그 추가
-uv run python run_eval.py --config gpt-4o --tag experiment1 --tag test
+cp .env.sample .env
 ```
 
-### 옵션
+필수 3종(W&B)은 반드시 채워야 합니다. Horangi는 결과를 W&B Models + Weave로만 기록하므로, 셋 중 하나라도 없으면 실행이 중단됩니다.
 
-| 옵션 | 설명 |
-|------|------|
-| `--config` | 모델 설정 파일 (필수) |
-| `--only` | 특정 벤치마크만 실행 (쉼표로 구분) |
-| `--limit` | 벤치마크당 샘플 수 제한 |
-| `--resume` | 기존 W&B run ID로 재개 |
-| `--tag` | W&B 태그 추가 (여러 번 사용 가능) |
-| `--log-dir` | inspect_ai 평가 로그 디렉토리 (기본: `./logs`, 병렬 실행 시 분리 필요) |
+```bash
+# 필수
+WANDB_API_KEY=...        # https://wandb.ai/authorize
+WANDB_ENTITY=your-entity
+WANDB_PROJECT=your-project
 
-### 주요 기능
+# 평가할 모델에 해당하는 API 키만 채우면 됩니다
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
+# ...
+```
 
-- **vLLM 서버 자동 관리**: `_template_vllm.yaml` 설정 시 vLLM 서버가 자동으로 시작/종료됩니다
-- **W&B Models 연동**: 평가 결과가 W&B에 자동 기록됩니다
-- **진행 상황 로깅**: 각 벤치마크 결과가 실시간으로 표시됩니다
-- **스코어 집계 테이블**: 평가 완료 후 전체 결과 요약을 출력합니다
+> `WANDB_MODE=offline|disabled|dryrun` 은 지원하지 않습니다.
+
+### 2. 평가할 모델 선택
+
+`configs/models/` 디렉토리에 있는 YAML 파일 이름(확장자 제외)이 `--config` 값입니다.
+
+```bash
+ls configs/models/
+# claude-opus-4-5-20251101_high-effort.yaml
+# gpt-4o.yaml
+# ...
+```
+
+리포지토리에 없는 모델을 추가하려면 → [새 모델 추가 가이드](./docs/README_models_ko.md)
+
+### 3. Smoke test (소량 실행)
+
+처음엔 한 벤치마크를 5 샘플만 돌려서 설정이 맞는지 확인합니다.
+
+```bash
+uv run python run_eval.py --config gpt-4o --only kmmlu --limit 5
+```
+
+실행 직후 W&B run URL과 Weave URL이 출력되면 성공입니다. 링크를 눌러 기록이 실제로 쌓였는지 확인하세요.
+
+### 4. 전체 평가
+
+```bash
+uv run python run_eval.py --config gpt-4o
+```
+
+전체 벤치마크를 순차 실행하고, 완료 시 W&B Models에 요약 테이블이, Weave에 샘플별 트레이스와 리더보드가 업로드됩니다.
+
+---
+
+### 자주 쓰는 옵션
+
+| 옵션 | 설명 | 예시 |
+|---|---|---|
+| `--config` | 모델 설정 파일명 (필수) | `--config gpt-4o` |
+| `--only` | 특정 벤치마크만 실행 (쉼표 구분) | `--only kmmlu,kobbq` |
+| `--limit` | 벤치마크당 샘플 수 제한 | `--limit 10` |
+| `--resume` | 중단된 W&B run 이어가기 | `--resume abc123xy` |
+| `--tag` | W&B 태그 추가 (여러 번 가능) | `--tag exp1 --tag test` |
+| `--log-dir` | inspect_ai 로그 디렉토리 | `--log-dir /tmp/my_logs` |
+
+### 동작 요약
+
+- vLLM 모델은 평가 시작 시 서버가 **자동 기동**되고 끝나면 종료됩니다.
+- 각 벤치마크 결과는 **실시간**으로 W&B에 기록됩니다.
+- 평가 완료 시 **Weave Leaderboard** 가 자동으로 업데이트됩니다.
 
 ---
 
 ## ⚙️ 설정 가이드
 
-### 새 모델 추가
+작업 유형별 상세 가이드는 아래 문서에 있습니다.
+
+| 하려는 것 | 문서 |
+|---|---|
+| 새 모델을 추가하고 평가하기 | [새 모델 추가 가이드](./docs/README_models_ko.md) |
+| 새 벤치마크를 추가하기 | [새 벤치마크 추가 가이드](./docs/README_benchmark_ko.md) |
+| SWE-bench 평가 환경 구축 | [SWE-bench 가이드](./docs/README_swebench_ko.md) |
+| Weave에서 결과 보고 분석하기 | [Weave 가이드](./docs/README_weave_ko.md) |
+
+프로젝트 레이아웃:
+
 ```
 configs/
-├── base_config.yaml      # 전역 기본 설정
-└── models/               # 모델별 설정
-    ├── _template_api.yaml    # 템플릿
-    ├── _template_vllm.yaml    # 템플릿
-    ├── gpt-4o.yaml
-    └── solar_pro2.yaml
+├── base_config.yaml          # 전역 기본 설정 (벤치마크 공통)
+└── models/
+    ├── _template_api.yaml    # API 모델 템플릿
+    ├── _template_vllm.yaml   # vLLM 모델 템플릿
+    └── <model-name>.yaml     # --config <model-name> 으로 지정
 ```
-
-```bash
-# 1. 템플릿 복사
-cp configs/models/_template_api.yaml configs/models/my-model.yaml
-# vllm 서버를 자동으로 열어서 테스트하는경우
-# 평가실행 시 vLLM 서버가 자동으로 시작되고 평가 완료 후 종료됩니다. 별도로 vLLM 서버를 실행할 필요가 없습니다.
-# cp configs/models/_template_vllm.yaml configs/models/my-model.yaml
-
-# 2. 설정 편집
-vi configs/models/my-model.yaml
-
-# 3. 실행
-uv run python run_eval.py --config my-model
-```
-
-### 새 벤치마크 추가
-
-[Horangi benchmark 문서](./docs/README_benchmark.md)를 참고해주세요.
 
 ---
 
@@ -296,10 +299,8 @@ uv run python run_eval.py --config gpt-4o --only swebench_verified_official_80 -
 ---
 
 ## 📚 참고 자료
-- [WandB Weave](https://wandb.ai/site/weave)
-- [Inspect AI Documentation](https://inspect.ai-safety-institute.org.uk/)
-- [inspect_evals](https://github.com/UKGovernmentBEIS/inspect_evals)
-- [inspect-wandb (fork)](https://github.com/hw-oh/inspect_wandb)
-- [inspect_evals (fork)](https://github.com/hw-oh/inspect_evals)
+- [Horangi 리더보드](https://horangi.ai)
+- [W&B Models](https://wandb.ai/site/models)
+- [W&B Weave](https://wandb.ai/site/weave)
 
 

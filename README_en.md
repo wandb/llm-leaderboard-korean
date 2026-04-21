@@ -4,7 +4,7 @@
 
 By integrating [WandB/Weave](https://wandb.ai/site/weave) and [Inspect AI](https://inspect.ai-safety-institute.org.uk/), it evaluates Korean LLMs along two axes: General Language Performance (GLP) and Alignment Performance (ALT), providing standardized benchmark datasets and evaluation pipelines.
 - 📦 Over 20 Korean benchmarks are registered in [Weave](https://wandb.ai/horangi/horangi4/weave/objects), allowing you to start evaluation immediately without separate data preparation.
-  - You can add new benchmarks. See [Horangi benchmark documentation](./docs/README_benchmark.md) for details.
+  - You can add new benchmarks. See the [Adding a New Benchmark](./docs/README_benchmark_en.md) guide for details.
 - 🔓 You can evaluate API models (OpenAI, Anthropic, Google, etc.) as well as open-source models served via vLLM using the same standards.
 - 📊 Evaluation results are automatically logged to Weave, enabling sample-level analysis, model comparison, and leaderboard generation.
 - 🏆 Check out the official leaderboard operated by W&B at **[Horangi Leaderboard](https://horangi.ai)**.
@@ -42,7 +42,7 @@ By integrating [WandB/Weave](https://wandb.ai/site/weave) and [Inspect AI](https
 ### 📈 Viewing Results
 
 After evaluation completes, you can view detailed results at the Weave URL in the output, and view comprehensive evaluation result tables in the Models workspace.
-See [Horangi Weave documentation](./docs/README_weave.md) for more details.
+See the [Weave guide](./docs/README_weave_en.md) for more details.
 - **Per-sample scores and responses**
 - **Model comparison**
 - **Aggregated metrics**
@@ -146,7 +146,9 @@ horangi/
 └── logs/                   # Evaluation logs
 ```
 
-> 📖 **How to add new benchmarks**: See [docs/README_benchmark_en.md](docs/README_benchmark_en.md).
+> 📖 Extension guides:
+> - Add a new model → [docs/README_models_en.md](docs/README_models_en.md)
+> - Add a new benchmark → [docs/README_benchmark_en.md](docs/README_benchmark_en.md)
 
 ---
 
@@ -172,107 +174,107 @@ cd llm-leaderboard-korean
 uv sync
 ```
 
-### Environment Variables
-
-Copy `.env.sample` to create a `.env` file or set environment variables directly:
-
-```bash
-# W&B settings (required)
-WANDB_API_KEY=your_wandb_api_key
-WANDB_ENTITY=your_wandb_entity
-WANDB_PROJECT=your_wandb_project
-
-# Model API keys (set for the models you use)
-HF_TOKEN=your_huggingface_token
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-GOOGLE_API_KEY=your_google_api_key
-DEEPSEEK_API_KEY=your_deepseek_api_key
-OPENROUTER_API_KEY=your_openrouter_api_key
-HOSTED_VLLM_API_KEY=dummy
-
-# swebench server settings
-SWE_SERVER_URL=http://YOUR_SERVER:8000
-```
-
 ---
 
 ## 🚀 Quick Start
 
-Run benchmarks with `run_eval.py` and log results to W&B.
+**From zero to your first evaluation in about 5 minutes**. Follow these four steps in order.
+
+### 1. Create a `.env` file
 
 ```bash
-# Run all benchmarks
-uv run python run_eval.py --config gpt-4o
-
-# Run specific benchmark
-uv run python run_eval.py --config gpt-4o --only kmmlu
-
-# Run multiple benchmarks
-uv run python run_eval.py --config gpt-4o --only kmmlu,kobbq,ko_hellaswag
-
-# Limit samples (for testing)
-uv run python run_eval.py --config gpt-4o --limit 10
-
-# Resume existing W&B run
-uv run python run_eval.py --config gpt-4o --resume <run_id>
-
-# Add W&B tags
-uv run python run_eval.py --config gpt-4o --tag experiment1 --tag test
+cp .env.sample .env
 ```
 
-### Options
+The three W&B variables are required. Horangi records all results to W&B Models + Weave, so the run aborts if any of them are missing.
 
-| Option | Description |
-|--------|-------------|
-| `--config` | Model configuration file (required) |
-| `--only` | Run specific benchmarks only (comma-separated) |
-| `--limit` | Limit samples per benchmark |
-| `--resume` | Resume existing W&B run by ID |
-| `--tag` | Add W&B tags (can be used multiple times) |
+```bash
+# Required
+WANDB_API_KEY=...        # https://wandb.ai/authorize
+WANDB_ENTITY=your-entity
+WANDB_PROJECT=your-project
 
-### Key Features
+# Only fill in the keys for the providers you plan to evaluate
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
+# ...
+```
 
-- **vLLM Server Auto-management**: When using `_template_vllm.yaml`, vLLM server starts/stops automatically
-- **W&B Models Integration**: Evaluation results are automatically logged to W&B
-- **Progress Logging**: Real-time display of benchmark results
-- **Score Aggregation Table**: Summary of all results after evaluation completes
+> `WANDB_MODE=offline|disabled|dryrun` is not supported.
+
+### 2. Pick a model
+
+Each YAML file under `configs/models/` (without the extension) is a valid `--config` value.
+
+```bash
+ls configs/models/
+# claude-opus-4-5-20251101_high-effort.yaml
+# gpt-4o.yaml
+# ...
+```
+
+If the model you want is not in the repo, see the [Adding a New Model guide](./docs/README_models_en.md).
+
+### 3. Smoke test (small run)
+
+Start with a single benchmark at 5 samples to verify the setup.
+
+```bash
+uv run python run_eval.py --config gpt-4o --only kmmlu --limit 5
+```
+
+If a W&B run URL and a Weave URL are printed, the setup is working. Open the links to confirm the traces landed.
+
+### 4. Full evaluation
+
+```bash
+uv run python run_eval.py --config gpt-4o
+```
+
+This runs every benchmark sequentially. When finished, a summary table is posted to W&B Models and per-sample traces plus the leaderboard are uploaded to Weave.
+
+---
+
+### Common options
+
+| Option | Description | Example |
+|---|---|---|
+| `--config` | Model config filename (required) | `--config gpt-4o` |
+| `--only` | Run a subset of benchmarks (comma-separated) | `--only kmmlu,kobbq` |
+| `--limit` | Cap the sample count per benchmark | `--limit 10` |
+| `--resume` | Continue an interrupted W&B run | `--resume abc123xy` |
+| `--tag` | Add W&B tags (repeatable) | `--tag exp1 --tag test` |
+| `--log-dir` | Directory for inspect_ai logs | `--log-dir /tmp/my_logs` |
+
+### How it behaves
+
+- vLLM models **auto-start** their server at the beginning of a run and shut it down at the end.
+- Each benchmark's results stream into W&B **in real time**.
+- The **Weave Leaderboard** is updated automatically when the run completes.
 
 ---
 
 ## ⚙️ Configuration Guide
 
-### Configuration File Structure
+Per-task guides live in `docs/`.
+
+| Goal | Doc |
+|---|---|
+| Add a new model and evaluate it | [Adding a New Model](./docs/README_models_en.md) |
+| Add a new benchmark | [Adding a New Benchmark](./docs/README_benchmark_en.md) |
+| Set up the SWE-bench evaluation server | [SWE-bench Guide](./docs/README_swebench_en.md) |
+| Explore results in Weave | [Weave Guide](./docs/README_weave_en.md) |
+
+Project layout:
 
 ```
 configs/
-├── base_config.yaml      # Global default settings
-└── models/               # Per-model settings
-    ├── _template_api.yaml    # Template
-    ├── _template_vllm.yaml   # Template
-    ├── gpt-4o.yaml
-    └── solar_pro2.yaml
+├── base_config.yaml          # Global defaults (shared across benchmarks)
+└── models/
+    ├── _template_api.yaml    # API model template
+    ├── _template_vllm.yaml   # vLLM model template
+    └── <model-name>.yaml     # Used as --config <model-name>
 ```
-
-### Adding a New Model
-
-```bash
-# 1. Copy template
-cp configs/models/_template_api.yaml configs/models/my-model.yaml
-# For auto-starting vLLM server:
-# `run_eval.py` automatically starts vLLM server before evaluation and stops it after completion. No need to run vLLM server separately.
-# cp configs/models/_template_vllm.yaml configs/models/my-model.yaml
-
-# 2. Edit configuration
-vi configs/models/my-model.yaml
-
-# 3. Run
-uv run python run_eval.py --config my-model
-```
-
-### Adding a New Benchmark
-
-See [Horangi benchmark documentation](./docs/README_benchmark.md).
 
 ---
 
