@@ -588,12 +588,36 @@ Examples:
     # Load W&B settings from environment variables (.env file already loaded)
     entity = os.environ.get("WANDB_ENTITY", "")
     project = os.environ.get("WANDB_PROJECT", "")
-    
-    if not entity or not project:
-        logger.error("WANDB_ENTITY and WANDB_PROJECT environment variables are required for W&B logging.")
+    api_key = os.environ.get("WANDB_API_KEY", "")
+
+    missing_vars = [
+        name
+        for name, value in (
+            ("WANDB_API_KEY", api_key),
+            ("WANDB_ENTITY", entity),
+            ("WANDB_PROJECT", project),
+        )
+        if not value
+    ]
+    if missing_vars:
+        logger.error(
+            "Horangi requires W&B Models + Weave. The following environment "
+            f"variable(s) are missing: {', '.join(missing_vars)}"
+        )
         logger.error("Add the following to your .env file:")
+        logger.error("  WANDB_API_KEY=your-api-key  # https://wandb.ai/authorize")
         logger.error("  WANDB_ENTITY=your-entity")
         logger.error("  WANDB_PROJECT=your-project")
+        sys.exit(1)
+
+    # Block off-ramps up front so users see a clear error instead of a
+    # mid-run SystemExit from the inspect_wandb guard hook.
+    wandb_mode = os.environ.get("WANDB_MODE", "online").strip().lower()
+    if wandb_mode in {"offline", "disabled", "dryrun"}:
+        logger.error(
+            f"WANDB_MODE='{wandb_mode}' is not supported. Horangi requires "
+            "WANDB_MODE=online (or unset) so results are published to W&B + Weave."
+        )
         sys.exit(1)
     
     config = get_config()
