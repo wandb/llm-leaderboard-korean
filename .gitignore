@@ -121,3 +121,6 @@ secrets.yaml
 create_benchmark/
 
 run.py
+# Claude and Analysis
+.claude/
+analyses/results/
