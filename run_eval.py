@@ -678,6 +678,13 @@ Examples:
         logger.info(f"W&B run resumed: {wandb_run.url}")
     else:
         # Create new run
+        # Avoid triggering wandb's automatic artifact resolution when the model
+        # identifier is a `wandb-artifact://...` URI (e.g. W&B Inference models
+        # served from cross-entity artifacts). Stash a sanitized string in the
+        # run config so we still record which model was evaluated.
+        _config_model_name = model_name
+        if isinstance(model_name, str) and model_name.startswith("wandb-artifact://"):
+            _config_model_name = "artifact:" + model_name[len("wandb-artifact://"):]
         wandb_run = wandb.init(
             entity=entity,
             project=project,
@@ -686,8 +693,8 @@ Examples:
             tags=tags,
             config={
                 "config": args.config,
-                "model": model_name,
-                "model_name": model_name,
+                "model": _config_model_name,
+                "model_name": _config_model_name,
                 "limit": args.limit,
                 "benchmarks": benchmarks,
             },
