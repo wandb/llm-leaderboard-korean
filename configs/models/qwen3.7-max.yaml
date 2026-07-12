@@ -1,0 +1,51 @@
+# W&B Settings
+wandb:
+  run_name: "qwen3.7-max"
+
+# Model Metadata
+metadata:
+  release_date: "2026-05-21"
+  size_category: null
+  model_size: null
+  context_window: 1000000
+
+# =============================================================================
+# Model Configuration
+# =============================================================================
+
+model:
+  # OpenRouter 모델명
+  name: qwen/qwen3.7-max
+
+  # API Client
+  client: litellm
+
+  # Model Provider
+  provider: openrouter
+
+  # Environment variable name for API key
+  api_key_env: OPENROUTER_API_KEY
+
+  # Generation Parameters
+  params:
+    max_tokens: 131072
+    temperature: 1.0
+    top_p: 0.95
+    timeout: 3600
+    max_retries: 5
+    extra_body:
+      reasoning:
+        enabled: true
+
+
+# =============================================================================
+# Benchmark-specific Overrides
+# =============================================================================
+
+benchmarks:
+  bfcl:
+    use_native_tools: false            # OpenRouter tool calling 호환 이슈 방지
+  swebench_verified_official_80:
+    max_tokens: 16384
+    temperature: 0.7
+    top_p: 1.0

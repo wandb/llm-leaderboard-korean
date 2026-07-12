@@ -1,0 +1,52 @@
+# Gemini 3.5 Flash (OpenRouter)
+
+# W&B Settings
+wandb:
+  run_name: "gemini-3.5-flash"
+
+# Model Metadata
+metadata:
+  release_date: "2026-05-19"
+  size_category: null
+  model_size: null
+  active_params: null
+  context_window: 1048576
+  max_output_tokens: 65536
+
+# =============================================================================
+# Model Configuration
+# =============================================================================
+
+model:
+  # OpenRouter 모델명
+  name: google/gemini-3.5-flash
+
+  # API Client
+  client: litellm
+
+  # Model Provider
+  provider: openrouter
+
+  # Environment variable name for API key
+  api_key_env: OPENROUTER_API_KEY
+
+  # Generation Parameters
+  params:
+    max_tokens: 65536
+    temperature: 0.3
+    timeout: 3600
+    max_retries: 5
+    # Gemini 3.5 Flash thinking model: enable reasoning via extra_body
+    extra_body:
+      reasoning:
+        enabled: true
+
+# =============================================================================
+# Benchmark-specific Overrides
+# =============================================================================
+
+benchmarks:
+  bfcl:
+    use_native_tools: false            # OpenRouter tool calling 호환 이슈 방지
+  swebench_verified_official_80:
+    max_tokens: 65536
