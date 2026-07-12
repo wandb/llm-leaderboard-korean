@@ -1,0 +1,31 @@
+# GLM 5.2 (High Effort)
+
+wandb:
+  run_name: "glm-5.2: high-effort"
+
+metadata:
+  release_date: "2026-06-16"
+  size_category: null
+  model_size: null
+  context_window: 1000000
+  max_output_tokens: 128000
+
+model:
+  name: z-ai/glm-5.2
+  client: litellm
+  provider: openrouter
+  api_key_env: OPENROUTER_API_KEY
+
+  params:
+    max_tokens: 64000
+    temperature: 1.0
+    reasoning_effort: high
+    timeout: 7200
+    max_retries: 5
+
+benchmarks:
+  bfcl:
+    use_native_tools: false
+    max_tokens: 64000
+  swebench_verified_official_80:
+    max_tokens: 64000

@@ -2029,7 +2029,7 @@ requires-dist = [
     { name = "huggingface-hub", specifier = ">=0.28.0" },
     { name = "inspect-ai", git = "https://github.com/hw-oh/inspect_ai.git" },
     { name = "inspect-evals", specifier = ">=0.3.103" },
-    { name = "inspect-wandb", extras = ["weave"], git = "https://github.com/hw-oh/inspect_wandb.git" },
+    { name = "inspect-wandb", extras = ["weave"], git = "https://github.com/hw-oh/inspect_wandb.git?rev=de8dc9c" },
     { name = "instruction-following-eval", git = "https://github.com/josejg/instruction_following_eval.git" },
     { name = "jsonlines", specifier = ">=4.0.0" },
     { name = "keras", specifier = ">=3.13.1" },
@@ -2390,7 +2390,7 @@ wheels = [
 [[package]]
 name = "inspect-wandb"
 version = "0.2.0"
-source = { git = "https://github.com/hw-oh/inspect_wandb.git#127f052997ad557bf9406ac63caad5d694434180" }
+source = { git = "https://github.com/hw-oh/inspect_wandb.git?rev=de8dc9c#de8dc9ce6463d376ce0625a7a7cea4a88cb3cc06" }
 dependencies = [
     { name = "inspect-ai" },
     { name = "pydantic" },
