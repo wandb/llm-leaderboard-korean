@@ -223,27 +223,36 @@ def get_previous_benchmark_scores(entity: str, project: str, run_id: str) -> dic
         benchmark_scores = {}
         
         # run.summary에서 직접 가져오기 시도 (더 간단한 방법)
-        # 또는 logged artifacts에서 테이블 데이터 가져오기
-        for artifact in run.logged_artifacts():
-            if "benchmark_detail_table" in artifact.name:
-                table = artifact.get("benchmark_detail_table")
-                if table:
-                    df = table.get_dataframe()
-                    for _, row in df.iterrows():
-                        benchmark_name = row.get("benchmark")
-                        if benchmark_name:
-                            score_info = {"score": row.get("score")}
-                            # detail_ 접두사가 붙은 컬럼들을 details로 수집
-                            details = {}
-                            for col in df.columns:
-                                if col.startswith("detail_"):
-                                    detail_key = col.replace("detail_", "")
-                                    if pd.notna(row.get(col)):
-                                        details[detail_key] = row.get(col)
-                            if details:
-                                score_info["details"] = details
-                            benchmark_scores[benchmark_name] = score_info
-                    break
+        # 또는 logged artifacts에서 테이블 데이터 가져오기.
+        # NOTE: run.logged_artifacts() returns artifacts in ascending creation order,
+        # so we must pick the NEWEST benchmark_detail_table (e.g. after prior --resume
+        # runs). Sort explicitly by created_at desc and take the first match.
+        detail_artifacts = [
+            a for a in run.logged_artifacts()
+            if "benchmark_detail_table" in a.name
+        ]
+        detail_artifacts.sort(
+            key=lambda a: getattr(a, "created_at", "") or "", reverse=True
+        )
+        for artifact in detail_artifacts:
+            table = artifact.get("benchmark_detail_table")
+            if table:
+                df = table.get_dataframe()
+                for _, row in df.iterrows():
+                    benchmark_name = row.get("benchmark")
+                    if benchmark_name:
+                        score_info = {"score": row.get("score")}
+                        # detail_ 접두사가 붙은 컬럼들을 details로 수집
+                        details = {}
+                        for col in df.columns:
+                            if col.startswith("detail_"):
+                                detail_key = col.replace("detail_", "")
+                                if pd.notna(row.get(col)):
+                                    details[detail_key] = row.get(col)
+                        if details:
+                            score_info["details"] = details
+                        benchmark_scores[benchmark_name] = score_info
+                break
         
         # Artifact에서 못 가져온 경우, summary에서 개별 점수 가져오기 시도
         if not benchmark_scores:

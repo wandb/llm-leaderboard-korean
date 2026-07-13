@@ -1,0 +1,42 @@
+# GPT-5.6 Sol (Max Effort)
+
+wandb:
+  run_name: "gpt-5.6-sol: max-effort"
+
+metadata:
+  release_date: "2026-07-26"
+  size_category: null
+  model_size: null
+  context_window: 1050000
+  max_output_tokens: 128000
+
+model:
+  name: gpt-5.6-sol
+  client: openai
+  provider: openai
+  api_key_env: OPENAI_API_KEY
+
+  params:
+    max_tokens: 128000
+    temperature: 1
+    reasoning_effort: max
+    client_timeout: 600
+    timeout: 7200
+    max_retries: 10
+
+benchmarks:
+  bfcl:
+    use_native_tools: true
+    # Under reasoning_effort=max the model tends to answer in natural language
+    # or emit nothing instead of calling tools (live_multiple 70% wrong).
+    # Lower effort + force a tool call via the Responses API tool_choice.
+    reasoning_effort: high
+    extra_body:
+      tool_choice: required
+  squad_kor_v1:
+    # Under max, the model adds decorations (guillemets, English glosses,
+    # extra phrases) that tank exact/F1. Lower effort to keep answers terse.
+    reasoning_effort: high
+  swebench_verified_official_80:
+    max_tokens: 128000
+    temperature: 0

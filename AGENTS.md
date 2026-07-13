@@ -17,21 +17,40 @@ uv run python run_eval.py --config <model_config_name> --only kmmlu,kobbq,sweben
 # Limit samples (for testing)
 uv run python run_eval.py --config <model_config_name> --limit 10
 
-# Resume a failed W&B run
-uv run python run_eval.py --config <model_config_name> --resume <wandb_run_id>
+# Add a W&B tag to the run
+uv run python run_eval.py --config <model_config_name> --tag exp1
 
-# Custom log directory (needed for parallel execution)
+# Resume an existing W&B run (preserves previously-logged benchmark scores;
+# combine with --only to re-evaluate a subset — e.g., after the SWE server was down)
+uv run python run_eval.py --config <model_config_name> \
+  --resume <wandb_run_id> --only swebench_verified_official_80
+
+# Custom log directory (REQUIRED for parallel execution — see "Parallel runs" below)
 uv run python run_eval.py --config <model_config_name> --log-dir /tmp/my_logs
 
-# Resume swebench for multiple models (parallel workers + vLLM GPU allocation)
-uv run python resume_swebench.py --workers 4 --dry-run
-uv run python resume_swebench.py --workers 4
-
 # Start swebench evaluation server (requires Docker host)
-uv run python src/server/swebench_server.py --port 8000
+uv run python src/server/swebench_server.py --host 0.0.0.0 --port 8000
 ```
 
 Config name is the YAML filename without extension from `configs/models/` (e.g., `gpt-5.4-2026-03-05_xhigh-effort`).
+
+**Finding a W&B run ID for `--resume`:** it is the 8-char string in the run URL
+(`https://wandb.ai/<entity>/<project>/runs/<run_id>`) or the last segment of
+`View run at ...` in the eval log. `run_eval.py --resume` requires the run to
+already exist (`resume="must"`); it loads previous scores from the run, executes
+only the benchmarks in `--only`, then merges (new results overwrite, others are
+preserved) and regenerates all W&B tables and the Weave Leaderboard.
+
+## Parallel runs & environment caveats
+
+- **`--log-dir` per config when running in parallel.** The default `./logs`
+  collides across simultaneous runs and Inspect AI will fail or interleave logs.
+  Give each parallel run a unique directory (e.g., `--log-dir /tmp/logs/<config>`).
+- **`.env` is captured at process start.** Values like `SWE_SERVER_URL`,
+  `OPENAI_API_KEY`, etc. are read into the process env when `run_eval.py`
+  launches. Editing `.env` after a run has started does **not** affect that
+  running process — you must relaunch. This matters most when the SWE server
+  moves (new EC2 IP) or an API key is rotated mid-session.
 
 # Initial Setup: W&B (Weights & Biases)
 
@@ -88,24 +107,15 @@ SWE-bench evaluation requires a separate Docker-based server. Follow `docs/READM
 
 ## Step 4: Run Benchmarks
 
-```bash
-# Standard models
-uv run python run_eval.py --config <ModelName>
-
-# Models with custom forks
-.venv/bin/python run_eval.py --config <ModelName>
-
-# Run specific benchmarks only
-.venv/bin/python run_eval.py --config <ModelName> --only kmmlu,kobbq
-
-# Limit samples (for quick testing)
-.venv/bin/python run_eval.py --config <ModelName> --limit 5
-```
+Use the commands in the [Common Commands](#common-commands) section above.
+For models with a custom transformers/vLLM fork, invoke `.venv/bin/python` directly
+instead of `uv run python` so `uv` does not overwrite the fork on sync.
 
 ## Step 5: Troubleshooting
 
 - **Timeout errors** (`litellm.Timeout`): For thinking models, ensure `timeout: 7200` and `max_retries: 10` are set in config.
 - **Architecture not recognized** (`model type "xxx" but Transformers does not recognize`): Custom transformers fork required. Check HuggingFace model page for install instructions.
-- **swebench score 0.0000**: Verify `SWE_SERVER_URL` is set in `.env` and server health check passes.
+- **swebench score 0.0000**: Server not reachable at the URL the process captured. Check `curl $SWE_SERVER_URL/health` returns `{"status":"ok"}`. Remember `.env` is read at process start (see [Parallel runs & environment caveats](#parallel-runs--environment-caveats)) — if you changed the URL mid-session, existing processes still use the old one. To recover the missing swebench scores without re-running everything: `run_eval.py --resume <wandb_run_id> --only swebench_verified_official_80`.
 - **GPU OOM**: Increase `tensor_parallel_size` or reduce `max_model_len`.
 - **Slow generation**: Expected with thinking models (long reasoning traces). Wait it out for fair evaluation.
+- **`reasoning_effort` validation error**: Valid values are `none`, `minimal`, `low`, `medium`, `high`, `xhigh` (allowed by `src/core/validation.py` *and* the pinned `inspect_ai` fork's `GenerateConfig`). Both layers must accept the value or the run crashes at init.
